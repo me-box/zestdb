@@ -123,6 +123,18 @@ let get_option_value options value => {
   find options value 0;
 };
 
+let get_content_format options => {
+  let value = get_option_value options 12;
+  let bits = Bitstring.bitstring_of_string value;
+  let id = [%bitstring
+    switch bits {
+    | {|id : 8 : unsigned|} => id;
+    | {|_|} => failwith "invalid content value";
+    };
+  ];
+  id;
+};
+
 let has_observed options => {
   if (Array.exists (fun (number,_) => number == 6) options) {
     true;
@@ -213,7 +225,15 @@ let handle_get options => {
   };
 };
 
+let assert_content_format options => {
+  let content_format = get_content_format options;
+  let _ = Lwt_io.printf "content_format => %d\n" content_format;
+  assert (content_format == 50);
+};
+
 let handle_post options payload with::pub_soc => {
+  /* we are just accepting json for now */
+  assert_content_format options;
   let uri_path = get_option_value options 11;
   if (is_observed uri_path) {
     publish uri_path payload pub_soc >>=

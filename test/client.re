@@ -6,7 +6,7 @@ let curve_public_key = ref "";
 let curve_secret_key = ref "";
 let token = ref "";
 let uri_path = ref "";
-let content_format = ref "text/plain;charset=utf-8";
+let content_format = ref "2"; /* ascii equivalent of 50 representing json */
 let payload = ref "";
 let loop_count = ref 0;
 let call_freq = ref 1.0;
@@ -295,14 +295,21 @@ let handle_mode mode => {
   command := func;
 };
 
+let create_content_format id => {
+  /* restrict content format support to 1 byte */
+  assert ((id >= 0) && (id <= 255));
+  let bits = [%bitstring {|id : 8 : unsigned|}];
+  Bitstring.string_of_bitstring bits  
+};
+
 let handle_format format => {
-  let content = switch format {
-  | "text" => "text/plain;charset=utf-8";
-  | "json" => "application/json";
-  | "binary" => "application/octet-stream";
+  let id = switch format {
+  | "text" => 0;
+  | "json" => 50;
+  | "binary" => 42;
   | _ => raise (Arg.Bad "Unsupported format");
   };
-  content_format := content;
+  content_format := create_content_format id;
 };
 
 let parse_cmdline () => { 
