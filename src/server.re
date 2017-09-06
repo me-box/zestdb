@@ -292,8 +292,13 @@ let curve_secret_key = ref "";
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
 
+let report_error e => {
+  let msg = Printexc.to_string e;
+  let stack = Printexc.get_backtrace ();
+  Lwt_io.eprintf "Opps: %s%s\n" msg stack;
+};
 
-let () = {
+let parse_cmdline () => {
   let usage = "usage: " ^ Sys.argv.(0) ^ " [--debug] [--secret-key string]";
   let speclist = [
     ("--request-endpoint", Arg.Set_string req_endpoint, ": to set the request/reply endpoint"),
@@ -302,13 +307,22 @@ let () = {
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
-  let _ = Lwt_io.printf "Running server...\n";
+};
+
+let rec run_server () => {
+  parse_cmdline ();
   let ctx = ZMQ.Context.create ();
   let rep_soc = connect_socket !req_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
   let pub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.publ !curve_secret_key;
-  let () = Lwt_main.run { server with::rep_soc and::pub_soc};
-  /* we never get here */
+  let _ = Lwt_io.printf "Ready...\n";
+  let _ = try (Lwt_main.run { server with::rep_soc and::pub_soc}) {
+    | e => report_error e;
+  };
   close_socket pub_soc;
   close_socket rep_soc;
-  ZMQ.Context.terminate ctx
+  ZMQ.Context.terminate ctx;
+  run_server ();
 };
+
+run_server ();
+
