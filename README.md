@@ -1,5 +1,7 @@
 # zest
 
+A REST over ZeroMQ server based on CoAP.
+
 #### to fix an issue with .pub being a reserved word in reason
 
 ```bash
