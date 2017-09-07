@@ -7,6 +7,18 @@ let notify_list  = ref [];
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
 
+let setup_logger () => {
+  Lwt_log_core.default :=
+    Lwt_log.channel
+      template::"$(date).$(milliseconds) [$(level)] $(message)"
+      close_mode::`Keep
+      channel::Lwt_io.stdout
+      ();
+  Lwt_log_core.add_rule "*" Lwt_log_core.Error;
+  Lwt_log_core.add_rule "*" Lwt_log_core.Info;
+  Lwt_log_core.add_rule "*" Lwt_log_core.Debug;
+};
+
 let publish path payload socket => {
   let msg = Printf.sprintf "%s %s" path payload;
   Lwt_zmq.Socket.send socket msg;
@@ -61,7 +73,7 @@ let handle_options oc bits => {
     } else {
       let (number, value, r) = handle_option bits;
       Array.set options (oc - 1) (number,value);
-      let _ = Lwt_io.printf "option => %d:%s\n" number value;
+      let _ = Lwt_log_core.debug_f "option => %d:%s" number value;
       handle (oc - 1) r
   };
   (options, handle oc bits);
@@ -149,7 +161,7 @@ let is_observed path => {
 
 let add_to_observe path => {
   if (is_observed path == false) {
-    let _ = Lwt_io.printf "adding %s to notify list\n" path;
+    let _ = Lwt_log_core.info_f "adding %s to notify list" path;
     notify_list := List.cons path !notify_list;
   };
 };
@@ -227,7 +239,7 @@ let handle_get options => {
 
 let assert_content_format options => {
   let content_format = get_content_format options;
-  let _ = Lwt_io.printf "content_format => %d\n" content_format;
+  let _ = Lwt_log_core.debug_f "content_format => %d" content_format;
   assert (content_format == 50);
 };
 
@@ -245,7 +257,7 @@ let handle_post options payload with::pub_soc => {
 };
 
 let handle_msg msg with::pub_soc => {
-  Lwt_io.printlf "Received: %s" msg >>=
+  Lwt_log_core.debug ("Received:" ^ msg) >>=
     fun () => {
       let r0 = Bitstring.bitstring_of_string msg;
       let (tkl, oc, code, r1) = handle_header r0;
@@ -267,8 +279,8 @@ let server with::rep_soc and::pub_soc => {
         handle_msg msg with::pub_soc >>=
           fun resp =>
             Lwt_zmq.Socket.send rep_soc resp >>=
-              fun () => 
-                Lwt_io.printf "Sending: %s\n" resp >>=
+              fun () =>
+                Lwt_log_core.debug ("Sending:" ^ resp) >>=
                   fun () => loop ();
   };
   loop ();
@@ -287,7 +299,7 @@ let close_socket lwt_soc => {
   ZMQ.Socket.close soc;
 };
 
-let debug_mode = ref false;
+let log_mode = ref false;
 let curve_secret_key = ref "";
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
@@ -295,7 +307,7 @@ let curve_secret_key = ref "";
 let report_error e => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
-  Lwt_io.eprintf "Opps: %s%s\n" msg stack;
+  let _ = Lwt_log_core.error_f "Opps: %s%s" msg stack;
 };
 
 let parse_cmdline () => {
@@ -303,7 +315,7 @@ let parse_cmdline () => {
   let speclist = [
     ("--request-endpoint", Arg.Set_string req_endpoint, ": to set the request/reply endpoint"),
     ("--subscribe-endpoint", Arg.Set_string sub_endpoint, ": to set the subscribe endpoint"),
-    ("--debug", Arg.Set debug_mode, ": turn debug mode on"),
+    ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
@@ -311,10 +323,11 @@ let parse_cmdline () => {
 
 let rec run_server () => {
   parse_cmdline ();
+  !log_mode ? setup_logger () : ();
   let ctx = ZMQ.Context.create ();
   let rep_soc = connect_socket !req_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
   let pub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.publ !curve_secret_key;
-  let _ = Lwt_io.printf "Ready...\n";
+  let _ = Lwt_log_core.info "Ready";
   let _ = try (Lwt_main.run { server with::rep_soc and::pub_soc}) {
     | e => report_error e;
   };
