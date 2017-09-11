@@ -228,13 +228,25 @@ let handle_get_read uri_path => {
   };
 };
 
-let handle_post_write uri_path payload => {
+let handle_write_database uri_path payload => {
   let (key,mode) = get_key_mode uri_path;
   switch mode {
   | "/kv/" => Database.Json.Kv.write !kv_json_store key (Ezjsonm.from_string payload);
   | "/ts/" => Database.Json.Ts.write !ts_json_store key (Ezjsonm.from_string payload);
   | _ => failwith "unsupported post mode";
-  }
+  };
+};
+
+let handle_write_hypercat payload => {
+  let result = Hypercat.update_cat payload;
+  Lwt.return_unit;
+};
+
+let handle_post_write uri_path payload => {
+  switch uri_path {
+  | "/cat" => handle_write_hypercat (Ezjsonm.from_string payload);
+  | _ => handle_write_database uri_path payload; 
+  };
 };
 
 let handle_get options => {

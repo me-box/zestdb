@@ -1,0 +1,29 @@
+{
+   "href":"http://hub.com/resource1",
+   "item-metadata":[
+      {
+         "rel":"urn:X-hypercat:rels:hasDescription:en",
+         "val":"Test item"
+      },
+      {
+         "rel":"urn:X-hypercat:rels:isContentType",
+         "val":"text/plain"
+      },
+      {
+         "rel":"urn:X-databox:rels:hasVendor",
+         "val":"Databox Inc."
+      },
+      {
+         "rel":"urn:X-databox:rels:hasType",
+         "val":"Test"
+      },
+      {
+         "rel":"urn:X-databox:rels:hasDatasourceid",
+         "val":"someRandomString"
+      },
+      {
+         "rel":"urn:X-databox:rels:hasStoreType",
+         "val":"databox-store-blob"
+      }
+   ]
+}

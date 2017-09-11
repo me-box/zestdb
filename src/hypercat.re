@@ -38,9 +38,9 @@ let update_cat item =>
     let new_list = List.cons item current_list;
     let new_items = list (fun x => x) new_list;
     cat := update !cat ["items"] (Some new_items);
-    Ezjsonm.dict [("status", `Bool true)]
+    true;
   } else {
-    Ezjsonm.dict [("status", `Bool false)]
+    false;
   };
 
 let get_cat () => `O (Ezjsonm.get_dict !cat);
