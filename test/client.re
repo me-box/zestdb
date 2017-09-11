@@ -72,7 +72,7 @@ let handle_response msg => {
       let resp = {
         switch code {
         | 69 => handle_ack_content options payload;
-        | 64 => handle_ack_created options;
+        | 65 => handle_ack_created options;
         | _ => failwith "invalid code";
         };
       };

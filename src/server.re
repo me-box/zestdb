@@ -103,10 +103,14 @@ let create_option number::number value::value => {
 };
 
 let ack_created () => {
-  let (header_value, header_length) = create_header tkl::0 oc::0 code::64;
-  let bits = [%bitstring 
-    {|header_value : header_length : bitstring|}
-  ];
+  let (header_value, header_length) = create_header tkl::0 oc::0 code::65;
+  let bits = [%bitstring {|header_value : header_length : bitstring|}];
+  Bitstring.string_of_bitstring bits;
+};
+
+let ack_bad_request () => {
+  let (header_value, header_length) = create_header tkl::0 oc::0 code::128;
+  let bits = [%bitstring {|header_value : header_length : bitstring|}];
   Bitstring.string_of_bitstring bits;
 };
 
@@ -238,7 +242,7 @@ let handle_write_database uri_path payload => {
 };
 
 let handle_write_hypercat payload => {
-  let result = Hypercat.update_cat payload;
+  let _ = Hypercat.update_cat payload;
   Lwt.return_unit;
 };
 
