@@ -1,0 +1,26 @@
+{
+    "catalogue-metadata": [
+	{
+	    "rel": "urn:X-hypercat:rels:isContentType",
+	    "val": "application/vnd.hypercat.catalogue+json"
+	},
+	{
+	    "rel": "urn:X-hypercat:rels:hasDescription:en",
+	    "val": "Databox Datasource Catalogue"
+	},
+	{
+	    "rel": "urn:X-hypercat:rels:hasHomepage",
+	    "val": "http://www.databoxproject.uk/"
+	},
+	{
+	    "rel": "urn:X-hypercat:rels:containsContentType",
+	    "val": "application/vnd.hypercat.catalogue+json"
+	},
+	{
+	    "rel": "urn:Xhypercat:rels:supportsSearch",
+	    "val":"urn:X-hypercat:search:simple"
+	}
+    ],
+    "items": [
+    ]
+}

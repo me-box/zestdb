@@ -208,13 +208,24 @@ let handle_get_read_ts uri_path => {
   };
 };
 
-let handle_get_read uri_path => {
+let handle_read_database uri_path => {
   let (key,mode) = get_key_mode uri_path;
-  switch mode {
-  | "/kv/" => Database.Json.Kv.read !kv_json_store key;
-  | "/ts/" => handle_get_read_ts uri_path;
-  | _ => failwith "unsupported get mode";
-  }
+    switch mode {
+    | "/kv/" => Database.Json.Kv.read !kv_json_store key;
+    | "/ts/" => handle_get_read_ts uri_path;
+    | _ => failwith "unsupported get mode";
+  };
+};
+
+let handle_read_hypercat () => {
+  Lwt.return (Hypercat.get_cat ());
+};
+
+let handle_get_read uri_path => {
+  switch uri_path {
+  | "/cat" => handle_read_hypercat ();
+  | _ => handle_read_database uri_path; 
+  };
 };
 
 let handle_post_write uri_path payload => {
