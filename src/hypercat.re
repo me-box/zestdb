@@ -1,3 +1,4 @@
+open Common;
 
 let cat = ref (Ezjsonm.from_channel (open_in "base-cat.json"));
 
@@ -38,9 +39,9 @@ let update_cat item =>
     let new_list = List.cons item current_list;
     let new_items = list (fun x => x) new_list;
     cat := update !cat ["items"] (Some new_items);
-    true;
+    Result.Ok;
   } else {
-    false;
+    Result.Error "failed to update cat";
   };
 
 let get_cat () => `O (Ezjsonm.get_dict !cat);

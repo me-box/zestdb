@@ -102,17 +102,15 @@ let create_option number::number value::value => {
   (bits ,(bit_length+24));
 };
 
-let ack_created () => {
-  let (header_value, header_length) = create_header tkl::0 oc::0 code::65;
+let ack code => {
+  let (header_value, header_length) = create_header tkl::0 oc::0 code::code;
   let bits = [%bitstring {|header_value : header_length : bitstring|}];
   Bitstring.string_of_bitstring bits;
 };
 
-let ack_bad_request () => {
-  let (header_value, header_length) = create_header tkl::0 oc::0 code::128;
-  let bits = [%bitstring {|header_value : header_length : bitstring|}];
-  Bitstring.string_of_bitstring bits;
-};
+let ack_created () => ack 65;
+
+let ack_bad_request () => ack 128;
 
 let ack_content payload => {
   let (header_value, header_length) = create_header tkl::0 oc::1 code::69;
