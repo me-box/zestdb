@@ -102,17 +102,13 @@ let create_option number::number value::value => {
   (bits ,(bit_length+24));
 };
 
-let ack code => {
+let create_ack code => {
   let (header_value, header_length) = create_header tkl::0 oc::0 code::code;
   let bits = [%bitstring {|header_value : header_length : bitstring|}];
   Bitstring.string_of_bitstring bits;
 };
 
-let ack_created () => ack 65;
-
-let ack_bad_request () => ack 128;
-
-let ack_content payload => {
+let create_ack_payload payload => {
   let (header_value, header_length) = create_header tkl::0 oc::1 code::69;
   let (format_value, format_length) = create_option number::12 value::"application/json";
   let payload_bytes = String.length payload * 8;
@@ -231,17 +227,23 @@ let handle_get_read uri_path => {
 };
 
 let handle_write_database uri_path payload => {
+  open Common.Ack;
   let (key,mode) = get_key_mode uri_path;
-  switch mode {
+  let resp = switch mode {
   | "/kv/" => Database.Json.Kv.write !kv_json_store key (Ezjsonm.from_string payload);
   | "/ts/" => Database.Json.Ts.write !ts_json_store key (Ezjsonm.from_string payload);
   | _ => failwith "unsupported post mode";
   };
+  resp >>= fun () => Lwt.return (Code 65);
 };
 
 let handle_write_hypercat payload => {
-  let _ = Hypercat.update_cat payload;
-  Lwt.return_unit;
+  open Common.Ack;
+  let resp = switch (Hypercat.update_cat payload) {
+  | Ok => (Code 65)
+  | Error n => (Code n)
+  };
+  Lwt.return resp;
 };
 
 let handle_post_write uri_path payload => {
@@ -251,14 +253,25 @@ let handle_post_write uri_path payload => {
   };
 };
 
+let ack kind => {
+  open Common.Ack;
+  let resp = switch kind {
+  | Code n => create_ack n;
+  | Payload s => create_ack_payload s;
+  };
+  Lwt.return resp;
+};
+
+
 let handle_get options => {
+  open Common.Ack;
   let uri_path = get_option_value options 11;
   if (has_observed options) {
     add_to_observe uri_path;
-    ack_created () |> Lwt.return;
+    ack (Code 65);
   } else {
     handle_get_read uri_path >>=
-      fun resp => ack_content (Ezjsonm.to_string resp) |> Lwt.return;
+      fun json => ack (Payload (Ezjsonm.to_string json));
   };
 };
 
@@ -269,15 +282,15 @@ let assert_content_format options => {
 };
 
 let handle_post options payload with::pub_soc => {
+  open Common.Ack;
   /* we are just accepting json for now */
   assert_content_format options;
   let uri_path = get_option_value options 11;
   if (is_observed uri_path) {
     publish uri_path payload pub_soc >>=
-      fun () => ack_created () |> Lwt.return;
+      fun () => handle_post_write uri_path payload >>= ack;
   } else {
-    handle_post_write uri_path payload >>=
-      fun () => ack_created () |> Lwt.return;
+    handle_post_write uri_path payload >>= ack;
   };
 };
 

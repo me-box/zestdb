@@ -73,7 +73,7 @@ let handle_response msg => {
         switch code {
         | 69 => handle_ack_content options payload;
         | 65 => handle_ack_created options;
-        | _ => failwith "invalid code";
+        | _ => failwith "invalid code:" ^ string_of_int code;
         };
       };
       resp |> Lwt.return;

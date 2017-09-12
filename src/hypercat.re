@@ -41,7 +41,7 @@ let update_cat item =>
     cat := update !cat ["items"] (Some new_items);
     Result.Ok;
   } else {
-    Result.Error "failed to update cat";
+    Result.Error 128;
   };
 
 let get_cat () => `O (Ezjsonm.get_dict !cat);
