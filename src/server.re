@@ -229,21 +229,19 @@ let handle_get_read uri_path => {
 let handle_write_database uri_path payload => {
   open Common.Ack;
   let (key,mode) = get_key_mode uri_path;
-  let resp = switch mode {
+  switch mode {
   | "/kv/" => Database.Json.Kv.write !kv_json_store key (Ezjsonm.from_string payload);
   | "/ts/" => Database.Json.Ts.write !ts_json_store key (Ezjsonm.from_string payload);
   | _ => failwith "unsupported post mode";
-  };
-  resp >>= fun () => Lwt.return (Code 65);
+  } >>= fun () => Lwt.return (Code 65);
 };
 
 let handle_write_hypercat payload => {
   open Common.Ack;
-  let resp = switch (Hypercat.update_cat payload) {
+  switch (Hypercat.update_cat payload) {
   | Ok => (Code 65)
   | Error n => (Code n)
-  };
-  Lwt.return resp;
+  } |> Lwt.return;
 };
 
 let handle_post_write uri_path payload => {
