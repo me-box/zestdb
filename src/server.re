@@ -207,16 +207,19 @@ let handle_get_read_ts uri_path => {
 };
 
 let handle_read_database uri_path => {
+  open Common.Ack;
   let (key,mode) = get_key_mode uri_path;
-    switch mode {
-    | "/kv/" => Database.Json.Kv.read !kv_json_store key;
-    | "/ts/" => handle_get_read_ts uri_path;
-    | _ => failwith "unsupported get mode";
-  };
+  switch mode {
+  | "/kv/" => Database.Json.Kv.read !kv_json_store key;
+  | "/ts/" => handle_get_read_ts uri_path;
+  | _ => failwith "unsupported get mode";
+  } >>= fun json => Lwt.return (Payload (Ezjsonm.to_string json));
 };
 
 let handle_read_hypercat () => {
-  Lwt.return (Hypercat.get_cat ());
+  open Common.Ack;
+  Hypercat.get_cat () |> Ezjsonm.to_string |>
+    fun s => (Payload s) |> Lwt.return;
 };
 
 let handle_get_read uri_path => {
@@ -253,11 +256,10 @@ let handle_post_write uri_path payload => {
 
 let ack kind => {
   open Common.Ack;
-  let resp = switch kind {
+  switch kind {
   | Code n => create_ack n;
   | Payload s => create_ack_payload s;
-  };
-  Lwt.return resp;
+  } |> Lwt.return;
 };
 
 
@@ -268,8 +270,7 @@ let handle_get options => {
     add_to_observe uri_path;
     ack (Code 65);
   } else {
-    handle_get_read uri_path >>=
-      fun json => ack (Payload (Ezjsonm.to_string json));
+    handle_get_read uri_path >>= ack;
   };
 };
 
