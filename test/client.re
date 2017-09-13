@@ -13,6 +13,9 @@ let call_freq = ref 1.0;
 let command = ref (fun _ => Lwt.return_unit);
 let log_mode = ref false;
 
+module Response = {
+    type t = OK |  Payload string | Error string;
+};
 
 let setup_logger () => {
   Lwt_log_core.default :=
@@ -68,15 +71,16 @@ let handle_options oc bits => {
 };
 
 let handle_ack_content options payload => {
-  Bitstring.string_of_bitstring payload |> Lwt.return;
+  let resp = Bitstring.string_of_bitstring payload;
+  Response.Payload resp |> Lwt.return;
 };
 
 let handle_ack_created options => {
-  "=> ok" |> Lwt.return;
+  Response.OK |> Lwt.return;
 };
 
 let handle_ack_bad_request options => {
-  "Error: bad request" |> Lwt.return;
+  Response.Error "bad request" |> Lwt.return;
 };
 
 let handle_response msg => {
@@ -219,13 +223,19 @@ let post_loop socket count => {
   let rec loop n => {
     send_request msg::(post uri::!uri_path payload::!payload ()) to::socket >>=
       fun resp =>
-        Lwt_io.printf "%s\n" resp >>=
-          fun () =>
-            if (n > 1) {
-              Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
-            } else { 
-              Lwt.return_unit; 
-            };
+        switch resp {
+        | Response.OK => {
+            Lwt_io.printf "=> ok\n" >>=
+              fun () =>
+                if (n > 1) {
+                  Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
+                } else { 
+                  Lwt.return_unit; 
+                };
+              };
+        | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
+        | _ => failwith "unhandled response";
+        };
   };
   loop count;
 };
@@ -241,13 +251,20 @@ let get_loop socket count => {
   let rec loop n => {
     send_request msg::(get uri::!uri_path ()) to::socket >>=
       fun resp =>
-        Lwt_io.printf "%s\n" resp >>=
-          fun () =>
-            if (n > 1) {
-              Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
-            } else { 
-              Lwt.return_unit; 
-            };
+        switch resp {
+        | Response.Payload msg => {
+            Lwt_io.printf "%s\n" msg >>=
+              fun () =>
+                if (n > 1) {
+                  Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
+                } else { 
+                  Lwt.return_unit; 
+                };
+              };
+        | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
+        | _ => failwith "unhandled response";
+        };
+
   };
   loop count;
 };
@@ -285,18 +302,25 @@ let set_socket_subscription socket path => {
 
 let observe_test ctx => {
   let req_soc = connect_socket !req_endpoint ctx ZMQ.Socket.req;
-  Lwt_log_core.debug_f "Subscribing to %s" !uri_path >>=
+  Lwt_log_core.debug_f "Subscribing:%s" !uri_path >>=
     fun () => 
       send_request msg::(observe uri::!uri_path ()) to::req_soc >>=
         fun resp =>
-          Lwt_io.printf "%s\n" resp >>=
-            fun () => { 
-              close_socket req_soc;
-              let sub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.sub;
-              set_socket_subscription sub_soc !uri_path;
-              observe_loop sub_soc !loop_count >>=
-                fun () => close_socket sub_soc |> Lwt.return;
+          switch resp {
+          | Response.OK => {
+              Lwt_log_core.debug_f "Observing:%s" !uri_path >>=
+                fun () => { 
+                  close_socket req_soc;
+                  let sub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.sub;
+                  set_socket_subscription sub_soc !uri_path;
+                  observe_loop sub_soc !loop_count >>=
+                    fun () => close_socket sub_soc |> Lwt.return;
+                };
             };
+          | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
+          | _ => failwith "unhandled response";
+          };
+
 };
 
 let handle_mode mode => {
