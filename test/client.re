@@ -11,6 +11,18 @@ let payload = ref "";
 let loop_count = ref 0;
 let call_freq = ref 1.0;
 let command = ref (fun _ => Lwt.return_unit);
+let log_mode = ref false;
+
+
+let setup_logger () => {
+  Lwt_log_core.default :=
+    Lwt_log.channel
+      template::"$(date).$(milliseconds) [$(level)] $(message)"
+      close_mode::`Keep
+      channel::Lwt_io.stdout
+      ();
+  Lwt_log_core.add_rule "*" Lwt_log_core.Debug;
+};
 
 let handle_header bits => {
   let tuple = [%bitstring
@@ -49,7 +61,7 @@ let handle_options oc bits => {
     } else {
       let (number, value, r) = handle_option bits;
       Array.set options (oc - 1) (number,value);
-      let _ = Lwt_io.printf "option => %d:%s\n" number value;
+      let _ = Lwt_log_core.debug_f "option => %d:%s\n" number value;
       handle (oc - 1) r
   };
   (options, handle oc bits);
@@ -60,11 +72,15 @@ let handle_ack_content options payload => {
 };
 
 let handle_ack_created options => {
-  "ok";
+  "";
+};
+
+let handle_ack_bad_request () => {
+  "Error: bad request\n";
 };
 
 let handle_response msg => {
-  Lwt_io.printlf "Received: %s" msg >>=
+  Lwt_log_core.debug ("Received:" ^ msg) >>=
     fun () => {
       let r0 = Bitstring.bitstring_of_string msg;
       let (tkl, oc, code, r1) = handle_header r0;
@@ -73,6 +89,7 @@ let handle_response msg => {
         switch code {
         | 69 => handle_ack_content options payload;
         | 65 => handle_ack_created options;
+        | 128 => handle_ack_bad_request ();
         | _ => failwith "invalid code:" ^ string_of_int code;
         };
       };
@@ -81,7 +98,7 @@ let handle_response msg => {
 };
 
 let send_request msg::msg to::socket => {
-  Lwt_io.printf "Sending: %s\n" msg >>=
+  Lwt_log_core.debug ("Sending:" ^ msg) >>=
     fun () =>
       Lwt_zmq.Socket.send socket msg >>=
         fun () =>
@@ -205,7 +222,7 @@ let post_loop socket count => {
   let rec loop n => {
     send_request msg::(post uri::!uri_path payload::!payload ()) to::socket >>=
       fun resp =>
-        Lwt_io.printf "response:%s\n" resp >>=
+        Lwt_io.printf "%s\n" resp >>=
           fun () =>
             if (n > 1) {
               Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
@@ -227,7 +244,7 @@ let get_loop socket count => {
   let rec loop n => {
     send_request msg::(get uri::!uri_path ()) to::socket >>=
       fun resp =>
-        Lwt_io.printf "response:%s\n" resp >>=
+        Lwt_io.printf "%s\n" resp >>=
           fun () =>
             if (n > 1) {
               Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
@@ -256,7 +273,7 @@ let observe_loop socket count => {
       fun resp =>
         /* remove subscription path prefix */
         string_drop_prefix ((String.length !uri_path)+1) resp |>
-          Lwt_io.printf "response:%s\n" >>=
+          Lwt_io.printf "%s\n" >>=
             fun () => 
               (n > 1) ? loop (n-1) : Lwt.return_unit;
   };
@@ -271,7 +288,7 @@ let set_socket_subscription socket path => {
 
 let observe_test ctx => {
   let req_soc = connect_socket !req_endpoint ctx ZMQ.Socket.req;
-  Lwt_io.printf "Subscribing to %s\n" !uri_path >>=
+  Lwt_log_core.debug_f "Subscribing to %s" !uri_path >>=
     fun () => 
       send_request msg::(observe uri::!uri_path ()) to::req_soc >>=
         fun resp =>
@@ -327,7 +344,7 @@ let parse_cmdline () => {
     ("--loop", Arg.Set_int loop_count, ": to set the number of times to run post/get/observe test"),
     ("--freq", Arg.Set_float call_freq, ": to set the number of seconds to wait between each get/post operation"),
     ("--mode", Arg.Symbol ["post", "get", "observe"] handle_mode, " : to set the mode of operation"),
-
+    ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
   ];
   Arg.parse speclist (fun err => raise (Arg.Bad ("Bad argument : " ^ err))) usage;
 };
@@ -338,5 +355,6 @@ let parse_cmdline () => {
 
 let ctx = ZMQ.Context.create ();
 parse_cmdline ();
+!log_mode ? setup_logger () : ();
 Lwt_main.run {ctx |> !command};
 ZMQ.Context.terminate ctx;
