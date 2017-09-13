@@ -232,7 +232,7 @@ let post_loop socket count => {
                 } else { 
                   Lwt.return_unit; 
                 };
-              };
+          };
         | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
         | _ => failwith "unhandled response";
         };
@@ -260,7 +260,7 @@ let get_loop socket count => {
                 } else { 
                   Lwt.return_unit; 
                 };
-              };
+          };
         | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
         | _ => failwith "unhandled response";
         };
