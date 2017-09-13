@@ -80,7 +80,11 @@ let handle_ack_created options => {
 };
 
 let handle_ack_bad_request options => {
-  Response.Error "bad request" |> Lwt.return;
+  Response.Error "Bad Request" |> Lwt.return;
+};
+
+let handle_unsupported_content_format options => {
+  Response.Error "Unsupported Content-Format" |> Lwt.return;
 };
 
 let handle_response msg => {
@@ -93,6 +97,7 @@ let handle_response msg => {
       | 69 => handle_ack_content options payload;
       | 65 => handle_ack_created options;
       | 128 => handle_ack_bad_request options;
+      | 143 => handle_unsupported_content_format options;
       | _ => failwith ("invalid code:" ^ string_of_int code);
       };
     };  
@@ -225,7 +230,7 @@ let post_loop socket count => {
       fun resp =>
         switch resp {
         | Response.OK => {
-            Lwt_io.printf "=> ok\n" >>=
+            Lwt_io.printf "=> Created\n" >>=
               fun () =>
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
@@ -233,7 +238,7 @@ let post_loop socket count => {
                   Lwt.return_unit; 
                 };
           };
-        | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
+        | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
         | _ => failwith "unhandled response";
         };
   };
@@ -261,7 +266,7 @@ let get_loop socket count => {
                   Lwt.return_unit; 
                 };
           };
-        | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
+        | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
         | _ => failwith "unhandled response";
         };
 
@@ -317,7 +322,7 @@ let observe_test ctx => {
                     fun () => close_socket sub_soc |> Lwt.return;
                 };
             };
-          | Response.Error msg => Lwt_io.printf "Error:%s\n" msg;
+          | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
           | _ => failwith "unhandled response";
           };
 

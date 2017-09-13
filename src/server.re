@@ -249,10 +249,17 @@ let handle_write_hypercat json => {
 
 let handle_post_write uri_path payload => {
   open Common.Ack;
-  let json = Ezjsonm.from_string payload;
-  switch uri_path {
-  | "/cat" => handle_write_hypercat json;
-  | _ => handle_write_database uri_path json; 
+  open Ezjsonm;
+  let parsed = try (Some (from_string payload)) {
+  | Parse_error _ => None;
+  };
+  switch parsed {
+  | None => Lwt.return (Code 143);
+  | Some json => 
+      switch uri_path {
+      | "/cat" => handle_write_hypercat json;
+      | _ => handle_write_database uri_path json; 
+      };
   };
 };
 
