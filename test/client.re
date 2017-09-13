@@ -68,15 +68,15 @@ let handle_options oc bits => {
 };
 
 let handle_ack_content options payload => {
-  Bitstring.string_of_bitstring payload;
+  Bitstring.string_of_bitstring payload |> Lwt.return;
 };
 
 let handle_ack_created options => {
-  "";
+  "" |> Lwt.return;
 };
 
-let handle_ack_bad_request () => {
-  "Error: bad request\n";
+let handle_ack_bad_request options => {
+  "Error: bad request" |> Lwt.return;
 };
 
 let handle_response msg => {
@@ -85,15 +85,12 @@ let handle_response msg => {
       let r0 = Bitstring.bitstring_of_string msg;
       let (tkl, oc, code, r1) = handle_header r0;
       let (options,payload) = handle_options oc r1;
-      let resp = {
-        switch code {
-        | 69 => handle_ack_content options payload;
-        | 65 => handle_ack_created options;
-        | 128 => handle_ack_bad_request ();
-        | _ => failwith "invalid code:" ^ string_of_int code;
-        };
+      switch code {
+      | 69 => handle_ack_content options payload;
+      | 65 => handle_ack_created options;
+      | 128 => handle_ack_bad_request options;
+      | _ => failwith ("invalid code:" ^ string_of_int code);
       };
-      resp |> Lwt.return;
     };  
 };
 
