@@ -72,7 +72,7 @@ let handle_ack_content options payload => {
 };
 
 let handle_ack_created options => {
-  "" |> Lwt.return;
+  "=> ok" |> Lwt.return;
 };
 
 let handle_ack_bad_request options => {
@@ -289,7 +289,7 @@ let observe_test ctx => {
     fun () => 
       send_request msg::(observe uri::!uri_path ()) to::req_soc >>=
         fun resp =>
-          Lwt_io.printf "got:%s\n" resp >>=
+          Lwt_io.printf "%s\n" resp >>=
             fun () => { 
               close_socket req_soc;
               let sub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.sub;
