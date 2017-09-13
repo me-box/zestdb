@@ -229,28 +229,30 @@ let handle_get_read uri_path => {
   };
 };
 
-let handle_write_database uri_path payload => {
+let handle_write_database uri_path json => {
   open Common.Ack;
   let (key,mode) = get_key_mode uri_path;
   switch mode {
-  | "/kv/" => Database.Json.Kv.write !kv_json_store key (Ezjsonm.from_string payload);
-  | "/ts/" => Database.Json.Ts.write !ts_json_store key (Ezjsonm.from_string payload);
+  | "/kv/" => Database.Json.Kv.write !kv_json_store key json;
+  | "/ts/" => Database.Json.Ts.write !ts_json_store key json;
   | _ => failwith "unsupported post mode";
   } >>= fun () => Lwt.return (Code 65);
 };
 
-let handle_write_hypercat payload => {
+let handle_write_hypercat json => {
   open Common.Ack;
-  switch (Hypercat.update_cat payload) {
+  switch (Hypercat.update_cat json) {
   | Ok => (Code 65)
   | Error n => (Code n)
   } |> Lwt.return;
 };
 
 let handle_post_write uri_path payload => {
+  open Common.Ack;
+  let json = Ezjsonm.from_string payload;
   switch uri_path {
-  | "/cat" => handle_write_hypercat (Ezjsonm.from_string payload);
-  | _ => handle_write_database uri_path payload; 
+  | "/cat" => handle_write_hypercat json;
+  | _ => handle_write_database uri_path json; 
   };
 };
 
