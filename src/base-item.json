@@ -1,0 +1,13 @@
+{
+   "href":"http://public.key",
+   "item-metadata":[
+      {
+         "rel":"urn:X-hypercat:rels:hasDescription:en",
+         "val":"Server public key"
+      },
+      {
+         "rel":"urn:X-hypercat:rels:isContentType",
+         "val":"text/plain"
+      }
+   ]
+}

@@ -44,4 +44,22 @@ let update_cat item =>
     Result.Error 128;
   };
 
+let create_rel_val rel_string val_string => {
+    open Ezjsonm;
+    let rel_json = ("rel", `String rel_string);
+    let val_json = ("val", `String val_string);
+    dict [rel_json, val_json];
+};
+
+  let update_item item rel_string val_string => {
+    open Ezjsonm;
+    let item_metadata = find item ["item-metadata"];
+    let metadata_list = get_list (fun x => x) item_metadata;
+    let rel_val = create_rel_val rel_string val_string;
+    let new_metadata_list = List.append metadata_list [rel_val];
+    let new_item_metadata = list (fun x => x) new_metadata_list;
+    let new_item = update item ["item-metadata"] (Some new_item_metadata);
+    update_cat new_item;
+  };
+
 let get_cat () => `O (Ezjsonm.get_dict !cat);
