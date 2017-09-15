@@ -379,7 +379,14 @@ let parse_cmdline () => {
 /* public_key: MP9pZzG25M2$.a%[DwU$OQ#-:C}Aq)3w*<AY^%V{ */
 /* secret_key: j#3yqGG17QNTe(g@jJt6[LOg%ivqr<:}L%&NAUPt */  
 
+let setup_keys () => {
+  let (public_key,private_key) = ZMQ.Curve.keypair ();
+  curve_public_key := public_key;
+  curve_secret_key := private_key;
+};
+
 let ctx = ZMQ.Context.create ();
+setup_keys ();
 parse_cmdline ();
 !log_mode ? setup_logger () : ();
 Lwt_main.run {ctx |> !command};
