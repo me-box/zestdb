@@ -367,6 +367,7 @@ let parse_cmdline () => {
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
 
+/* experimental idea to add key to hypercat and have unencrypted read access */
 let setup_keys () => {
   let (public_key,private_key) = ZMQ.Curve.keypair ();
   curve_secret_key := private_key;
@@ -390,6 +391,6 @@ let rec run_server () => {
   run_server ();
 };
 
-setup_keys ();
+/* setup_keys (); */
 run_server ();
 
