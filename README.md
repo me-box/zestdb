@@ -6,6 +6,12 @@ The current implementation supports POST/GET of JSON data with backend storage i
 
 An API exists to support key/value storage and retrieval as well as times series storage and retrieval.
 
+**Todo:** 
+
+* Token-based control of actions such as being able to observe a resource for fixed time periods or a number of times of usage etc. This will utilise the in-built HyperCat to describe and control what is in the backend storage and what can be accessed.
+
+* Factor out functionality into a stand-alone library and support other languages.
+
 ### Building
 
 #### to fix an issue with .pub being a reserved word in ReasonML
