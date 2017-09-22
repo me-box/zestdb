@@ -1,8 +1,8 @@
 open Lwt.Infix;
 
-let req_endpoint = ref "tcp://127.0.0.1:5555";
-let sub_endpoint = ref "tcp://127.0.0.1:5556";
-let notify_list  = ref [];
+let rep_endpoint = ref "tcp://127.0.0.1:5555";
+let rout_endpoint = ref "tcp://127.0.0.1:5556";
+let notify_list  = ref [("",[""])];
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
@@ -19,9 +19,54 @@ let setup_logger () => {
   Lwt_log_core.add_rule "*" Lwt_log_core.Debug;
 };
 
+let has_observed options => {
+  if (Array.exists (fun (number,_) => number == 6) options) {
+    true;
+  } else {
+    false;
+  }
+};
+
+let is_observed path => {
+  List.mem_assoc path !notify_list;
+};
+
+let get_ident path => {
+  List.assoc path !notify_list;
+};
+
+let add_to_observe path ident => {
+  if (is_observed path) {
+    let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s" ident path;
+    let items = get_ident path;
+    let new_items = List.cons ident items;
+    let filtered = List.filter (fun (path',_) => (path' != path)) !notify_list;
+    notify_list := List.cons (path, new_items) filtered;
+  } else {
+    let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s" ident path;
+    notify_list := List.cons (path, [ident]) !notify_list;
+  };
+};
+
+
 let publish path payload socket => {
   let msg = Printf.sprintf "%s %s" path payload;
   Lwt_zmq.Socket.send socket msg;
+};
+
+
+let route path payload socket => {
+  let rec loop l => {
+    switch l {
+    | [] => Lwt.return_unit;
+    | [ident, ...rest] => {
+        Lwt_zmq.Socket.send_all socket [ident, payload] >>=
+          fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s ident" payload ident >>=
+            fun _ => loop rest;
+      };
+    };
+  };
+  loop (get_ident path);
 };
 
 let handle_header bits => {
@@ -145,24 +190,6 @@ let get_content_format options => {
   id;
 };
 
-let has_observed options => {
-  if (Array.exists (fun (number,_) => number == 6) options) {
-    true;
-  } else {
-    false;
-  }
-};
-
-let is_observed path => {
-  List.mem path !notify_list;
-};
-
-let add_to_observe path => {
-  if (is_observed path == false) {
-    let _ = Lwt_log_core.info_f "adding %s to notify list" path;
-    notify_list := List.cons path !notify_list;
-  };
-};
 
 let get_key_mode uri_path => {
   let key = Str.string_after uri_path 4;
@@ -271,13 +298,17 @@ let ack kind => {
   } |> Lwt.return;
 };
 
+let create_uuid () => {
+  Uuidm.v4_gen (Random.State.make_self_init ()) () |> Uuidm.to_string;
+};
 
 let handle_get options => {
   open Common.Ack;
   let uri_path = get_option_value options 11;
   if (has_observed options) {
-    add_to_observe uri_path;
-    ack (Code 65);
+    let uuid = create_uuid ();
+    add_to_observe uri_path uuid;
+    ack (Payload uuid);
   } else {
     handle_get_read uri_path >>= ack;
   };
@@ -289,20 +320,20 @@ let assert_content_format options => {
   assert (content_format == 50);
 };
 
-let handle_post options payload with::pub_soc => {
+let handle_post options payload with::rout_soc => {
   open Common.Ack;
   /* we are just accepting json for now */
   assert_content_format options;
   let uri_path = get_option_value options 11;
   if (is_observed uri_path) {
-    publish uri_path payload pub_soc >>=
+    route uri_path payload rout_soc >>=
       fun () => handle_post_write uri_path payload >>= ack;
   } else {
     handle_post_write uri_path payload >>= ack;
   };
 };
 
-let handle_msg msg with::pub_soc => {
+let handle_msg msg with::rout_soc => {
   Lwt_log_core.debug ("Received:" ^ msg) >>=
     fun () => {
       let r0 = Bitstring.bitstring_of_string msg;
@@ -312,17 +343,17 @@ let handle_msg msg with::pub_soc => {
       let payload = Bitstring.string_of_bitstring r3;
       switch code {
       | 1 => handle_get options;
-      | 2 => handle_post options payload with::pub_soc;
+      | 2 => handle_post options payload with::rout_soc;
       | _ => failwith "invalid code";
       };
     };  
 };
 
-let server with::rep_soc and::pub_soc => {
+let server with::rep_soc and::rout_soc => {
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
       fun msg =>
-        handle_msg msg with::pub_soc >>=
+        handle_msg msg with::rout_soc >>=
           fun resp =>
             Lwt_zmq.Socket.send rep_soc resp >>=
               fun () =>
@@ -359,8 +390,8 @@ let report_error e => {
 let parse_cmdline () => {
   let usage = "usage: " ^ Sys.argv.(0) ^ " [--debug] [--secret-key string]";
   let speclist = [
-    ("--request-endpoint", Arg.Set_string req_endpoint, ": to set the request/reply endpoint"),
-    ("--subscribe-endpoint", Arg.Set_string sub_endpoint, ": to set the subscribe endpoint"),
+    ("--request-endpoint", Arg.Set_string rep_endpoint, ": to set the request/reply endpoint"),
+    ("--router-endpoint", Arg.Set_string rout_endpoint, ": to set the router/dealer endpoint"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
   ];
@@ -379,13 +410,13 @@ let rec run_server () => {
   parse_cmdline ();
   !log_mode ? setup_logger () : ();
   let ctx = ZMQ.Context.create ();
-  let rep_soc = connect_socket !req_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
-  let pub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.publ !curve_secret_key;
+  let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
+  let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !curve_secret_key;
   let _ = Lwt_log_core.info "Ready";
-  let _ = try (Lwt_main.run { server with::rep_soc and::pub_soc}) {
+  let _ = try (Lwt_main.run { server with::rep_soc and::rout_soc}) {
     | e => report_error e;
   };
-  close_socket pub_soc;
+  close_socket rout_soc;
   close_socket rep_soc;
   ZMQ.Context.terminate ctx;
   run_server ();

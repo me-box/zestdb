@@ -1,6 +1,6 @@
 (jbuild_version 1)
 
 (executables
- ((libraries (lwt-zmq bitstring ezirmin str))
+ ((libraries (lwt-zmq bitstring ezirmin str uuidm))
   (preprocess  (pps (ppx_bitstring)))
    (names (server))))

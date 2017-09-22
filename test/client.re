@@ -1,6 +1,6 @@
 open Lwt.Infix;
 let req_endpoint = ref "tcp://127.0.0.1:5555";
-let sub_endpoint = ref "tcp://127.0.0.1:5556";
+let deal_endpoint = ref "tcp://127.0.0.1:5556";
 let curve_server_key = ref "";
 let curve_public_key = ref "";
 let curve_secret_key = ref "";
@@ -64,7 +64,7 @@ let handle_options oc bits => {
     } else {
       let (number, value, r) = handle_option bits;
       Array.set options (oc - 1) (number,value);
-      let _ = Lwt_log_core.debug_f "option => %d:%s\n" number value;
+      let _ = Lwt_log_core.debug_f "option => %d:%s" number value;
       handle (oc - 1) r
   };
   (options, handle oc bits);
@@ -210,11 +210,23 @@ let observe ::token=(!token) uri::uri () => {
   Bitstring.string_of_bitstring bits;
 };
 
-let connect_socket endpoint ctx kind => {
-  let soc = ZMQ.Socket.create ctx kind; 
+let set_socket_security soc => {
   ZMQ.Socket.set_curve_serverkey soc !curve_server_key;
   ZMQ.Socket.set_curve_publickey soc !curve_public_key;
   ZMQ.Socket.set_curve_secretkey soc !curve_secret_key;
+};
+
+let connect_request_socket endpoint ctx kind => {
+  let soc = ZMQ.Socket.create ctx kind;
+  set_socket_security soc;
+  ZMQ.Socket.connect soc endpoint;
+  Lwt_zmq.Socket.of_socket soc;
+};
+
+let connect_dealer_socket ident endpoint ctx kind => {
+  let soc = ZMQ.Socket.create ctx kind;
+  set_socket_security soc;
+  ZMQ.Socket.set_identity soc ident; 
   ZMQ.Socket.connect soc endpoint;
   Lwt_zmq.Socket.of_socket soc;
 };
@@ -247,7 +259,7 @@ let post_loop socket count => {
 
 
 let post_test ctx => {
-  let req_soc = connect_socket !req_endpoint ctx ZMQ.Socket.req;
+  let req_soc = connect_request_socket !req_endpoint ctx ZMQ.Socket.req;
   post_loop req_soc !loop_count >>=
     fun () => close_socket req_soc |> Lwt.return;
 };
@@ -275,7 +287,7 @@ let get_loop socket count => {
 };
 
 let get_test ctx => {
-  let req_soc = connect_socket !req_endpoint ctx ZMQ.Socket.req;
+  let req_soc = connect_request_socket !req_endpoint ctx ZMQ.Socket.req;
   get_loop req_soc !loop_count >>=
     fun () => close_socket req_soc |> Lwt.return;
 };
@@ -290,11 +302,9 @@ let observe_loop socket count => {
   let rec loop n => {
     Lwt_zmq.Socket.recv socket >>=
       fun resp =>
-        /* remove subscription path prefix */
-        string_drop_prefix ((String.length !uri_path)+1) resp |>
-          Lwt_io.printf "%s\n" >>=
-            fun () => 
-              (n > 1) ? loop (n-1) : Lwt.return_unit;
+        Lwt_io.printf "%s\n" resp >>=
+          fun () => 
+            (n > 1) ? loop (n-1) : Lwt.return_unit;
   };
   loop count;
 };
@@ -306,20 +316,19 @@ let set_socket_subscription socket path => {
 };
 
 let observe_test ctx => {
-  let req_soc = connect_socket !req_endpoint ctx ZMQ.Socket.req;
+  let req_soc = connect_request_socket !req_endpoint ctx ZMQ.Socket.req;
   Lwt_log_core.debug_f "Subscribing:%s" !uri_path >>=
     fun () => 
       send_request msg::(observe uri::!uri_path ()) to::req_soc >>=
         fun resp =>
           switch resp {
-          | Response.OK => {
-              Lwt_log_core.debug_f "Observing:%s" !uri_path >>=
+          | Response.Payload ident => {
+              Lwt_log_core.debug_f "Observing:%s with ident:%s" !uri_path ident >>=
                 fun () => { 
                   close_socket req_soc;
-                  let sub_soc = connect_socket !sub_endpoint ctx ZMQ.Socket.sub;
-                  set_socket_subscription sub_soc !uri_path;
-                  observe_loop sub_soc !loop_count >>=
-                    fun () => close_socket sub_soc |> Lwt.return;
+                  let deal_soc = connect_dealer_socket ident !deal_endpoint ctx ZMQ.Socket.dealer;
+                  observe_loop deal_soc !loop_count >>=
+                    fun () => close_socket deal_soc |> Lwt.return;
                 };
             };
           | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
@@ -359,7 +368,7 @@ let parse_cmdline () => {
   let usage = "usage: " ^ Sys.argv.(0);
   let speclist = [
     ("--request-endpoint", Arg.Set_string req_endpoint, ": to set the request/reply endpoint"),
-    ("--subscribe-endpoint", Arg.Set_string sub_endpoint, ": to set the subscribe endpoint"),
+    ("--router-endpoint", Arg.Set_string deal_endpoint, ": to set the router/dealer endpoint"),
     ("--server-key", Arg.Set_string curve_server_key, ": to set the curve server key"),
     ("--public-key", Arg.Set_string curve_public_key, ": to set the curve public key"),
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
