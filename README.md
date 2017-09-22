@@ -1,4 +1,4 @@
-# REST over ZeroMQ.
+# REST over ZeroMQ
 
 A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ in ReasonML.
 
@@ -13,15 +13,6 @@ An API exists to support key/value storage and retrieval as well as times series
 * Factor out functionality into a stand-alone library and support other languages.
 
 ### Building
-
-#### to fix an issue with .pub being a reserved word in ReasonML
-
-```bash
-git clone https://github.com/jptmoore/ocaml-zmq.git
-cd ocaml-zmq
-opam pin add -y zmq .
-opam install lwt-zmq
-```
 
 #### to build the server
 
