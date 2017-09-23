@@ -56,11 +56,13 @@ let publish path payload socket => {
 
 
 let route path payload socket => {
+  open Lwt_zmq.Socket.Router;
   let rec loop l => {
     switch l {
     | [] => Lwt.return_unit;
     | [ident, ...rest] => {
-        Lwt_zmq.Socket.send_all socket [ident, payload] >>=
+        send socket (id_of_string ident) [payload] >>=
+        /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
           fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s ident" payload ident >>=
             fun _ => loop rest;
       };
