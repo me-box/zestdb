@@ -366,7 +366,8 @@ let server with::rep_soc and::rout_soc => {
 };
 
 let connect_socket endpoint ctx kind secret => {
-  let soc = ZMQ.Socket.create ctx kind; 
+  let soc = ZMQ.Socket.create ctx kind;
+  ZMQ.Socket.set_linger_period soc 0;
   ZMQ.Socket.set_curve_server soc true;
   ZMQ.Socket.set_curve_secretkey soc secret; 
   ZMQ.Socket.bind soc endpoint;
