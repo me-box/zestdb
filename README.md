@@ -30,23 +30,11 @@ make
 make install
 ```
 
-#### to build the genkeys utility
-
-```bash
-cd utils/genkeys
-make
-make install
-```
-
 ### Usage example
 
-To get a complete list of options of the server or test client use the --help flag
+* To get a complete list of options of the server or test client use the --help flag
 
-#### to generate a new public and private key
-
-```bash
-/tmp/genkeys
-```
+* Keys can be generated using the ZeroMQ utility 'curve_keygen'
 
 #### starting server locally
 
