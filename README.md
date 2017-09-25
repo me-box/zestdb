@@ -9,7 +9,7 @@ An API exists to support key/value storage and retrieval as well as times series
 **Todo:** 
 
 * Token-based control of actions such as being able to observe a resource for fixed time periods or a number of times of access etc. This will utilise the in-built HyperCat to describe and control what is in the backend storage and what can be accessed.
-
+* Implement proper handling of valid observed paths.
 * Factor out functionality into a stand-alone library and support other languages.
 
 ### Building
