@@ -1,0 +1,35 @@
+_build
+tmp
+*~
+\.\#*
+\#*#
+*.install
+*.native
+*.byte
+
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+
+# build directory
+src/_build/
+src/.git
+src/.merlin
+
+# ocamlbuild targets
+*.byte
+*.native
+
+# oasis generated files
+setup.data
+setup.log
+
+# docker files
+Dockerfile
+.dockerignore
