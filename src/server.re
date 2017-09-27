@@ -1,7 +1,7 @@
 open Lwt.Infix;
 
-let rep_endpoint = ref "tcp://127.0.0.1:5555";
-let rout_endpoint = ref "tcp://127.0.0.1:5556";
+let rep_endpoint = ref "tcp://0.0.0.0:5555";
+let rout_endpoint = ref "tcp://0.0.0.0:5556";
 let notify_list  = ref [("",[""])];
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
