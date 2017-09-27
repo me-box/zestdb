@@ -12,52 +12,39 @@ An API exists to support key/value storage and retrieval as well as times series
 * Implement proper handling of valid observed paths.
 * Factor out functionality into a stand-alone library and support other languages.
 
-### Building
-
-#### to build the server
-
-```bash
-cd src
-make
-make install
-```
-
-#### to build the test client
-
-```bash
-cd test
-make
-make install
-```
 
 ### Usage example
 
-* To get a complete list of options of the server or test client use the --help flag
+You can run a server and test client using Docker. Each command supports --help to get a list of parameters.
 
-* Keys can be generated using the ZeroMQ utility 'curve_keygen'
-
-#### starting server locally
+#### starting server
 
 ```bash
-$ /tmp/server.exe --secret-key 'uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1' --enable-logging
+$ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm zest /app/zest/server.exe --secret-key 'EKy(xjAnIfg6AT+OGd?nS1Mi5zZ&b*VXA@WxNLLE'
 ```
 
 #### running client to post key/value data
 
 ```bash
-$ /tmp/client.exe --server-key 'qDq63cJF5gd3Jed:/3t[F8u(ETeep(qk+%pmj(s?' --path '/kv/foo' --payload '{"name":"fred", "age":30}' --mode post
+$ docker run --network host -it zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --payload '{"name":"dave", "age":30}' --mode post
 ```
 
 #### running client to get key/value data
 
 ```bash
-$ /tmp/client.exe --server-key 'qDq63cJF5gd3Jed:/3t[F8u(ETeep(qk+%pmj(s?' --path '/kv/foo' --mode get
+$ docker run --network host -it zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get
 ```
 
 #### running client to observe changes to a resource path
 
 ```bash
-$ /tmp/client.exe --server-key 'qDq63cJF5gd3Jed:/3t[F8u(ETeep(qk+%pmj(s?' --path '/kv/foo' --mode observe
+$ docker run --network host -it zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe
+```
+
+#### generating a key pair
+
+```bash
+$ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 ```
 
 ### Key/Value API
