@@ -1,21 +1,22 @@
 FROM alpine:latest
 
-MAINTAINER jmoore@zedstar.org
-
 RUN apk update && apk upgrade \
  && apk add sudo \
- && adduser -S databox \
- && echo 'databox ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/databox \
- && chmod 440 /etc/sudoers.d/databox \
- && chown root:root /etc/sudoers.d/databox \
+ && adduser -S zest \
+ && echo 'zest ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/zest \
+ && chmod 440 /etc/sudoers.d/zest \
+ && chown root:root /etc/sudoers.d/zest \
  && sed -i.bak 's/^Defaults.*requiretty//g' /etc/sudoers
 
-USER databox
-WORKDIR /home/databox
+USER zest
+WORKDIR /home/zest
 
 # add the code
 ADD src src
-RUN sudo chown -R databox:nogroup src
+ADD test test
+RUN sudo chown -R zest:nogroup src
+RUN sudo chown -R zest:nogroup test
+
 # add the build script
 ADD build.sh .
 
@@ -26,11 +27,21 @@ RUN sudo apk add --no-cache --virtual .build-deps alpine-sdk bash ncurses-dev m4
 && opam install -y reason lwt tls sodium macaroons ezirmin bitstring ppx_bitstring uuidm lwt-zmq \
 && sudo chmod +x build.sh && sync \
 && ./build.sh \
-&& rm -rf /home/databox/.opam \
-&& sudo apk del .build-deps \
-&& sudo apk add libsodium gmp zlib libzmq
+&& rm -rf /home/zest/src \
+&& rm -rf /home/zest/test \
+&& rm -rf /home/zest/.opam \
+&& sudo apk del .build-deps
+
+FROM alpine:latest
 
 USER root
+WORKDIR /app/zest/
+
+COPY --from=0 /home/zest/ .
+# runtime dependencies
+RUN apk update && apk upgrade \
+&& apk add libsodium gmp zlib libzmq
+
 VOLUME /database
 
 EXPOSE 5555

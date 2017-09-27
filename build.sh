@@ -4,7 +4,8 @@
 echo "compiling..."
 eval `opam config env`
 cd src && jbuilder build server.exe
-echo "done compiling"
-# setup runtime env
 cp base-cat.json ../
-ln ./_build/default/server.exe ../server.exe
+cp ./_build/default/server.exe ../
+cd ../test && jbuilder build client.exe
+cp ./_build/default/client.exe ../
+echo "done compiling"
