@@ -381,6 +381,7 @@ let close_socket lwt_soc => {
 
 let log_mode = ref false;
 let curve_secret_key = ref "";
+let token_secret_key = ref "";
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
 
@@ -397,6 +398,7 @@ let parse_cmdline () => {
     ("--router-endpoint", Arg.Set_string rout_endpoint, ": to set the router/dealer endpoint"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
+    ("--token-key", Arg.Set_string token_secret_key, ": to set the token secret key"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
