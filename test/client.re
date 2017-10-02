@@ -12,6 +12,7 @@ let loop_count = ref 0;
 let call_freq = ref 1.0;
 let command = ref (fun _ => Lwt.return_unit);
 let log_mode = ref false;
+let version = 1;
 
 module Response = {
     type t = OK |  Payload string | Error string;
@@ -30,7 +31,8 @@ let setup_logger () => {
 let handle_header bits => {
   let tuple = [%bitstring
     switch bits {
-    | {|tkl : 4 : unsigned;
+    | {|version : 4 : unsigned;
+        tkl : 16 : bigendian;
         oc : 4 : unsigned; 
         code : 8 : unsigned; 
         rest : -1 : bitstring
@@ -114,12 +116,13 @@ let send_request msg::msg to::socket => {
 
 let create_header tkl::tkl oc::oc code::code => {
   let bits = [%bitstring 
-    {|tkl : 4 : unsigned;
+    {|version : 4 : unsigned;
+      tkl : 16 : bigendian;
       oc : 4 : unsigned;
       code : 8 : unsigned
     |}
   ];
-  (bits, 16);
+  (bits, 32);
 };
 
 let create_option number::number value::value => {

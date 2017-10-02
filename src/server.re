@@ -3,6 +3,8 @@ open Lwt.Infix;
 let rep_endpoint = ref "tcp://0.0.0.0:5555";
 let rout_endpoint = ref "tcp://0.0.0.0:5556";
 let notify_list  = ref [("",[""])];
+let token_secret_key = ref "";
+let version = 1;
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
@@ -74,7 +76,8 @@ let route path payload socket => {
 let handle_header bits => {
   let tuple = [%bitstring
     switch bits {
-    | {|tkl : 4 : unsigned;
+    | {|version : 4 : unsigned;
+        tkl : 16 : bigendian;
         oc : 4 : unsigned; 
         code : 8 : unsigned; 
         rest : -1 : bitstring
@@ -128,12 +131,13 @@ let handle_options oc bits => {
 
 let create_header tkl::tkl oc::oc code::code => {
   let bits = [%bitstring 
-    {|tkl : 4 : unsigned;
+    {|version : 4: unsigned;
+      tkl : 16 : bigendian;
       oc : 4 : unsigned;
       code : 8 : unsigned
     |}
   ];
-  (bits, 16);
+  (bits, 32);
 };
 
 let create_option number::number value::value => {
@@ -304,7 +308,13 @@ let create_uuid () => {
   Uuidm.v4_gen (Random.State.make_self_init ()) () |> Uuidm.to_string;
 };
 
-let handle_get options => {
+let valid_token token path => {
+  let result = Token.is_valid token !token_secret_key [path];
+  let _ = Lwt_log_core.debug_f "is token valid => %b" result;
+};
+
+
+let handle_get options token => {
   open Common.Ack;
   let uri_path = get_option_value options 11;
   if (has_observed options) {
@@ -322,11 +332,12 @@ let assert_content_format options => {
   assert (content_format == 50);
 };
 
-let handle_post options payload with::rout_soc => {
+let handle_post options token payload with::rout_soc => {
   open Common.Ack;
   /* we are just accepting json for now */
   assert_content_format options;
   let uri_path = get_option_value options 11;
+  valid_token token uri_path;
   if (is_observed uri_path) {
     route uri_path payload rout_soc >>=
       fun () => handle_post_write uri_path payload >>= ack;
@@ -344,8 +355,8 @@ let handle_msg msg with::rout_soc => {
       let (options,r3) = handle_options oc r2;
       let payload = Bitstring.string_of_bitstring r3;
       switch code {
-      | 1 => handle_get options;
-      | 2 => handle_post options payload with::rout_soc;
+      | 1 => handle_get options token;
+      | 2 => handle_post options token payload with::rout_soc;
       | _ => failwith "invalid code";
       };
     };  
@@ -381,7 +392,6 @@ let close_socket lwt_soc => {
 
 let log_mode = ref false;
 let curve_secret_key = ref "";
-let token_secret_key = ref "";
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
 
