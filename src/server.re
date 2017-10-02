@@ -308,16 +308,19 @@ let create_uuid () => {
   Uuidm.v4_gen (Random.State.make_self_init ()) () |> Uuidm.to_string;
 };
 
-let valid_token token path => {
-  let result = Token.is_valid token !token_secret_key [path];
-  let _ = Lwt_log_core.debug_f "is token valid => %b" result;
+let is_valid_token token path => {
+  switch !token_secret_key {
+  | "" => true;
+  | _ => Token.is_valid token !token_secret_key [path];
+  };
 };
-
 
 let handle_get options token => {
   open Common.Ack;
   let uri_path = get_option_value options 11;
-  if (has_observed options) {
+  if ((is_valid_token token uri_path) == false) {
+    ack (Code 129)
+  } else if (has_observed options) {
     let uuid = create_uuid ();
     add_to_observe uri_path uuid;
     ack (Payload uuid);
@@ -337,8 +340,9 @@ let handle_post options token payload with::rout_soc => {
   /* we are just accepting json for now */
   assert_content_format options;
   let uri_path = get_option_value options 11;
-  valid_token token uri_path;
-  if (is_observed uri_path) {
+  if ((is_valid_token token uri_path) == false) {
+    ack (Code 129);
+  } else if (is_observed uri_path) {
     route uri_path payload rout_soc >>=
       fun () => handle_post_write uri_path payload >>= ack;
   } else {

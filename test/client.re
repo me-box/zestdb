@@ -89,6 +89,10 @@ let handle_unsupported_content_format options => {
   Response.Error "Unsupported Content-Format" |> Lwt.return;
 };
 
+let handle_ack_unauthorized options => {
+  Response.Error "Unauthorized" |> Lwt.return;
+};
+
 let handle_response msg => {
   Lwt_log_core.debug ("Received:" ^ msg) >>=
     fun () => {
@@ -99,6 +103,7 @@ let handle_response msg => {
       | 69 => handle_ack_content options payload;
       | 65 => handle_ack_created options;
       | 128 => handle_ack_bad_request options;
+      | 129 => handle_ack_unauthorized options;
       | 143 => handle_unsupported_content_format options;
       | _ => failwith ("invalid code:" ^ string_of_int code);
       };
