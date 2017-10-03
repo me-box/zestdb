@@ -5,6 +5,7 @@ let rout_endpoint = ref "tcp://0.0.0.0:5556";
 let notify_list  = ref [("",[""])];
 let token_secret_key = ref "";
 let version = 1;
+let identity = ref (Unix.gethostname ());
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
@@ -308,17 +309,17 @@ let create_uuid () => {
   Uuidm.v4_gen (Random.State.make_self_init ()) () |> Uuidm.to_string;
 };
 
-let is_valid_token token path => {
+let is_valid_token token path meth => {
   switch !token_secret_key {
   | "" => true;
-  | _ => Token.is_valid token !token_secret_key [path];
+  | _ => Token.is_valid token !token_secret_key [path, meth, !identity];
   };
 };
 
 let handle_get options token => {
   open Common.Ack;
   let uri_path = get_option_value options 11;
-  if ((is_valid_token token uri_path) == false) {
+  if ((is_valid_token token uri_path "get") == false) {
     ack (Code 129)
   } else if (has_observed options) {
     let uuid = create_uuid ();
@@ -340,7 +341,7 @@ let handle_post options token payload with::rout_soc => {
   /* we are just accepting json for now */
   assert_content_format options;
   let uri_path = get_option_value options 11;
-  if ((is_valid_token token uri_path) == false) {
+  if ((is_valid_token token uri_path "post") == false) {
     ack (Code 129);
   } else if (is_observed uri_path) {
     route uri_path payload rout_soc >>=
@@ -413,6 +414,7 @@ let parse_cmdline () => {
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
     ("--token-key", Arg.Set_string token_secret_key, ": to set the token secret key"),
+    ("--identity", Arg.Set_string identity, ": to set the server identity"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
