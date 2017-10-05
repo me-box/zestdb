@@ -6,6 +6,7 @@ let notify_list  = ref [("",[""])];
 let token_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
+let content_format = ref "2"; /* ascii equivalent of 50 representing json */
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
@@ -167,7 +168,7 @@ let create_ack code => {
 
 let create_ack_payload payload => {
   let (header_value, header_length) = create_header tkl::0 oc::1 code::69;
-  let (format_value, format_length) = create_option number::12 value::"application/json";
+  let (format_value, format_length) = create_option number::12 value::!content_format;
   let payload_bytes = String.length payload * 8;
   let bits = [%bitstring 
     {|header_value : header_length : bitstring;
