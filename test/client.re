@@ -28,6 +28,11 @@ let setup_logger () => {
   Lwt_log_core.add_rule "*" Lwt_log_core.Debug;
 };
 
+let to_hex msg => {
+  open Hex;
+  String.trim (of_string msg |> hexdump_s);
+};
+
 let handle_header bits => {
   let tuple = [%bitstring
     switch bits {
@@ -94,7 +99,7 @@ let handle_ack_unauthorized options => {
 };
 
 let handle_response msg => {
-  Lwt_log_core.debug ("Received:" ^ msg) >>=
+  Lwt_log_core.debug_f "Received:%s\n%s" msg (to_hex msg) >>=
     fun () => {
       let r0 = Bitstring.bitstring_of_string msg;
       let (tkl, oc, code, r1) = handle_header r0;
@@ -111,7 +116,7 @@ let handle_response msg => {
 };
 
 let send_request msg::msg to::socket => {
-  Lwt_log_core.debug ("Sending:" ^ msg) >>=
+  Lwt_log_core.debug_f "Sending:%s\n%s" msg (to_hex msg) >>=
     fun () =>
       Lwt_zmq.Socket.send socket msg >>=
         fun () =>

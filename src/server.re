@@ -22,6 +22,11 @@ let setup_logger () => {
   Lwt_log_core.add_rule "*" Lwt_log_core.Debug;
 };
 
+let to_hex msg => {
+  open Hex;
+  String.trim (of_string msg |> hexdump_s);
+};
+
 let has_observed options => {
   if (Array.exists (fun (number,_) => number == 6) options) {
     true;
@@ -352,7 +357,7 @@ let handle_post options token payload with::rout_soc => {
 };
 
 let handle_msg msg with::rout_soc => {
-  Lwt_log_core.debug ("Received:" ^ msg) >>=
+  Lwt_log_core.debug_f "Received:%s\n%s" msg (to_hex msg) >>=
     fun () => {
       let r0 = Bitstring.bitstring_of_string msg;
       let (tkl, oc, code, r1) = handle_header r0;
@@ -375,7 +380,7 @@ let server with::rep_soc and::rout_soc => {
           fun resp =>
             Lwt_zmq.Socket.send rep_soc resp >>=
               fun () =>
-                Lwt_log_core.debug ("Sending:" ^ resp) >>=
+                Lwt_log_core.debug_f "Sending:%s\n%s" resp (to_hex resp) >>=
                   fun () => loop ();
   };
   loop ();

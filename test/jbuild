@@ -1,6 +1,6 @@
 (jbuild_version 1)
 
 (executables
- ((libraries (lwt-zmq bitstring))
+ ((libraries (lwt-zmq bitstring hex))
   (preprocess  (pps (ppx_bitstring)))
     (names (client))))
