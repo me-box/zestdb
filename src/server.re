@@ -318,14 +318,14 @@ let create_uuid () => {
 let is_valid_token token path meth => {
   switch !token_secret_key {
   | "" => true;
-  | _ => Token.is_valid token !token_secret_key [path, meth, !identity];
+  | _ => Token.is_valid token !token_secret_key ["path = " ^ path, "method = " ^ meth, "target = " ^ !identity];
   };
 };
 
 let handle_get options token => {
   open Common.Ack;
   let uri_path = get_option_value options 11;
-  if ((is_valid_token token uri_path "get") == false) {
+  if ((is_valid_token token uri_path "GET") == false) {
     ack (Code 129)
   } else if (has_observed options) {
     let uuid = create_uuid ();
@@ -347,7 +347,7 @@ let handle_post options token payload with::rout_soc => {
   /* we are just accepting json for now */
   assert_content_format options;
   let uri_path = get_option_value options 11;
-  if ((is_valid_token token uri_path "post") == false) {
+  if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
   } else if (is_observed uri_path) {
     route uri_path payload rout_soc >>=
