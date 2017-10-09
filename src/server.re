@@ -84,8 +84,8 @@ let handle_header bits => {
   let tuple = [%bitstring
     switch bits {
     | {|version : 4 : unsigned;
-        tkl : 16 : bigendian;
-        oc : 4 : unsigned; 
+        oc : 4 : unsigned;
+        tkl : 16 : bigendian; 
         code : 8 : unsigned; 
         rest : -1 : bitstring
      |} => (tkl, oc, code, rest); 
@@ -110,9 +110,8 @@ let handle_token bits len => {
 let handle_option bits => {
   let tuple = [%bitstring
     switch bits {
-    | {|number : 4 : unsigned; 
+    | {|number : 8 : unsigned; 
         len : 16 : bigendian;
-        0xf : 4 : unsigned; 
         value: len*8: string; 
         rest : -1 : bitstring
       |} => (number, value, rest);
@@ -151,9 +150,8 @@ let create_option number::number value::value => {
   let byte_length = String.length value;
   let bit_length = byte_length * 8;
   let bits = [%bitstring 
-    {|number : 4 : unsigned;
+    {|number : 8 : unsigned;
       byte_length : 16 : bigendian;
-      0xf : 4 : unsigned;
       value : bit_length : string
     |}
   ];
