@@ -1,6 +1,6 @@
 (jbuild_version 1)
 
 (executables
- ((libraries (lwt-zmq bitstring ezirmin str uuidm macaroons macaroons.sodium))
+ ((libraries (lwt-zmq bitstring ezirmin str uuidm macaroons macaroons.sodium unix-type-representations))
   (preprocess  (pps (ppx_bitstring)))
    (names (server))))
