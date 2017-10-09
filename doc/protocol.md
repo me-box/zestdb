@@ -23,7 +23,7 @@ All values are in bits unless specified.
 | bytes |
 #### options (repeating)
 | number  | length | value | ... | 
-| :--: | :--: |  :--: | :--: | :--: | 
+| :--: | :--: |  :--: | :--: | 
 | 8 | 16 (network order) | bytes | ... |
 
 * number = CoAP specified
