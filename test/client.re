@@ -36,10 +36,9 @@ let to_hex msg => {
 let handle_header bits => {
   let tuple = [%bitstring
     switch bits {
-    | {|version : 4 : unsigned;
+    | {|code : 8 : unsigned;
+        oc : 8 : unsigned;
         tkl : 16 : bigendian;
-        oc : 4 : unsigned; 
-        code : 8 : unsigned; 
         rest : -1 : bitstring
      |} => (tkl, oc, code, rest); 
     | {|_|} => failwith "invalid header";
@@ -125,10 +124,9 @@ let send_request msg::msg to::socket => {
 
 let create_header tkl::tkl oc::oc code::code => {
   let bits = [%bitstring 
-    {|version : 4 : unsigned;
-      oc : 4 : unsigned;
-      tkl : 16 : bigendian;
-      code : 8 : unsigned
+    {|code : 8 : unsigned;
+      oc : 8 : unsigned;
+      tkl : 16 : bigendian
     |}
   ];
   (bits, 32);

@@ -9,9 +9,9 @@ An OBSERVE message is slightly more complex and involves an initial Request-Repl
 All values are in bits unless specified.
 
 #### header
-| version  | tkl | oc | code |
-| :--: | :--: |  :--: | :--: |
-| 4 | 16 (network order) | 4 | 8 |
+| code | oc | tkl |
+| :--: |  :--: | :--: |
+| 8 | 8 | 16 (network order) |
 
 * tlk = token length in bytes
 * oc = number of options present
@@ -22,9 +22,9 @@ All values are in bits unless specified.
 | :--: |
 | bytes |
 #### options (repeating)
-| number  | length | pad | value | ... | 
+| number  | length | value | ... | 
 | :--: | :--: |  :--: | :--: | :--: | 
-| 4 | 16 (network order) | 4 | bytes | ... |
+| 8 | 16 (network order) | bytes | ... |
 
 * number = CoAP specified
 * value = CoAP specified
