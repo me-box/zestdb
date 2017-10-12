@@ -12,6 +12,7 @@ let loop_count = ref 0;
 let call_freq = ref 1.0;
 let command = ref (fun _ => Lwt.return_unit);
 let log_mode = ref false;
+let file = ref false;
 let version = 1;
 
 module Response = {
@@ -363,6 +364,13 @@ let create_content_format id => {
   Bitstring.string_of_bitstring bits  
 };
 
+let set_payload_from file => {
+  let data = Fpath.v file |>
+    Bos.OS.File.read |>
+      Rresult.R.get_ok;
+  payload := data;
+};
+
 let handle_format format => {
   let id = switch format {
   | "text" => 0;
@@ -388,6 +396,7 @@ let parse_cmdline () => {
     ("--loop", Arg.Set_int loop_count, ": to set the number of times to run post/get/observe test"),
     ("--freq", Arg.Set_float call_freq, ": to set the number of seconds to wait between each get/post operation"),
     ("--mode", Arg.Symbol ["post", "get", "observe"] handle_mode, " : to set the mode of operation"),
+    ("--file", Arg.Set file, ": payload contents comes from a file"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
   ];
   Arg.parse speclist (fun err => raise (Arg.Bad ("Bad argument : " ^ err))) usage;
@@ -403,9 +412,25 @@ let setup_keys () => {
   curve_secret_key := private_key;
 };
 
-let ctx = ZMQ.Context.create ();
-setup_keys ();
-parse_cmdline ();
-!log_mode ? setup_logger () : ();
-Lwt_main.run {ctx |> !command};
-ZMQ.Context.terminate ctx;
+let report_error e => {
+  let msg = Printexc.to_string e;
+  let stack = Printexc.get_backtrace ();
+  let _ = Lwt_log_core.error_f "Opps: %s%s" msg stack;
+};
+
+let client () => {
+  let ctx = ZMQ.Context.create ();
+  setup_keys ();
+  parse_cmdline ();
+  /* can take payload from a file */
+  !file ? set_payload_from !payload : ();
+  /* log to screen debug info */  
+  !log_mode ? setup_logger () : ();
+  Lwt_main.run {ctx |> !command};
+  ZMQ.Context.terminate ctx;
+};
+
+let _ = try (Lwt_main.run {Lwt.return (client ())}) {
+  | Invalid_argument msg => Printf.printf "Error: file not found!\n";
+  | e => report_error e;
+};
