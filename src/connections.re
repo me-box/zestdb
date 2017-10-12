@@ -28,8 +28,8 @@ let handle_monitor socket => {
     open ZMQ.Monitor;    
     fun event =>
       switch event {
-      | Accepted address fd => Lwt_log_core.info_f "Connect from %s on %s with fd %d" address (get_peername fd) (Unix_representations.int_of_file_descr fd);
-      | Disconnected address fd => Lwt_log_core.info_f "Disconnect on fd %d" (Unix_representations.int_of_file_descr fd);
+      | Accepted address fd => Lwt_log_core.info_f "%s" (string_of_event event);
+      | Disconnected address fd => Lwt_log_core.info_f "%s" (string_of_event event);
       | _ => Lwt.return_unit;
       };
     } >>= fun () => loop ();
