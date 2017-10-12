@@ -25,7 +25,7 @@ let setup_logger () => {
 
 let to_hex msg => {
   open Hex;
-  String.trim (of_string msg |> hexdump_s);
+  String.trim (of_string msg |> hexdump_s print_chars::false);
 };
 
 let has_observed options => {
@@ -354,7 +354,7 @@ let handle_post options token payload with::rout_soc => {
 };
 
 let handle_msg msg with::rout_soc => {
-  Lwt_log_core.debug_f "Received:%s\n%s" msg (to_hex msg) >>=
+  Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
     fun () => {
       let r0 = Bitstring.bitstring_of_string msg;
       let (tkl, oc, code, r1) = handle_header r0;
@@ -377,7 +377,7 @@ let server with::rep_soc and::rout_soc => {
           fun resp =>
             Lwt_zmq.Socket.send rep_soc resp >>=
               fun () =>
-                Lwt_log_core.debug_f "Sending:%s\n%s" resp (to_hex resp) >>=
+                Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
                   fun () => loop ();
   };
   loop ();

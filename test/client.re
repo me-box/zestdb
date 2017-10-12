@@ -30,7 +30,7 @@ let setup_logger () => {
 
 let to_hex msg => {
   open Hex;
-  String.trim (of_string msg |> hexdump_s);
+  String.trim (of_string msg |> hexdump_s print_chars::false);
 };
 
 let handle_header bits => {
