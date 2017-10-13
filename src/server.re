@@ -340,7 +340,6 @@ let handle_content_format options => {
 
 let handle_post options token payload with::rout_soc => {
   open Common.Ack;
-  /* we are just accepting json for now */
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
   if ((is_valid_token token uri_path "POST") == false) {

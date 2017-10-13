@@ -166,10 +166,11 @@ let create_post_options uri::uri format::format => {
   create_options [|uri_path, uri_host, content_format|];
 };
 
-let create_get_options uri::uri => {
+let create_get_options uri::uri format::format => {
   let uri_path = create_option number::11 value::uri;
   let uri_host = create_option number::3 value::(Unix.gethostname ());
-  create_options [|uri_path, uri_host|];
+  let content_format = create_option number::12 value::format;  
+  create_options [|uri_path, uri_host, content_format|];
 };
 
 let create_observe_options uri::uri => {
@@ -194,8 +195,8 @@ let post ::token=(!token) ::format=(!content_format) uri::uri payload::payload (
   Bitstring.string_of_bitstring bits;
 };
 
-let get ::token=(!token) uri::uri () => {
-  let (options_value, options_length, options_count) = create_get_options uri::uri;
+let get ::token=(!token) ::format=(!content_format) uri::uri () => {
+  let (options_value, options_length, options_count) = create_get_options uri::uri format::format;
   let (header_value, header_length) = create_header tkl::(String.length token) oc::options_count code::1;
   let (token_value, token_length) = create_token tk::token;
   let bits = [%bitstring 
