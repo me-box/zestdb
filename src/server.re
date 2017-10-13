@@ -289,13 +289,33 @@ let handle_get_read content_format uri_path => {
   };
 };
 
+let to_json payload => {
+  open Ezjsonm;
+  let parsed = try (Some (from_string payload)) {
+  | Parse_error _ => None;
+  };
+  parsed;
+};
+
 let handle_write_database content_format uri_path payload => {
   open Common.Ack;
   open Ezjsonm;
   let (key,mode) = get_key_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => Some (Database.Json.Kv.write !kv_json_store key (from_string payload));
-  | ("/ts/", 50) => Some (Database.Json.Ts.write !ts_json_store key (from_string payload));
+  | ("/kv/", 50) => {
+    let json = to_json payload;
+    switch json {
+    | Some json => Some (Database.Json.Kv.write !kv_json_store key json);
+    | None => None;
+    };
+  };
+  | ("/ts/", 50) => {
+    let json = to_json payload;
+    switch json {
+    | Some json => Some (Database.Json.Ts.write !ts_json_store key json);
+    | None => None;
+    };
+  };  
   | ("/kv/", 42) => Some (Database.String.Kv.write !kv_string_store key payload);
   | ("/kv/", 0) => Some (Database.String.Kv.write !kv_string_store key payload);
   | _ => None;
@@ -306,17 +326,23 @@ let handle_write_database content_format uri_path payload => {
   };
 };
 
-let handle_write_hypercat json => {
+let handle_write_hypercat payload => {
   open Common.Ack;
-  switch (Hypercat.update_cat json) {
-  | Ok => (Code 65)
-  | Error n => (Code n)
-  } |> Lwt.return;
+  let json = to_json payload;
+  switch json {
+  | Some json => {
+      switch (Hypercat.update_cat json) {
+        | Ok => (Code 65)
+        | Error n => (Code n)
+        } |> Lwt.return;
+    };
+  | None => Lwt.return (Code 128);
+  };
 };
 
 let handle_post_write content_format uri_path payload => {
   switch uri_path {
-  | "/cat" => handle_write_hypercat (Ezjsonm.from_string payload);
+  | "/cat" => handle_write_hypercat payload;
   | _ => handle_write_database content_format uri_path payload; 
   };
 };
