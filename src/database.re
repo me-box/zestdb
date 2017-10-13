@@ -1,6 +1,32 @@
 
 open Lwt.Infix;
 
+module String = {
+
+  module Kv = {
+
+    module Store = Ezirmin.FS_lww_register Irmin.Contents.String;
+
+    let create ::file =>
+    Store.init root::file bare::true () >>= Store.master;
+
+    let write branch k v =>
+      branch >>= fun branch' =>
+        Store.write message::"write_kv" branch' path::["kv", k] v >>=
+          fun _ => Lwt.return_unit;
+
+    let read branch k =>
+      branch >>= fun branch' =>
+        Store.read branch' path::["kv", k] >>=
+          fun data =>
+            switch data {
+            | Some json => Lwt.return json;
+            | None => Lwt.return "";
+          };
+  };
+
+};
+
 module Json = {
 
   let json_empty = Ezjsonm.dict [];
@@ -24,7 +50,7 @@ module Json = {
             switch data {
             | Some json => Lwt.return json;
             | None => Lwt.return json_empty;
-          } ;  
+          };  
   };
 
   module Ts = {

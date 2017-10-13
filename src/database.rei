@@ -1,4 +1,15 @@
 
+module String: {
+    module Kv: {
+        module Store: {
+            type branch = Ezirmin.FS_lww_register(Irmin.Contents.String).branch;
+        };
+        let create : file::string => Lwt.t Store.branch;
+        let write : Lwt.t Store.branch => string => string => Lwt.t unit;
+        let read : Lwt.t Store.branch => string => Lwt.t string;
+    };
+};
+
 module Json: {
     module Kv: {
         module Store: {
