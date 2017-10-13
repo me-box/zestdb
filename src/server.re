@@ -164,9 +164,16 @@ let create_ack code => {
   Bitstring.string_of_bitstring bits;
 };
 
-let create_ack_payload payload => {
+let create_content_format id => {
+  /* restrict content format support to 1 byte */
+  assert ((id >= 0) && (id <= 255));
+  let bits = [%bitstring {|id : 8 : unsigned|}];
+  Bitstring.string_of_bitstring bits  
+};
+
+let create_ack_payload code payload => {
   let (header_value, header_length) = create_header tkl::0 oc::1 code::69;
-  let (format_value, format_length) = create_option number::12 value::!content_format;
+  let (format_value, format_length) = create_option number::12 value::(create_content_format code);
   let payload_bytes = String.length payload * 8;
   let bits = [%bitstring 
     {|header_value : header_length : bitstring;
@@ -244,26 +251,41 @@ let handle_get_read_ts uri_path => {
   };
 };
 
-let handle_read_database uri_path => {
+let handle_read_database content_format uri_path => {
   open Common.Ack;
+  open Common.Response;
   let (key,mode) = get_key_mode uri_path;
-  switch mode {
-  | "/kv/" => Database.Json.Kv.read !kv_json_store key;
-  | "/ts/" => handle_get_read_ts uri_path;
-  | _ => failwith "unsupported get mode";
-  } >>= fun json => Lwt.return (Payload (Ezjsonm.to_string json));
+  let result = switch (mode, content_format) {
+  | ("/kv/", 50) => Some (Json (Database.Json.Kv.read !kv_json_store key));
+  | ("/ts/", 50) => Some (Json (handle_get_read_ts uri_path));
+  | ("/kv/", 42) => Some (Binary (Database.String.Kv.read !kv_string_store key));
+  | ("/kv/", 0) => Some (Text (Database.String.Kv.read !kv_string_store key));
+  | _ => None;
+  };
+  switch result {
+  | Some content =>
+    switch content {
+    | Json json => json >>= fun json' => 
+        Lwt.return (Payload content_format (Ezjsonm.to_string json'));
+    | Text text => text >>= fun text' =>
+        Lwt.return (Payload content_format text');
+    | Binary binary => binary >>= fun binary' =>
+        Lwt.return (Payload content_format binary');
+    };
+  | None => Lwt.return (Code 128);
+  };
 };
 
 let handle_read_hypercat () => {
   open Common.Ack;
   Hypercat.get_cat () |> Ezjsonm.to_string |>
-    fun s => (Payload s) |> Lwt.return;
+    fun s => (Payload 50 s) |> Lwt.return;
 };
 
-let handle_get_read uri_path => {
+let handle_get_read content_format uri_path => {
   switch uri_path {
   | "/cat" => handle_read_hypercat ();
-  | _ => handle_read_database uri_path; 
+  | _ => handle_read_database content_format uri_path; 
   };
 };
 
@@ -303,7 +325,7 @@ let ack kind => {
   open Common.Ack;
   switch kind {
   | Code n => create_ack n;
-  | Payload s => create_ack_payload s;
+  | Payload code data => create_ack_payload code data;
   } |> Lwt.return;
 };
 
@@ -318,25 +340,27 @@ let is_valid_token token path meth => {
   };
 };
 
+let handle_content_format options => {
+  let content_format = get_content_format options;
+  let _ = Lwt_log_core.debug_f "content_format => %d" content_format;
+  content_format;
+};
+
 let handle_get options token => {
   open Common.Ack;
+  let content_format = handle_content_format options;  
   let uri_path = get_option_value options 11;
   if ((is_valid_token token uri_path "GET") == false) {
     ack (Code 129)
   } else if (has_observed options) {
     let uuid = create_uuid ();
     add_to_observe uri_path uuid;
-    ack (Payload uuid);
+    ack (Payload 0 uuid);
   } else {
-    handle_get_read uri_path >>= ack;
+    handle_get_read content_format uri_path >>= ack;
   };
 };
 
-let handle_content_format options => {
-  let content_format = get_content_format options;
-  let _ = Lwt_log_core.debug_f "content_format => %d" content_format;
-  content_format;
-};
 
 let handle_post options token payload with::rout_soc => {
   open Common.Ack;

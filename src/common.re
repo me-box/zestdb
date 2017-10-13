@@ -3,5 +3,9 @@ module Result = {
 };
 
 module Ack = {
-    type t = Code int |  Payload string;
+    type t = Code int |  Payload int string;
+};
+
+module Response = {
+    type t = Json (Lwt.t Ezjsonm.t) | Text (Lwt.t string) | Binary (Lwt.t string);
 };
