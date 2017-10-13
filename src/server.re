@@ -10,6 +10,8 @@ let content_format = ref "2"; /* ascii equivalent of 50 representing json */
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
+let kv_string_store = ref (Database.String.Kv.create file::"./kv-string-store");
+
 
 let setup_logger () => {
   Lwt_log_core.default :=
@@ -265,14 +267,21 @@ let handle_get_read uri_path => {
   };
 };
 
-let handle_write_database uri_path json => {
+let handle_write_database content_format uri_path payload => {
   open Common.Ack;
+  open Ezjsonm;
   let (key,mode) = get_key_mode uri_path;
-  switch mode {
-  | "/kv/" => Database.Json.Kv.write !kv_json_store key json;
-  | "/ts/" => Database.Json.Ts.write !ts_json_store key json;
-  | _ => failwith "unsupported post mode";
-  } >>= fun () => Lwt.return (Code 65);
+  let result = switch (mode, content_format) {
+  | ("/kv/", 50) => Some (Database.Json.Kv.write !kv_json_store key (from_string payload));
+  | ("/ts/", 50) => Some (Database.Json.Ts.write !ts_json_store key (from_string payload));
+  | ("/kv/", 42) => Some (Database.String.Kv.write !kv_string_store key payload);
+  | ("/kv/", 0) => Some (Database.String.Kv.write !kv_string_store key payload);
+  | _ => None;
+  };
+  switch result {
+  | Some _ => Lwt.return (Code 65);
+  | None => Lwt.return (Code 128);
+  };
 };
 
 let handle_write_hypercat json => {
@@ -283,19 +292,10 @@ let handle_write_hypercat json => {
   } |> Lwt.return;
 };
 
-let handle_post_write uri_path payload => {
-  open Common.Ack;
-  open Ezjsonm;
-  let parsed = try (Some (from_string payload)) {
-  | Parse_error _ => None;
-  };
-  switch parsed {
-  | None => Lwt.return (Code 143);
-  | Some json => 
-      switch uri_path {
-      | "/cat" => handle_write_hypercat json;
-      | _ => handle_write_database uri_path json; 
-      };
+let handle_post_write content_format uri_path payload => {
+  switch uri_path {
+  | "/cat" => handle_write_hypercat (Ezjsonm.from_string payload);
+  | _ => handle_write_database content_format uri_path payload; 
   };
 };
 
@@ -332,24 +332,24 @@ let handle_get options token => {
   };
 };
 
-let assert_content_format options => {
+let handle_content_format options => {
   let content_format = get_content_format options;
   let _ = Lwt_log_core.debug_f "content_format => %d" content_format;
-  assert (content_format == 50);
+  content_format;
 };
 
 let handle_post options token payload with::rout_soc => {
   open Common.Ack;
   /* we are just accepting json for now */
-  assert_content_format options;
+  let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
   if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
   } else if (is_observed uri_path) {
     route uri_path payload rout_soc >>=
-      fun () => handle_post_write uri_path payload >>= ack;
+      fun () => handle_post_write content_format uri_path payload >>= ack;
   } else {
-    handle_post_write uri_path payload >>= ack;
+    handle_post_write content_format uri_path payload >>= ack;
   };
 };
 
