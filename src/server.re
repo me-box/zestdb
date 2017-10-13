@@ -478,11 +478,10 @@ let setup_keys () => {
   Hypercat.update_item base_item "urn:X-hypercat:rels:publicKey" public_key;
 };
 
-let threads ctx rep_soc rout_soc => {
-  let _ = Lwt_log_core.info "Ready";    
+/* some issues running these threads so disabled */
+let monitor_connections ctx rep_soc rout_soc => {
   let () = Connections.monitor ctx rout_soc;
   let () = Connections.monitor ctx rep_soc;
-  server with::rep_soc and::rout_soc; 
 };
 
 let rec run_server () => {
@@ -491,7 +490,8 @@ let rec run_server () => {
   let ctx = ZMQ.Context.create ();
   let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
   let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !curve_secret_key;
-  let _ = try (Lwt_main.run {threads ctx rep_soc rout_soc}) {
+  let _ = Lwt_log_core.info "Ready";   
+  let _ = try (Lwt_main.run {server with::rep_soc and::rout_soc}) {
     | e => report_error e;
   };
   close_socket rout_soc;
