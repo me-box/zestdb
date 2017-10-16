@@ -10,8 +10,8 @@ let content_format = ref "";
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
-let kv_string_store = ref (Database.String.Kv.create file::"./kv-string-store");
-
+let kv_text_store = ref (Database.String.Kv.create file::"./kv-text-store");
+let kv_binary_store = ref (Database.String.Kv.create file::"./kv-binary-store");
 
 let setup_logger () => {
   Lwt_log_core.default :=
@@ -268,8 +268,8 @@ let handle_read_database content_format uri_path => {
   let result = switch (mode, content_format) {
   | ("/kv/", 50) => Some (Json (Database.Json.Kv.read !kv_json_store key));
   | ("/ts/", 50) => Some (Json (handle_get_read_ts uri_path));
-  | ("/kv/", 42) => Some (Binary (Database.String.Kv.read !kv_string_store key));
-  | ("/kv/", 0) => Some (Text (Database.String.Kv.read !kv_string_store key));
+  | ("/kv/", 42) => Some (Binary (Database.String.Kv.read !kv_binary_store key));
+  | ("/kv/", 0) => Some (Text (Database.String.Kv.read !kv_text_store key));
   | _ => None;
   };
   switch result {
@@ -326,8 +326,8 @@ let handle_write_database content_format uri_path payload => {
     | None => None;
     };
   };  
-  | ("/kv/", 42) => Some (Database.String.Kv.write !kv_string_store key payload);
-  | ("/kv/", 0) => Some (Database.String.Kv.write !kv_string_store key payload);
+  | ("/kv/", 42) => Some (Database.String.Kv.write !kv_binary_store key payload);
+  | ("/kv/", 0) => Some (Database.String.Kv.write !kv_text_store key payload);
   | _ => None;
   };
   switch result {
