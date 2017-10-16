@@ -6,7 +6,7 @@ let notify_list  = ref [("",[""])];
 let token_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
-let content_format = ref "2"; /* ascii equivalent of 50 representing json */
+let content_format = ref "";
 
 let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
 let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
@@ -46,15 +46,15 @@ let get_ident path => {
   List.assoc path !notify_list;
 };
 
-let add_to_observe path ident => {
+let add_to_observe path ident max_age => {
   if (is_observed path) {
-    let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s" ident path;
+    let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident path max_age;
     let items = get_ident path;
     let new_items = List.cons ident items;
     let filtered = List.filter (fun (path',_) => (path' != path)) !notify_list;
     notify_list := List.cons (path, new_items) filtered;
   } else {
-    let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s" ident path;
+    let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s with max-age:%lu" ident path max_age;
     notify_list := List.cons (path, [ident]) !notify_list;
   };
 };
@@ -204,6 +204,18 @@ let get_content_format options => {
     };
   ];
   id;
+};
+
+let get_max_age options => {
+  let value = get_option_value options 14;
+  let bits = Bitstring.bitstring_of_string value;
+  let seconds = [%bitstring
+    switch bits {
+    | {|seconds : 32 : bigendian|} => seconds;
+    | {|_|} => failwith "invalid max-age value";
+    };
+  ];
+  seconds;
 };
 
 
@@ -370,15 +382,22 @@ let handle_content_format options => {
   content_format;
 };
 
+let handle_max_age options => {
+  let max_age = get_max_age options;
+  let _ = Lwt_log_core.debug_f "max_age => %lu" max_age;
+  max_age;
+};
+
 let handle_get options token => {
   open Common.Ack;
-  let content_format = handle_content_format options;  
+  let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
   if ((is_valid_token token uri_path "GET") == false) {
     ack (Code 129)
   } else if (has_observed options) {
+    let max_age = handle_max_age options;  
     let uuid = create_uuid ();
-    add_to_observe uri_path uuid;
+    add_to_observe uri_path uuid max_age;
     ack (Payload 0 uuid);
   } else {
     handle_get_read content_format uri_path >>= ack;
