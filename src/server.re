@@ -8,10 +8,13 @@ let version = 1;
 let identity = ref (Unix.gethostname ());
 let content_format = ref "";
 
-let kv_json_store = ref (Database.Json.Kv.create file::"./kv-json-store");
-let ts_json_store = ref (Database.Json.Ts.create file::"./ts-json-store");
-let kv_text_store = ref (Database.String.Kv.create file::"./kv-text-store");
-let kv_binary_store = ref (Database.String.Kv.create file::"./kv-binary-store");
+/* create stores in local directory by default */
+let default_store_directory = "./";
+let store_directory = ref default_store_directory;
+let kv_json_store = ref (Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store"));
+let ts_json_store = ref (Database.Json.Ts.create file::(!store_directory ^ "/ts-json-store"));
+let kv_text_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-text-store"));
+let kv_binary_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store"));
 
 let setup_logger () => {
   Lwt_log_core.default :=
@@ -483,6 +486,7 @@ let parse_cmdline () => {
     ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
     ("--token-key", Arg.Set_string token_secret_key, ": to set the token secret key"),
     ("--identity", Arg.Set_string identity, ": to set the server identity"),
+    ("--store-dir", Arg.Set_string store_directory, ": to set the location for the database files"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
@@ -501,9 +505,18 @@ let monitor_connections ctx rep_soc rout_soc => {
   let () = Connections.monitor ctx rep_soc;
 };
 
+/* support overriding location of stores */
+let create_stores_again () => {
+  kv_json_store := Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store");
+  ts_json_store := Database.Json.Ts.create file::(!store_directory ^ "/ts-json-store");
+  kv_text_store := Database.String.Kv.create file::(!store_directory ^ "/kv-text-store");
+  kv_binary_store := Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store");
+};
+
 let rec run_server () => {
   parse_cmdline ();
   !log_mode ? setup_logger () : ();
+  (!store_directory != default_store_directory) ? create_stores_again () : ();
   let ctx = ZMQ.Context.create ();
   let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
   let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !curve_secret_key;
