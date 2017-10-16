@@ -1,4 +1,10 @@
 open Lwt.Infix;
+
+let create_content_format id => {
+  let bits = [%bitstring {|id : 16 : bigendian|}];
+  Bitstring.string_of_bitstring bits  
+};
+
 let req_endpoint = ref "tcp://127.0.0.1:5555";
 let deal_endpoint = ref "tcp://127.0.0.1:5556";
 let curve_server_key = ref "";
@@ -6,7 +12,7 @@ let curve_public_key = ref "";
 let curve_secret_key = ref "";
 let token = ref "";
 let uri_path = ref "";
-let content_format = ref "2"; /* ascii equivalent of 50 representing json */
+let content_format = ref (create_content_format 50);
 let payload = ref "";
 let loop_count = ref 0;
 let call_freq = ref 1.0;
@@ -357,13 +363,6 @@ let handle_mode mode => {
   | _ => raise (Arg.Bad "Unsupported mode");
   };
   command := func;
-};
-
-let create_content_format id => {
-  /* restrict content format support to 1 byte */
-  assert ((id >= 0) && (id <= 255));
-  let bits = [%bitstring {|id : 8 : unsigned|}];
-  Bitstring.string_of_bitstring bits  
 };
 
 let set_payload_from file => {

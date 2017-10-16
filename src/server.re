@@ -165,9 +165,7 @@ let create_ack code => {
 };
 
 let create_content_format id => {
-  /* restrict content format support to 1 byte */
-  assert ((id >= 0) && (id <= 255));
-  let bits = [%bitstring {|id : 8 : unsigned|}];
+  let bits = [%bitstring {|id : 16 : bigendian|}];
   Bitstring.string_of_bitstring bits  
 };
 
@@ -201,7 +199,7 @@ let get_content_format options => {
   let bits = Bitstring.bitstring_of_string value;
   let id = [%bitstring
     switch bits {
-    | {|id : 8 : unsigned|} => id;
+    | {|id : 16 : bigendian|} => id;
     | {|_|} => failwith "invalid content value";
     };
   ];
