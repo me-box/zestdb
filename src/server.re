@@ -50,8 +50,11 @@ let get_ident path => {
 };
 
 let add_to_observe uri_path content_format ident max_age => {
+  open Int32;
   let key = (uri_path, content_format);
-  let value = (ident, max_age);
+  let expiry = (equal max_age (of_int 0)) ? 
+    max_age : add (of_float (Unix.time ())) max_age;
+  let value = (ident, expiry);
   if (is_observed key) {
     let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age;
     let items = get_ident key;
@@ -76,10 +79,10 @@ let route tuple payload socket => {
   let rec loop l => {
     switch l {
     | [] => Lwt.return_unit;
-    | [(ident,_), ...rest] => {
+    | [(ident,expiry), ...rest] => {
         send socket (id_of_string ident) [payload] >>=
         /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
-          fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s" payload ident >>=
+          fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s with expiry:%lu" payload ident expiry >>=
             fun _ => loop rest;
       };
     };
