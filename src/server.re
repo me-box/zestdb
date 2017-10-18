@@ -2,7 +2,7 @@ open Lwt.Infix;
 
 let rep_endpoint = ref "tcp://0.0.0.0:5555";
 let rout_endpoint = ref "tcp://0.0.0.0:5556";
-let notify_list  = ref [(("",0),[""])];
+let notify_list  = ref [(("",0),[("", Int32.of_int 0)])];
 let token_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
@@ -50,16 +50,17 @@ let get_ident path => {
 };
 
 let add_to_observe uri_path content_format ident max_age => {
-  let tuple = (uri_path, content_format);
-  if (is_observed tuple) {
+  let key = (uri_path, content_format);
+  let value = (ident, max_age);
+  if (is_observed key) {
     let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age;
-    let items = get_ident tuple;
-    let new_items = List.cons ident items;
-    let filtered = List.filter (fun (tuple',_) => (tuple' != tuple)) !notify_list;
-    notify_list := List.cons (tuple, new_items) filtered;
+    let items = get_ident key;
+    let new_items = List.cons value items;
+    let filtered = List.filter (fun (key',_) => (key' != key)) !notify_list;
+    notify_list := List.cons (key, new_items) filtered;
   } else {
     let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s with max-age:%lu" ident uri_path max_age;
-    notify_list := List.cons (tuple, [ident]) !notify_list;
+    notify_list := List.cons (key, [value]) !notify_list;
   };
 };
 
@@ -75,7 +76,7 @@ let route tuple payload socket => {
   let rec loop l => {
     switch l {
     | [] => Lwt.return_unit;
-    | [ident, ...rest] => {
+    | [(ident,_), ...rest] => {
         send socket (id_of_string ident) [payload] >>=
         /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
           fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s" payload ident >>=
