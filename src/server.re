@@ -2,7 +2,8 @@ open Lwt.Infix;
 
 let rep_endpoint = ref "tcp://0.0.0.0:5555";
 let rout_endpoint = ref "tcp://0.0.0.0:5556";
-let notify_list  = ref [(("",0),[("", Int32.of_int 0)])];
+/* let notify_list  = ref [(("",0),[("", Int32.of_int 0)])]; */
+let notify_list  = ref [];
 let token_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
@@ -49,11 +50,14 @@ let get_ident path => {
   List.assoc path !notify_list;
 };
 
+let time_now () => {
+  Int32.of_float (Unix.time ());
+};
+
 let add_to_observe uri_path content_format ident max_age => {
   open Int32;
   let key = (uri_path, content_format);
-  let expiry = (equal max_age (of_int 0)) ? 
-    max_age : add (of_float (Unix.time ())) max_age;
+  let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
   let value = (ident, expiry);
   if (is_observed key) {
     let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age;
@@ -73,6 +77,14 @@ let publish path payload socket => {
   Lwt_zmq.Socket.send socket msg;
 };
 
+let expire l t => {
+  open List;
+  let f x =>
+    switch x {
+    | (k,v) => (k, filter (fun (_,t') => t' > t) v);
+    };
+  map f l;
+};
 
 let route tuple payload socket => {
   open Lwt_zmq.Socket.Router;
@@ -87,6 +99,7 @@ let route tuple payload socket => {
       };
     };
   };
+  notify_list := expire !notify_list (time_now ());
   loop (get_ident tuple);
 };
 
