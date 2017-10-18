@@ -2,7 +2,7 @@ open Lwt.Infix;
 
 let rep_endpoint = ref "tcp://0.0.0.0:5555";
 let rout_endpoint = ref "tcp://0.0.0.0:5556";
-let notify_list  = ref [("",[""])];
+let notify_list  = ref [(("",0),[""])];
 let token_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
@@ -49,16 +49,17 @@ let get_ident path => {
   List.assoc path !notify_list;
 };
 
-let add_to_observe path ident max_age => {
-  if (is_observed path) {
-    let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident path max_age;
-    let items = get_ident path;
+let add_to_observe uri_path content_format ident max_age => {
+  let tuple = (uri_path, content_format);
+  if (is_observed tuple) {
+    let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age;
+    let items = get_ident tuple;
     let new_items = List.cons ident items;
-    let filtered = List.filter (fun (path',_) => (path' != path)) !notify_list;
-    notify_list := List.cons (path, new_items) filtered;
+    let filtered = List.filter (fun (tuple',_) => (tuple' != tuple)) !notify_list;
+    notify_list := List.cons (tuple, new_items) filtered;
   } else {
-    let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s with max-age:%lu" ident path max_age;
-    notify_list := List.cons (path, [ident]) !notify_list;
+    let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s with max-age:%lu" ident uri_path max_age;
+    notify_list := List.cons (tuple, [ident]) !notify_list;
   };
 };
 
@@ -69,7 +70,7 @@ let publish path payload socket => {
 };
 
 
-let route path payload socket => {
+let route tuple payload socket => {
   open Lwt_zmq.Socket.Router;
   let rec loop l => {
     switch l {
@@ -77,12 +78,12 @@ let route path payload socket => {
     | [ident, ...rest] => {
         send socket (id_of_string ident) [payload] >>=
         /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
-          fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s ident" payload ident >>=
+          fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s" payload ident >>=
             fun _ => loop rest;
       };
     };
   };
-  loop (get_ident path);
+  loop (get_ident tuple);
 };
 
 let handle_header bits => {
@@ -400,7 +401,7 @@ let handle_get options token => {
   } else if (has_observed options) {
     let max_age = handle_max_age options;  
     let uuid = create_uuid ();
-    add_to_observe uri_path uuid max_age;
+    add_to_observe uri_path content_format uuid max_age;
     ack (Payload 0 uuid);
   } else {
     handle_get_read content_format uri_path >>= ack;
@@ -412,10 +413,11 @@ let handle_post options token payload with::rout_soc => {
   open Common.Ack;
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
+  let tuple = (uri_path, content_format);
   if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
-  } else if (is_observed uri_path) {
-    route uri_path payload rout_soc >>=
+  } else if (is_observed tuple) {
+    route tuple payload rout_soc >>=
       fun () => handle_post_write content_format uri_path payload >>= ack;
   } else {
     handle_post_write content_format uri_path payload >>= ack;
