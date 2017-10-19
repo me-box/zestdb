@@ -83,7 +83,7 @@ let expire l t => {
     switch x {
     | (k,v) => (k, filter (fun (_,t') => t' > t) v);
     };
-  map f l;
+  filter (fun (x,y) => y != []) (map f l);
 };
 
 let route tuple payload socket => {
@@ -99,8 +99,8 @@ let route tuple payload socket => {
       };
     };
   };
-  notify_list := expire !notify_list (time_now ());
-  loop (get_ident tuple);
+  loop (get_ident tuple) >>=
+    fun _ => Lwt.return (notify_list := expire !notify_list (time_now ()));
 };
 
 let handle_header bits => {
