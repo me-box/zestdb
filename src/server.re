@@ -81,7 +81,7 @@ let expire l t => {
   open List;
   let f x =>
     switch x {
-    | (k,v) => (k, filter (fun (_,t') => t' > t) v);
+    | (k,v) => (k, filter (fun (_,t') => (t' > t) || (t' == Int32.of_int 0)) v);
     };
   filter (fun (x,y) => y != []) (map f l);
 };
