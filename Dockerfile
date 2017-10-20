@@ -12,9 +12,9 @@ RUN sudo chown -R opam:nogroup utils
 ADD build.sh .
 
 # setup ocaml
-RUN sudo apk add alpine-sdk bash ncurses-dev m4 perl gmp-dev zlib-dev libsodium-dev opam zeromq-dev \
+RUN sudo apk update && sudo apk add alpine-sdk bash ncurses-dev m4 perl gmp-dev zlib-dev libsodium-dev opam zeromq-dev \
 && opam pin add -n sodium https://github.com/me-box/ocaml-sodium.git#with_auth_hmac256 \
-&& opam install -y reason.1.13.7 lwt tls sodium macaroons ezirmin bitstring ppx_bitstring uuidm lwt-zmq bos \
+&& opam install -y reason lwt tls sodium macaroons ezirmin bitstring ppx_bitstring uuidm lwt-zmq bos \
 && sudo chmod +x build.sh && sync \
 && ./build.sh \
 && rm -rf /home/opam/src \
