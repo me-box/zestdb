@@ -2,7 +2,7 @@
 
 A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ.
 
-The current implementation supports POST/GET of JSON data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
+The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
 
 An API exists to support key/value storage and retrieval as well as times series storage and retrieval which is specified as part of the path.
 
