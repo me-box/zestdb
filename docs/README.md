@@ -1,5 +1,3 @@
-# REST over ZeroMQ
-
 A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ.
 
 The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
