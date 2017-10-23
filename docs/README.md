@@ -8,7 +8,7 @@ An API exists to support key/value storage and retrieval as well as times series
 
 Access control is supported through macaroons which can be enabled using a command-line flag. A command-line tool is provided to help mint macaroons for testing.
 
-The zest protocol is documented [here](https://github.com/jptmoore/zest/tree/master/doc).
+The zest protocol is documented [here](protocol).
 
 ### Usage example
 
