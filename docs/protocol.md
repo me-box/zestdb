@@ -6,7 +6,7 @@ An OBSERVE message is slightly more complex and involves an initial Request-Repl
 
 ### message structure
 
-All values are in bits unless specified.
+All values are in bits unless specified and all values are unsigned.
 
 #### header
 | code | oc | tkl |
