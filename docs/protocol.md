@@ -4,6 +4,12 @@ Both POST and GET messages are exchanged over a ZeroMQ Request-Reply socket usin
 
 An OBSERVE message is slightly more complex and involves an initial Request-Reply exchange to setup communication over a Router-Dealer socket. This allows multiple clients to connect to the server and receive updates posted to an observed path. An OBSERVE message is implemented as a special type of GET message with an observe option set. The server replies to the GET with a UUID in the payload which is used to identify the client over the Router-Dealer communication.
 
+| foo | bar | boz | baz | biz |
+|-----|-----|-----|-----|-----|
+|     |     |     |     |     |
+|     |     |     |     |     |
+|     |     |     |     |     |
+
 ### message structure
 
 All values are in bits unless specified and all values are unsigned.
