@@ -29,6 +29,33 @@ All values are in bits unless specified.
 * number = CoAP specified
 * value = CoAP specified
 
+Some options must be present depending on the type of message.
+
+*GET request*
+
+* uri_path
+* uri_host
+* content_format
+
+*GET request (observe)*
+
+* uri_path
+* uri_host
+* content_format
+* observe
+* max_age
+
+*GET response*
+
+* content_format
+
+*POST request*
+
+* uri_path
+* uri_host
+* content_format
+
+
 #### message payload (optional)
 | payload |
 | :--: |

@@ -6,6 +6,10 @@ The current implementation supports POST/GET of JSON, text and binary data with 
 
 An API exists to support key/value storage and retrieval as well as times series storage and retrieval which is specified as part of the path.
 
+Access control is supported by through macaroons which can be enabled using a command-line flag. A command-line tool is provided to help mint macaroons for testing.
+
+The zest protocol is documented [here](https://github.com/jptmoore/zest/tree/master/doc).
+
 ### Usage example
 
 You can run a server and test client using Docker. Each command supports --help to get a list of parameters.
