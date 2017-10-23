@@ -9,23 +9,26 @@ An OBSERVE message is slightly more complex and involves an initial Request-Repl
 All values are in bits unless specified and all values are unsigned.
 
 #### header
-| code | oc | tkl |
-|-----|-----|-----|
-| 8 | 8 | 16 (network order) |
+
+| code | oc | tkl                |
+|------|----|--------------------|
+|   8  |  8 | 16 (network order) |
 
 * tlk = token length in bytes
 * oc = number of options present
 * code = CoAP specified
 
 #### token (optional)
+
 | token |
-|-----|
+|-------|
 | bytes |
 
 #### options (repeating)
-| number  | length | value | ... | 
-|-----|-----|-----|-----|
-| 8 | 16 (network order) | bytes | ... |
+
+| number | length             | value | ... |
+|--------|--------------------|-------|-----|
+|    8   | 16 (network order) | bytes | ... |
 
 * number = CoAP specified
 * value = CoAP specified
@@ -58,6 +61,7 @@ Some options must be present depending on the type of message.
 
 
 #### message payload (optional)
+
 | payload |
-|-----|
-| bytes |
+|---------|
+|  bytes  |
