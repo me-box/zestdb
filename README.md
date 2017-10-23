@@ -1,17 +1,10 @@
 # REST over ZeroMQ
 
-A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ in ReasonML.
+A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ.
 
 The current implementation supports POST/GET of JSON data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
 
 An API exists to support key/value storage and retrieval as well as times series storage and retrieval which is specified as part of the path.
-
-**Todo:** 
-
-* Token-based control of actions such as being able to observe a resource for fixed time periods or a number of times of access etc. This will utilise the in-built HyperCat to describe and control what is in the backend storage and what can be accessed.
-* Implement proper handling of valid observed paths.
-* Factor out functionality into a stand-alone library and support other languages.
-
 
 ### Usage example
 
