@@ -42,27 +42,6 @@ $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 
 $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 ```
 
-### More advanced usage examples
-
-You can write a binary such as a image to the database:
-
-```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format binary --file --payload image.jpg
-```
-
-Reading an image from the database:
-
-```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get --format binary > /tmp/image.jpg
-```
-
-When you observe a path this functionality will expire. By default a single observation will take place and then expire immediately. To extend this behaviour you need to specify a 'max-age' flag. This is the time in seconds the observation will expire from its first invocation. For example to observe a path for 1 hour you could do the following:
-
-```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe --max-age 3600
-```
-
-
 ### Key/Value API
 
 #### Write entry
@@ -111,3 +90,32 @@ $ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv
     Method: GET
     Parameters: replace <id> with an identifier, replace <from> and <to> with epoch seconds
     Notes: return the number of entries in time range provided
+
+
+### More advanced usage (you need to build the code locally)
+
+You can write a binary such as a image to the database:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format binary --file --payload image.jpg
+```
+
+Reading an image from the database:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get --format binary > /tmp/image.jpg
+```
+
+When you observe a path this functionality will expire. By default a single observation will take place and then expire immediately. To extend this behaviour you need to specify a 'max-age' flag. This is the time in seconds the observation will expire from its first invocation. For example to observe a path for 1 hour you could do the following:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe --max-age 3600 --loop 1000
+```
+
+The example above used the 'loop' flag which can be applied to any operation to control how many times it occurs. We can also add a 'freq' flag which controls the frequency of the loop. This is useful for generating performance tests such as:
+
+```bash
+$ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format text --payload 'hello world' --loop 10 --freq 0.001
+```
+
+
