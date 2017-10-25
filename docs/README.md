@@ -116,7 +116,7 @@ $ server.exe --secret-key 'EKy(xjAnIfg6AT+OGd?nS1Mi5zZ&b*VXA@WxNLLE' --enable-lo
 
 In the above example, we have turned debugging on which is useful option if you want to write your own client. A client can also be run in this mode.
 
-### More advanced usage (running locally)
+### More advanced usage
 
 To add an entry to the in-built HyperCat:
 
