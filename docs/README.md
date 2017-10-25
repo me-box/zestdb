@@ -8,7 +8,7 @@ Access control is supported through macaroons which can be enabled using a comma
 
 The zest protocol is documented [here](protocol).
 
-### Usage example
+### Basic usage examples
 
 You can run a server and test client using Docker. Each command supports --help to get a list of parameters.
 
@@ -41,6 +41,27 @@ $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 
 ```bash
 $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 ```
+
+### More advanced usage examples
+
+You can write a binary such as a image to the database:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format binary --file --payload image.jpg
+```
+
+Reading an image from the database:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get --format binary > /tmp/image.jpg
+```
+
+When you observe a path this functionality will expire. By default a single observation will take place and then expire immediately. To extend this behaviour you need to specify a 'max-age' flag. This is the time in seconds the observation will expire from its first invocation. For example to observe a path for 1 hour you could do the following:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe --max-age 3600
+```
+
 
 ### Key/Value API
 
