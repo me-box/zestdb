@@ -1,18 +1,18 @@
-A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ.
+A [CoAP](https://tools.ietf.org/html/rfc7252) inspired implementation of a RESTful-like experience implemented over [ZeroMQ](http://zeromq.org/).
 
 The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
 
-Data stored can be described and queried using a built in HyperCat.
+Data stored can be described and queried using a built in [HyperCat](http://www.hypercat.io/).
 
 An API exists to support key/value storage and retrieval as well as times series storage and retrieval which is specified as part of the path.
 
-Access control is supported through macaroons which can be enabled using a command-line flag. A command-line tool is provided to help mint macaroons for testing.
+Access control is supported through [macaroons](https://github.com/rescrv/libmacaroons) which can be enabled using a command-line flag. A command-line tool is provided to help mint macaroons for testing.
 
 The zest protocol is documented [here](protocol).
 
 ### Basic usage examples
 
-You can run a server and test client using Docker. Each command supports --help to get a list of parameters.
+You can run a server and test client using [Docker](https://www.docker.com/). Each command supports --help to get a list of parameters.
 
 #### starting server
 
@@ -96,7 +96,7 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 
 ### Security
 
-All communication is encrypted using ZeroMQ's built-in CurveZMQ security. However, access to the server can be controlled through tokens called macaroons. A command-line utility exists to mint macaroons which restricts what path can be accessed, who is accessing it and what the operation is. For example to mint a macaroon to control a POST operations you could do:
+All communication is encrypted using ZeroMQ's built-in [CurveZMQ](http://curvezmq.org/) security. However, access to the server can be controlled through tokens called macaroons. A command-line utility exists to mint macaroons which restricts what path can be accessed, who is accessing it and what the operation is. For example to mint a macaroon to control a POST operations you could do:
 
 ```bash
 $ mint.exe --path 'path = /kv/foo' --method 'method = POST' --target 'target = Johns-MacBook-Pro.local' --key 'secret'
