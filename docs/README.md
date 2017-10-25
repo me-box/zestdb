@@ -94,6 +94,28 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
     Notes: return the number of entries in time range provided
 
 
+### Security
+
+All communication is encrypted using ZeroMQ's built-in CurveZMQ security. However, access to the server can be controlled through tokens called macaroons. A command-line utility exists to mint macaroons which restricts what path can be accessed, who is accessing it and what the operation is. For example to mint a macaroon to control a POST operations you could do:
+
+```bash
+$ mint.exe --path 'path = /kv/foo' --method 'method = POST' --target 'target = Johns-MacBook-Pro.local' --key 'secret'
+```
+
+In the above example we are allowing POST operations to the path '/kv/foo' for a host called 'Johns-MacBook-Pro.local'. The output from this command is a token which can be specified on the command-line as follows:
+
+```bash
+$ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format text --payload 'hello world' --token 'MDAwZWxvY2F0aW9uIAowMDEwaWRlbnRpZmllciAKMDAxN2NpZCBwYXRoID0gL2t2L2ZvbwowMDE2Y2lkIG1ldGhvZCA9IFBPU1QKMDAyOWNpZCB0YXJnZXQgPSBKb2hucy1NYWNCb29rLVByby5sb2NhbAowMDJmc2lnbmF0dXJlIJKloR0-WbbJBV1gXPWGimpo_eTByptDAIZ2wh1bZfKMCg=='
+```
+
+If we started our server using the same token key we will be able to verify the above request as being a valid operation. So in this case we would have started our server as follows:
+
+```bash
+$ server.exe --secret-key 'EKy(xjAnIfg6AT+OGd?nS1Mi5zZ&b*VXA@WxNLLE' --enable-logging --token-key 'secret'
+```
+
+In the above example, we have turned debugging on which is useful option if you want to write your own client. A client can also be run in this mode.
+
 ### More advanced usage (running locally)
 
 To add an entry to the in-built HyperCat:
@@ -131,26 +153,3 @@ The example above used the 'loop' flag which can be applied to any operation to 
 ```bash
 $ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format text --payload 'hello world' --loop 10 --freq 0.001
 ```
-
-
-### Security
-
-All communication is encrypted using ZeroMQ's built-in CurveZMQ security. However, access to the server can be controlled through tokens called macaroons. A command-line utility exists to mint macaroons which restricts what path can be accessed, who is accessing it and what the operation is. For example to mint a macaroon to control a POST operations you could do:
-
-```bash
-$ mint.exe --path 'path = /kv/foo' --method 'method = POST' --target 'target = Johns-MacBook-Pro.local' --key 'secret'
-```
-
-In the above example we are allowing POST operations to the path '/kv/foo' for a host called 'Johns-MacBook-Pro.local'. The output from this command is a token which can be specified on the command-line as follows:
-
-```bash
-$ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format text --payload 'hello world' --token 'MDAwZWxvY2F0aW9uIAowMDEwaWRlbnRpZmllciAKMDAxN2NpZCBwYXRoID0gL2t2L2ZvbwowMDE2Y2lkIG1ldGhvZCA9IFBPU1QKMDAyOWNpZCB0YXJnZXQgPSBKb2hucy1NYWNCb29rLVByby5sb2NhbAowMDJmc2lnbmF0dXJlIJKloR0-WbbJBV1gXPWGimpo_eTByptDAIZ2wh1bZfKMCg=='
-```
-
-If we started our server using the same token key we will be able to verify the above request as being a valid operation. So in this case we would have started our server as follows:
-
-```bash
-$ server.exe --secret-key 'EKy(xjAnIfg6AT+OGd?nS1Mi5zZ&b*VXA@WxNLLE' --enable-logging --token-key 'secret'
-```
-
-In the above example, we have turned debugging on which is useful option if you want to write your own client. A client can also be run in this mode.
