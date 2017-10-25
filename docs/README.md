@@ -2,6 +2,8 @@ A CoAP inspired implementation of a RESTful-like experience implemented over Zer
 
 The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
 
+Data stored can be described and queried using a built in HyperCat.
+
 An API exists to support key/value storage and retrieval as well as times series storage and retrieval which is specified as part of the path.
 
 Access control is supported through macaroons which can be enabled using a command-line flag. A command-line tool is provided to help mint macaroons for testing.
@@ -92,7 +94,19 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
     Notes: return the number of entries in time range provided
 
 
-### More advanced usage (you need to build the code locally)
+### More advanced usage (running locally)
+
+To add an entry to the in-built HyperCat:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --payload /tmp/client.exe --file --payload item1.json
+```
+
+To query the in-built HyperCat:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode get
+```
 
 You can write a binary such as a image to the database:
 
