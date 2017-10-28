@@ -23,7 +23,7 @@ let file = ref false;
 let version = 1;
 
 module Response = {
-    type t = OK |  Payload string | Error string;
+    type t = OK | Unavailable |  Payload string | Error string;
 };
 
 let setup_logger () => {
@@ -92,6 +92,10 @@ let handle_ack_created options => {
   Response.OK |> Lwt.return;
 };
 
+let handle_service_unavailable options => {
+  Response.Unavailable |> Lwt.return;
+};
+
 let handle_ack_bad_request options => {
   Response.Error "Bad Request" |> Lwt.return;
 };
@@ -116,6 +120,7 @@ let handle_response msg => {
       | 128 => handle_ack_bad_request options;
       | 129 => handle_ack_unauthorized options;
       | 143 => handle_unsupported_content_format options;
+      | 163 => handle_service_unavailable options;
       | _ => failwith ("invalid code:" ^ string_of_int code);
       };
     };  
@@ -328,15 +333,22 @@ let string_split_at s n =>
 let string_drop_prefix n s =>
   string_split_at s n |> snd;
 
+
 let observe_loop socket count => {
-  let rec loop n => {
+  let rec loop () => {
     Lwt_zmq.Socket.recv socket >>=
-      fun resp =>
-        Lwt_io.printf "%s\n" resp >>=
-          fun () => 
-            (n > 1) ? loop (n-1) : Lwt.return_unit;
+      handle_response >>=
+        fun resp =>
+          switch resp {
+          | Response.Payload msg => 
+              Lwt_io.printf "%s\n" msg >>=
+                fun () => loop ();
+          | Response.Unavailable => 
+              Lwt.return_unit;
+          | _ => failwith "unhandled response";
+          };
   };
-  loop count;
+  loop ();
 };
 
 
