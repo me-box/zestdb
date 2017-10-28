@@ -145,10 +145,10 @@ $ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv
 When you observe a path this functionality will expire. By default a single observation will take place and then expire immediately. To extend this behaviour you need to specify a 'max-age' flag. This is the time in seconds the observation will expire from its first invocation. For example to observe a path for 1 hour you could do the following:
 
 ```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe --max-age 3600 --loop 1000
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe --max-age 3600
 ```
 
-The example above used the 'loop' flag which can be applied to any operation to control how many times it occurs. We can also add a 'freq' flag which controls the frequency of the loop. This is useful for generating performance tests such as:
+To carry out some performance tests we can use the 'loop' flag with POST and GET operations to control how many times they repeat. We can also add a 'freq' flag to control the frequency of the loop:
 
 ```bash
 $ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format text --payload 'hello world' --loop 10 --freq 0.001
