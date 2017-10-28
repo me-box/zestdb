@@ -71,38 +71,6 @@ let add_to_observe uri_path content_format ident max_age => {
   };
 };
 
-
-let publish path payload socket => {
-  let msg = Printf.sprintf "%s %s" path payload;
-  Lwt_zmq.Socket.send socket msg;
-};
-
-let expire l t => {
-  open List;
-  let f x =>
-    switch x {
-    | (k,v) => (k, filter (fun (_,t') => (t' > t)) v);
-    };
-  filter (fun (x,y) => y != []) (map f l);
-};
-
-let route tuple payload socket => {
-  open Lwt_zmq.Socket.Router;
-  let rec loop l => {
-    switch l {
-    | [] => Lwt.return_unit;
-    | [(ident,expiry), ...rest] => {
-        send socket (id_of_string ident) [payload] >>=
-        /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
-          fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s with expiry:%lu" payload ident expiry >>=
-            fun _ => loop rest;
-      };
-    };
-  };
-  loop (get_ident tuple) >>=
-    fun _ => Lwt.return (notify_list := expire !notify_list (time_now ()));
-};
-
 let handle_header bits => {
   let tuple = [%bitstring
     switch bits {
@@ -244,6 +212,59 @@ let get_key_mode uri_path => {
   let key = Str.string_after uri_path 4;
   let mode = Str.first_chars uri_path 4;
   (key,mode);
+};
+
+
+let publish path payload socket => {
+  let msg = Printf.sprintf "%s %s" path payload;
+  Lwt_zmq.Socket.send socket msg;
+};
+
+let expire l t => {
+  open List;
+  let f x =>
+    switch x {
+    | (k,v) => (k, filter (fun (_,t') => (t' > t)) v);
+    };
+  filter (fun (x,y) => y != []) (map f l);
+};
+
+let diff l1 l2 => List.filter (fun x => not (List.mem x l2)) l1;
+
+let list_uuids alist => {
+  open List;  
+  map (fun (x,y) => hd y) alist;    
+};
+
+let route_message alist socket payload => {
+  open Lwt_zmq.Socket.Router;  
+  let rec loop l => {
+    switch l {
+      | [] => Lwt.return_unit;
+      | [(ident,expiry), ...rest] => {
+          send socket (id_of_string ident) [payload] >>=
+          /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
+            fun _ => Lwt_log_core.debug_f "sending payload:%s to ident:%s with expiry:%lu" payload ident expiry >>=
+              fun _ => loop rest;
+        };
+      };    
+  };
+  loop alist;
+};
+
+let handle_expire socket => {
+  open Lwt_zmq.Socket.Router;
+  let new_notify_list = expire !notify_list (time_now ());
+  let uuids = diff (list_uuids !notify_list) (list_uuids new_notify_list);
+  notify_list := new_notify_list;
+  /* send Service Unavailable */
+  route_message uuids socket (create_ack 163);
+};
+
+let route tuple payload socket => {
+  let (_,content_format) = tuple;
+  route_message (get_ident tuple) socket (create_ack_payload content_format payload) >>=
+    fun _ => handle_expire socket;
 };
 
 let handle_get_read_ts_latest path_list => {
