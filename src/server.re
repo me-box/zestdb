@@ -244,7 +244,7 @@ let route_message alist socket payload => {
       | [(ident,expiry), ...rest] => {
           send socket (id_of_string ident) [payload] >>=
           /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
-            fun _ => Lwt_log_core.debug_f "sending payload:%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry >>=
+            fun _ => Lwt_log_core.debug_f "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry >>=
               fun _ => loop rest;
         };
       };    
