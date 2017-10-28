@@ -46,6 +46,10 @@ let is_observed path => {
   List.mem_assoc path !notify_list;
 };
 
+let observed_paths_exist () => {
+  List.length !notify_list > 0;
+};
+
 let get_ident path => {
   List.assoc path !notify_list;
 };
@@ -253,18 +257,21 @@ let route_message alist socket payload => {
 };
 
 let handle_expire socket => {
-  open Lwt_zmq.Socket.Router;
-  let new_notify_list = expire !notify_list (time_now ());
-  let uuids = diff (list_uuids !notify_list) (list_uuids new_notify_list);
-  notify_list := new_notify_list;
-  /* send Service Unavailable */
-  route_message uuids socket (create_ack 163);
+  if (observed_paths_exist ()) {
+    open Lwt_zmq.Socket.Router;
+    let new_notify_list = expire !notify_list (time_now ());
+    let uuids = diff (list_uuids !notify_list) (list_uuids new_notify_list);
+    notify_list := new_notify_list;
+    /* send Service Unavailable */
+    route_message uuids socket (create_ack 163);
+  } else {
+    Lwt.return_unit;
+  };
 };
 
 let route tuple payload socket => {
   let (_,content_format) = tuple;
-  route_message (get_ident tuple) socket (create_ack_payload content_format payload) >>=
-    fun _ => handle_expire socket;
+  route_message (get_ident tuple) socket (create_ack_payload content_format payload);
 };
 
 let handle_get_read_ts_latest path_list => {
@@ -463,19 +470,21 @@ let handle_post options token payload with::rout_soc => {
 };
 
 let handle_msg msg with::rout_soc => {
-  Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
-    fun () => {
-      let r0 = Bitstring.bitstring_of_string msg;
-      let (tkl, oc, code, r1) = handle_header r0;
-      let (token, r2) = handle_token r1 tkl;
-      let (options,r3) = handle_options oc r2;
-      let payload = Bitstring.string_of_bitstring r3;
-      switch code {
-      | 1 => handle_get options token;
-      | 2 => handle_post options token payload with::rout_soc;
-      | _ => failwith "invalid code";
-      };
-    };  
+  handle_expire rout_soc >>=
+    fun () =>
+      Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
+        fun () => {
+          let r0 = Bitstring.bitstring_of_string msg;
+          let (tkl, oc, code, r1) = handle_header r0;
+          let (token, r2) = handle_token r1 tkl;
+          let (options,r3) = handle_options oc r2;
+          let payload = Bitstring.string_of_bitstring r3;
+          switch code {
+          | 1 => handle_get options token;
+          | 2 => handle_post options token payload with::rout_soc;
+          | _ => failwith "invalid code";
+          };
+        };  
 };
 
 let server with::rep_soc and::rout_soc => {
