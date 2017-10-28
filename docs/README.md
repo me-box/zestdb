@@ -142,7 +142,7 @@ Reading an image from the database:
 $ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get --format binary > /tmp/image.jpg
 ```
 
-When you observe a path this functionality will expire. By default a single observation will take place and then expire immediately. To extend this behaviour you need to specify a 'max-age' flag. This is the time in seconds the observation will expire from its first invocation. For example to observe a path for 1 hour you could do the following:
+When you observe a path this functionality will expire. By default a observation will last 60 seconds. To change this behaviour you need to specify a 'max-age' flag providing the number of seconds to observe for. For example to observe a path for 1 hour you could do the following:
 
 ```bash
 $ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe --max-age 3600
