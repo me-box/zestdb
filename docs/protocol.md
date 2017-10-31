@@ -14,7 +14,7 @@ All values are in bits unless specified and all values are unsigned.
 |------|----|--------------------|
 |   8  |  8 | 16 (network order) |
 
-* tlk = token length in bytes
+* tkl = token length in bytes
 * oc = number of options present
 * code = CoAP specified
 
