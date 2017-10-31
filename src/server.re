@@ -108,7 +108,7 @@ let handle_token bits len => {
 let handle_option bits => {
   let tuple = [%bitstring
     switch bits {
-    | {|number : 8 : unsigned; 
+    | {|number : 16 : bigendian; 
         len : 16 : bigendian;
         value: len*8: string; 
         rest : -1 : bitstring
@@ -147,12 +147,12 @@ let create_option number::number value::value => {
   let byte_length = String.length value;
   let bit_length = byte_length * 8;
   let bits = [%bitstring 
-    {|number : 8 : unsigned;
+    {|number : 16 : bigendian;
       byte_length : 16 : bigendian;
       value : bit_length : string
     |}
   ];
-  (bits ,(bit_length+24));
+  (bits ,(bit_length+32));
 };
 
 
@@ -196,7 +196,7 @@ let create_ack_payload format_code payload => {
 
 let create_ack_observe_options format::format key::key => {
   let content_format = create_option number::12 value::format;
-  let public_key = create_option number::200 value::key;
+  let public_key = create_option number::2048 value::key;
   create_options [|content_format, public_key|];
 };
 

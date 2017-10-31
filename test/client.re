@@ -60,7 +60,7 @@ let handle_header bits => {
 let handle_option bits => {
   let tuple = [%bitstring
     switch bits {
-    | {|number : 8 : unsigned; 
+    | {|number : 16 : bigendian; 
         len : 16 : bigendian;
         value: len*8: string; 
         rest : -1 : bitstring
@@ -86,7 +86,7 @@ let handle_options oc bits => {
 };
 
 let has_public_key options => {
-  if (Array.exists (fun (number,_) => number == 200) options) {
+  if (Array.exists (fun (number,_) => number == 2048) options) {
     true;
   } else {
     false;
@@ -108,7 +108,7 @@ let get_option_value options value => {
 let handle_ack_content options payload => {
   let payload = Bitstring.string_of_bitstring payload;
   if (has_public_key options) {
-    let key = get_option_value options 200;
+    let key = get_option_value options 2048;
     Response.Observe key payload |> Lwt.return;
   } else {
     Response.Payload payload |> Lwt.return;    
@@ -176,12 +176,12 @@ let create_option number::number value::value => {
   let byte_length = String.length value;
   let bit_length = byte_length * 8;
   let bits = [%bitstring 
-    {|number : 8 : unsigned;
+    {|number : 16 : bigendian;
       byte_length : 16 : bigendian;
       value : bit_length : string
     |}
   ];
-  (bits ,(bit_length+24));
+  (bits ,(bit_length+32));
 };
 
 let create_token tk::token => {
