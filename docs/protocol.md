@@ -53,6 +53,11 @@ Some options must be present depending on the type of message.
 
 * content_format
 
+*GET response (observe)*
+
+* content_format (payload contains a UUID)
+* public_key (number 2048, contains key)
+
 *POST request*
 
 * uri_path
