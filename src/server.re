@@ -8,7 +8,7 @@ let token_secret_key = ref "";
 let router_public_key = ref "";
 let router_secret_key = ref "";
 let log_mode = ref false;
-let curve_secret_key = ref "";
+let server_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
 let content_format = ref "";
@@ -569,7 +569,7 @@ let parse_cmdline () => {
     ("--request-endpoint", Arg.Set_string rep_endpoint, ": to set the request/reply endpoint"),
     ("--router-endpoint", Arg.Set_string rout_endpoint, ": to set the router/dealer endpoint"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
-    ("--secret-key", Arg.Set_string curve_secret_key, ": to set the curve secret key"),
+    ("--secret-key", Arg.Set_string server_secret_key, ": to set the curve secret key"),
     ("--token-key", Arg.Set_string token_secret_key, ": to set the token secret key"),
     ("--identity", Arg.Set_string identity, ": to set the server identity"),
     ("--store-dir", Arg.Set_string store_directory, ": to set the location for the database files"),
@@ -603,7 +603,7 @@ let rec run_server () => {
   setup_router_keys ();
   (!store_directory != default_store_directory) ? create_stores_again () : ();
   let ctx = ZMQ.Context.create ();
-  let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
+  let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
   let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
   let _ = Lwt_log_core.info "Ready";   
   let _ = try (Lwt_main.run {server with::rep_soc and::rout_soc}) {
