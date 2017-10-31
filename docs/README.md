@@ -121,7 +121,7 @@ In the above example, we have turned debugging on which is useful option if you 
 To add an entry to the in-built HyperCat:
 
 ```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --payload /tmp/client.exe --file --payload item1.json
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --file --payload item1.json
 ```
 
 To query the in-built HyperCat:
