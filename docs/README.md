@@ -49,8 +49,14 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 #### Write entry
     URL: /kv/<key>
     Method: POST
-    Parameters: JSON body of data, replace <id> with an identifier
-    Notes: add data to time series with given identifier
+    Parameters: JSON body of data, replace <key> with a key
+    Notes: store data using given key
+    
+#### Read entry
+    URL: /kv/<key>
+    Method: GET
+    Parameters: replace <key> with a key
+    Notes: return data for given key    
 
 #### Read latest entry
     URL: /kv/<key>/latest
