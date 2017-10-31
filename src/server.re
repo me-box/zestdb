@@ -501,8 +501,15 @@ let handle_post options token payload with::rout_soc => {
   if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
   } else if (is_observed tuple) {
-    route tuple payload rout_soc >>=
-      fun () => handle_post_write content_format uri_path payload >>= ack;
+      handle_post_write content_format uri_path payload >>=
+        fun resp => {
+          /* we dont want to route bad requests */
+          if (resp != (Code 128)) {
+            route tuple payload rout_soc >>= fun () => ack resp;
+          } else {
+            ack resp;
+          };
+      };
   } else {
     handle_post_write content_format uri_path payload >>= ack;
   };
