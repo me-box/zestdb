@@ -26,9 +26,9 @@ All values are in bits unless specified and all values are unsigned.
 
 #### options (repeating)
 
-| number | length             | value | ... |
-|--------|--------------------|-------|-----|
-|    8   | 16 (network order) | bytes | ... |
+| number             | length             | value | ... |
+|--------------------|--------------------|-------|-----|
+| 16 (network order) | 16 (network order) | bytes | ... |
 
 * number = CoAP specified
 * value = CoAP specified
