@@ -10,6 +10,8 @@ let deal_endpoint = ref "tcp://127.0.0.1:5556";
 let curve_server_key = ref "";
 let curve_public_key = ref "";
 let curve_secret_key = ref "";
+let router_public_key = ref "";
+let router_secret_key = ref "";
 let token = ref "";
 let uri_path = ref "";
 let content_format = ref (create_content_format 50);
@@ -23,7 +25,7 @@ let file = ref false;
 let version = 1;
 
 module Response = {
-    type t = OK | Unavailable |  Payload string | Error string;
+    type t = OK | Unavailable |  Payload string | Observe string string | Error string;
 };
 
 let setup_logger () => {
@@ -83,9 +85,34 @@ let handle_options oc bits => {
   (options, handle oc bits);
 };
 
+let has_public_key options => {
+  if (Array.exists (fun (number,_) => number == 200) options) {
+    true;
+  } else {
+    false;
+  }
+};
+
+let get_option_value options value => {
+  let rec find a x i => {
+    let (number,value) = a.(i);
+    if (number == x) {
+      value;
+    } else {
+      find a x (i + 1)
+    };
+  };
+  find options value 0;
+};
+
 let handle_ack_content options payload => {
-  let resp = Bitstring.string_of_bitstring payload;
-  Response.Payload resp |> Lwt.return;
+  let payload = Bitstring.string_of_bitstring payload;
+  if (has_public_key options) {
+    let key = get_option_value options 200;
+    Response.Observe key payload |> Lwt.return;
+  } else {
+    Response.Payload payload |> Lwt.return;    
+  };
 };
 
 let handle_ack_created options => {
@@ -245,22 +272,28 @@ let observe ::token=(!token) ::format=(!content_format) uri::uri () => {
   Bitstring.string_of_bitstring bits;
 };
 
-let set_socket_security soc => {
+let set_main_socket_security soc => {
   ZMQ.Socket.set_curve_serverkey soc !curve_server_key;
   ZMQ.Socket.set_curve_publickey soc !curve_public_key;
   ZMQ.Socket.set_curve_secretkey soc !curve_secret_key;
 };
 
+let set_dealer_socket_security soc key=> {
+  ZMQ.Socket.set_curve_serverkey soc key;
+  ZMQ.Socket.set_curve_publickey soc !router_public_key;
+  ZMQ.Socket.set_curve_secretkey soc !router_secret_key;
+};
+
 let connect_request_socket endpoint ctx kind => {
   let soc = ZMQ.Socket.create ctx kind;
-  set_socket_security soc;
+  set_main_socket_security soc;
   ZMQ.Socket.connect soc endpoint;
   Lwt_zmq.Socket.of_socket soc;
 };
 
-let connect_dealer_socket ident endpoint ctx kind => {
+let connect_dealer_socket key ident endpoint ctx kind => {
   let soc = ZMQ.Socket.create ctx kind;
-  set_socket_security soc;
+  set_dealer_socket_security soc key;
   ZMQ.Socket.set_identity soc ident; 
   ZMQ.Socket.connect soc endpoint;
   Lwt_zmq.Socket.of_socket soc;
@@ -364,11 +397,11 @@ let observe_test ctx => {
       send_request msg::(observe uri::!uri_path ()) to::req_soc >>=
         fun resp =>
           switch resp {
-          | Response.Payload ident => {
+          | Response.Observe key ident => {
               Lwt_log_core.debug_f "Observing:%s with ident:%s" !uri_path ident >>=
                 fun () => { 
                   close_socket req_soc;
-                  let deal_soc = connect_dealer_socket ident !deal_endpoint ctx ZMQ.Socket.dealer;
+                  let deal_soc = connect_dealer_socket key ident !deal_endpoint ctx ZMQ.Socket.dealer;
                   observe_loop deal_soc !loop_count >>=
                     fun () => close_socket deal_soc |> Lwt.return;
                 };
@@ -432,10 +465,16 @@ let parse_cmdline () => {
 /* public_key: MP9pZzG25M2$.a%[DwU$OQ#-:C}Aq)3w*<AY^%V{ */
 /* secret_key: j#3yqGG17QNTe(g@jJt6[LOg%ivqr<:}L%&NAUPt */  
 
-let setup_keys () => {
+let setup_curve_keys () => {
   let (public_key,private_key) = ZMQ.Curve.keypair ();
   curve_public_key := public_key;
   curve_secret_key := private_key;
+};
+
+let setup_router_keys () => {
+  let (public_key,private_key) = ZMQ.Curve.keypair ();
+  router_public_key := public_key;
+  router_secret_key := private_key;
 };
 
 let report_error e => {
@@ -446,7 +485,8 @@ let report_error e => {
 
 let client () => {
   let ctx = ZMQ.Context.create ();
-  setup_keys ();
+  setup_curve_keys ();
+  setup_router_keys ();
   parse_cmdline ();
   /* can take payload from a file */
   !file ? set_payload_from !payload : ();

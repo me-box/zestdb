@@ -5,6 +5,10 @@ let rout_endpoint = ref "tcp://0.0.0.0:5556";
 /* let notify_list  = ref [(("",0),[("", Int32.of_int 0)])]; */
 let notify_list  = ref [];
 let token_secret_key = ref "";
+let router_public_key = ref "";
+let router_secret_key = ref "";
+let log_mode = ref false;
+let curve_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
 let content_format = ref "";
@@ -151,6 +155,16 @@ let create_option number::number value::value => {
   (bits ,(bit_length+24));
 };
 
+
+let create_options options => {
+  let count = Array.length options;
+  let values = Array.map (fun (x,y) => x) options;
+  let value = Bitstring.concat (Array.to_list values);
+  let lengths = Array.map (fun (x,y) => y) options;
+  let length = Array.fold_left (fun x y => x + y) 0 lengths;
+  (value, length, count);
+};
+
 let create_ack code => {
   let (header_value, header_length) = create_header tkl::0 oc::0 code::code;
   let bits = [%bitstring {|header_value : header_length : bitstring|}];
@@ -162,13 +176,37 @@ let create_content_format id => {
   Bitstring.string_of_bitstring bits  
 };
 
-let create_ack_payload code payload => {
-  let (header_value, header_length) = create_header tkl::0 oc::1 code::69;
-  let (format_value, format_length) = create_option number::12 value::(create_content_format code);
+let create_ack_payload_options format::format => {
+  let content_format = create_option number::12 value::format;
+  create_options [|content_format|];
+};
+
+let create_ack_payload format_code payload => {
+  let (options_value, options_length, options_count) = create_ack_payload_options format::(create_content_format format_code);
+  let (header_value, header_length) = create_header tkl::0 oc::options_count code::69;  
   let payload_bytes = String.length payload * 8;
   let bits = [%bitstring 
     {|header_value : header_length : bitstring;
-      format_value : format_length : bitstring;
+      options_value : options_length : bitstring;
+      payload : payload_bytes : string
+    |}
+  ];
+  Bitstring.string_of_bitstring bits;
+};
+
+let create_ack_observe_options format::format key::key => {
+  let content_format = create_option number::12 value::format;
+  let public_key = create_option number::200 value::key;
+  create_options [|content_format, public_key|];
+};
+
+let create_ack_observe public_key uuid::payload => {
+  let (options_value, options_length, options_count) = create_ack_observe_options format::(create_content_format 0) key::public_key;
+  let (header_value, header_length) = create_header tkl::0 oc::options_count code::69;  
+  let payload_bytes = String.length payload * 8;
+  let bits = [%bitstring 
+    {|header_value : header_length : bitstring;
+      options_value : options_length : bitstring;
       payload : payload_bytes : string
     |}
   ];
@@ -410,7 +448,8 @@ let ack kind => {
   open Common.Ack;
   switch kind {
   | Code n => create_ack n;
-  | Payload code data => create_ack_payload code data;
+  | Payload format data => create_ack_payload format data;
+  | Observe key uuid => create_ack_observe key uuid;
   } |> Lwt.return;
 };
 
@@ -447,7 +486,7 @@ let handle_get options token => {
     let max_age = handle_max_age options;  
     let uuid = create_uuid ();
     add_to_observe uri_path content_format uuid max_age;
-    ack (Payload 0 uuid);
+    ack (Observe !router_public_key uuid);
   } else {
     handle_get_read content_format uri_path >>= ack;
   };
@@ -515,8 +554,6 @@ let close_socket lwt_soc => {
   ZMQ.Socket.close soc;
 };
 
-let log_mode = ref false;
-let curve_secret_key = ref "";
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
 
@@ -540,12 +577,10 @@ let parse_cmdline () => {
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
 
-/* experimental idea to add key to hypercat and have unencrypted read access */
-let setup_keys () => {
+let setup_router_keys () => {
   let (public_key,private_key) = ZMQ.Curve.keypair ();
-  curve_secret_key := private_key;
-  let base_item = Ezjsonm.from_channel (open_in "base-item.json");
-  Hypercat.update_item base_item "urn:X-hypercat:rels:publicKey" public_key;
+  router_secret_key := private_key;
+  router_public_key := public_key;
 };
 
 /* some issues running these threads so disabled */
@@ -565,10 +600,11 @@ let create_stores_again () => {
 let rec run_server () => {
   parse_cmdline ();
   !log_mode ? setup_logger () : ();
+  setup_router_keys ();
   (!store_directory != default_store_directory) ? create_stores_again () : ();
   let ctx = ZMQ.Context.create ();
   let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !curve_secret_key;
-  let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !curve_secret_key;
+  let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
   let _ = Lwt_log_core.info "Ready";   
   let _ = try (Lwt_main.run {server with::rep_soc and::rout_soc}) {
     | e => report_error e;

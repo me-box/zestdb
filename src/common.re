@@ -3,7 +3,7 @@ module Result = {
 };
 
 module Ack = {
-    type t = Code int |  Payload int string;
+    type t = Code int |  Payload int string | Observe string string;
 };
 
 module Response = {
