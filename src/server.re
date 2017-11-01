@@ -251,7 +251,8 @@ let get_max_age options => {
 
 
 let get_key_mode uri_path => {
-  let key = Str.string_after uri_path 4;
+  let key_path = Str.string_after uri_path 4;
+  let key = String.split_on_char '/' key_path |> List.hd;
   let mode = Str.first_chars uri_path 4;
   (key,mode);
 };
@@ -394,25 +395,32 @@ let to_json payload => {
   parsed;
 };
 
+let handle_post_write_ts key uri_path payload => {
+  let path_list = String.split_on_char '/' uri_path;
+  let timestamp = (List.length path_list == 5 && List.nth path_list 3 == "at") ? 
+    Some (int_of_string (List.nth path_list 4)) : None;
+  let json = to_json payload;
+  switch json {
+  | Some value => Some (Database.Json.Ts.write !ts_json_store timestamp key value);
+  | None => None;
+  };  
+};
+
+let handle_post_write_kv key uri_path payload => {
+  let json = to_json payload;
+  switch json {
+  | Some value => Some (Database.Json.Kv.write !kv_json_store key value);
+  | None => None;
+  };  
+};
+
 let handle_write_database content_format uri_path payload => {
   open Common.Ack;
   open Ezjsonm;
   let (key,mode) = get_key_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => {
-    let json = to_json payload;
-    switch json {
-    | Some json => Some (Database.Json.Kv.write !kv_json_store key json);
-    | None => None;
-    };
-  };
-  | ("/ts/", 50) => {
-    let json = to_json payload;
-    switch json {
-    | Some json => Some (Database.Json.Ts.write !ts_json_store key json);
-    | None => None;
-    };
-  };  
+  | ("/kv/", 50) => handle_post_write_kv key uri_path payload;
+  | ("/ts/", 50) => handle_post_write_ts key uri_path payload;  
   | ("/kv/", 42) => Some (Database.String.Kv.write !kv_binary_store key payload);
   | ("/kv/", 0) => Some (Database.String.Kv.write !kv_text_store key payload);
   | _ => None;

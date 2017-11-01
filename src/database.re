@@ -38,10 +38,12 @@ module Json = {
     let create ::file =>
       Store.init root::file bare::true () >>= Store.master;
   
-    let write branch k v =>
+    let write branch k v => {
+      open Printf;
       branch >>= fun branch' =>
-        Store.write message::"write_kv" branch' path::["kv", k] v >>=
+        Store.write message::(sprintf "write_kv (%s)\n" k) branch' path::["kv", k] v >>=
           fun _ => Lwt.return_unit;
+    };
 
     let read branch k =>
       branch >>= fun branch' =>
@@ -66,13 +68,16 @@ module Json = {
     let create ::file =>
       Store.init root::file bare::true () >>= Store.master;
 
-    let write branch id v =>
+    let write branch ts id v => {
+      open Printf;
       branch >>=
         fun branch' => {
-          let t = get_time ();
-            Store.append message::"write_ts" branch' path::["ts", id] (t, v) >>=
-            fun _ => Lwt.return_unit;
-        };  
+          switch ts {
+          | Some t => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (t, v)
+          | None => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (get_time (), v)
+          };
+        };
+      };
 
     let get_cursor branch id =>
       branch >>= (fun branch' => Store.get_cursor branch' path::["ts", id]);
