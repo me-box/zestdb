@@ -49,28 +49,31 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 #### Write entry
     URL: /kv/<key>
     Method: POST
-    Parameters: JSON body of data, replace <key> with a key
+    Parameters: JSON body of data, replace <key> with a string
     Notes: store data using given key
     
 #### Read entry
     URL: /kv/<key>
     Method: GET
-    Parameters: replace <key> with a key
+    Parameters: replace <key> with a string
     Notes: return data for given key    
 
-#### Read latest entry
-    URL: /kv/<key>/latest
-    Method: GET
-    Parameters: replace <id> with an identifier
-    Notes: return the latest entry
 
 ### Time series API
 
-#### Write entry
+A datum returned is a JSON array containing a timestamp in epoch milliseconds and the actual data. For example:```[ 1509564588450, [1,2,3,4,5] ]```
+
+#### Write entry (auto-generated time)
     URL: /ts/<id>
     Method: POST
-    Parameters: JSON body of data, replace <id> with an identifier
-    Notes: add data to time series with given identifier
+    Parameters: JSON body of data, replace <id> with a string
+    Notes: add data to time series with given identifier (a timestamp will be calculated at time of insertion)
+    
+#### Write entry (user-specified time)
+    URL: /ts/<id>/at/<t>
+    Method: POST
+    Parameters: JSON body of data, replace <id> with a string and <t> with epoch milliseconds
+    Notes: add data to time series with given identifier at the specified time
 
 #### Read latest entry
     URL: /ts/<id>/latest
@@ -85,18 +88,18 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
     Parameters: replace <id> with an identifier, replace <n> with the number of entries
     Notes: return the number of entries requested
     
-#### Read all entries since a time
+#### Read all entries since a time (inclusive)
     
     URL: /ts/<id>/since/<from>
     Method: GET
-    Parameters: replace <id> with an identifier, replace <from> with epoch seconds
+    Parameters: replace <id> with an identifier, replace <from> with epoch milliseconds
     Notes: return the number of entries from time provided
     
-#### Read all entries in a time range
+#### Read all entries in a time range (inclusive)
     
     URL: /ts/<id>/range/<from>/<to>
     Method: GET
-    Parameters: replace <id> with an identifier, replace <from> and <to> with epoch seconds
+    Parameters: replace <id> with an identifier, replace <from> and <to> with epoch milliseconds
     Notes: return the number of entries in time range provided
 
 
