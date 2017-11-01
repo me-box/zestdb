@@ -56,7 +56,12 @@ module Json = {
   module Ts = {
 
     module Store = Ezirmin.FS_log (Tc.Pair Tc.Int Irmin.Contents.Json);
-    let get_time () => int_of_float (Unix.time ());
+
+    let get_time () => {
+      let t_sec = Unix.gettimeofday ();
+      let t_ms = t_sec *. 1000.0;
+      int_of_float t_ms;
+    };
 
     let create ::file =>
       Store.init root::file bare::true () >>= Store.master;
@@ -85,25 +90,33 @@ module Json = {
             /* returns just the dataset */
             fun cursor => read_from_cursor cursor n;     
             
-    let read_latest branch id =>
+    let read_latest branch id => {
+      open Ezjsonm;
       read branch id 1 >>=
         fun (data, _) =>
           switch data {
           | [] => Lwt.return json_empty;
-          | [(_, json), ..._] => Lwt.return json;
-          };        
+          | [(t, json), ..._] => Lwt.return (`A [int t, value json]);
+          };
+    };        
 
     let read_data branch id n =>
       read branch id n >>=
         fun (data, _) => Lwt.return data;
 
-    let remove_timestamp l =>
+    let without_timestamp l =>
       List.map (fun (_, json) => Ezjsonm.value json) l |>
-        fun l => Ezjsonm.(`A l);    
+        fun l => Ezjsonm.(`A l);
+        
+    let with_timestamp l => {
+      open Ezjsonm;
+        List.map (fun (t,json) => `A [int t, value json]) l |>
+          fun l => `A l;
+    };
     
     let read_last branch id n =>
       read_data branch id n >>=
-        fun data => Lwt.return (remove_timestamp data);    
+        fun data => Lwt.return (with_timestamp data);    
 
     let read_data_all branch id =>
       branch >>=
@@ -112,21 +125,21 @@ module Json = {
 
     let read_all branch id =>
       read_data_all branch id >>=
-        fun data => Lwt.return (remove_timestamp data);
+        fun data => Lwt.return (with_timestamp data);
 
     let since t l => List.filter (fun (ts, _) => ts >= t) l;
 
-    let until t l => List.filter (fun (ts, _) => ts < t) l;
+    let until t l => List.filter (fun (ts, _) => ts <= t) l;
 
     let range t1 t2 l => since t1 l |> until t2;        
 
     let read_since branch id t =>
       read_data_all branch id >>=
-        fun l => Lwt.return (remove_timestamp (since t l));
+        fun l => Lwt.return (with_timestamp (since t l));
 
     let read_range branch id t1 t2 =>
       read_data_all branch id >>=
-        fun l => Lwt.return (remove_timestamp (range t1 t2 l));          
+        fun l => Lwt.return (with_timestamp (range t1 t2 l));          
 
   };    
 
