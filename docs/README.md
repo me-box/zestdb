@@ -32,6 +32,26 @@ $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 
 $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get
 ```
 
+#### running client to post time series data
+
+```bash
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo' --mode post --payload '[1,2,3]'
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo' --mode post --payload '[4,5,6]'
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo' --mode post --payload '[7,8,9]'
+```
+
+#### running client to return time series data
+
+```bash
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo/last/3' --mode get
+```
+
+The above request will produce something like the following:
+
+```
+[{"timestamp":1509627709142,"data":[7,8,9]},{"timestamp":1509627686551,"data":[4,5,6]},{"timestamp":1509627667855,"data":[1,2,3]}]
+```
+
 #### running client to observe changes to a resource path
 
 ```bash
