@@ -61,7 +61,7 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 
 ### Time series API
 
-A datum returned is a JSON array containing a timestamp in epoch milliseconds and the actual data. For example:```[ 1509564588450, [1,2,3,4,5] ]```
+A datum returned is a JSON dictionary containing a timestamp in epoch milliseconds and the actual data. For example:```{"timestamp":1509626879783,"data":[1,2,3]}```
 
 #### Write entry (auto-generated time)
     URL: /ts/<id>
