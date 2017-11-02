@@ -101,7 +101,7 @@ module Json = {
         fun (data, _) =>
           switch data {
           | [] => Lwt.return json_empty;
-          | [(t, json), ..._] => Lwt.return (`A [int t, value json]);
+          | [(t, json), ..._] => Lwt.return (dict [("timestamp", int t), ("data", value json)]);
           };
     };        
 
@@ -115,7 +115,7 @@ module Json = {
         
     let with_timestamp l => {
       open Ezjsonm;
-        List.map (fun (t,json) => `A [int t, value json]) l |>
+        List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
           fun l => `A l;
     };
     
