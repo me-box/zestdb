@@ -555,12 +555,25 @@ let server with::rep_soc and::rout_soc => {
   loop ();
 };
 
-let connect_socket endpoint ctx kind secret => {
+let setup_rep_socket endpoint ctx kind secret => {
+  open ZMQ.Socket;
   let soc = ZMQ.Socket.create ctx kind;
-  ZMQ.Socket.set_linger_period soc 0;
-  ZMQ.Socket.set_curve_server soc true;
-  ZMQ.Socket.set_curve_secretkey soc secret; 
-  ZMQ.Socket.bind soc endpoint;
+  set_linger_period soc 0;
+  set_curve_server soc true;
+  set_curve_secretkey soc secret; 
+  bind soc endpoint;
+  Lwt_zmq.Socket.of_socket soc;
+};
+
+let setup_rout_socket endpoint ctx kind secret => {
+  open ZMQ.Socket;
+  let soc = ZMQ.Socket.create ctx kind;
+  /* ZMQ.Socket.set_receive_high_water_mark soc 1; */
+  /* ZMQ.Socket.set_send_high_water_mark soc 1; */
+  set_linger_period soc 0;
+  set_curve_server soc true;
+  set_curve_secretkey soc secret; 
+  bind soc endpoint;
   Lwt_zmq.Socket.of_socket soc;
 };
 
@@ -618,8 +631,8 @@ let rec run_server () => {
   setup_router_keys ();
   (!store_directory != default_store_directory) ? create_stores_again () : ();
   let ctx = ZMQ.Context.create ();
-  let rep_soc = connect_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
-  let rout_soc = connect_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
+  let rep_soc = setup_rep_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
+  let rout_soc = setup_rout_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
   let _ = Lwt_log_core.info "Ready";   
   let _ = try (Lwt_main.run {server with::rep_soc and::rout_soc}) {
     | e => report_error e;
