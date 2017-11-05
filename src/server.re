@@ -4,11 +4,13 @@ let rep_endpoint = ref "tcp://0.0.0.0:5555";
 let rout_endpoint = ref "tcp://0.0.0.0:5556";
 /* let notify_list  = ref [(("",0),[("", Int32.of_int 0)])]; */
 let notify_list  = ref [];
+let token_secret_key_file = ref "";
 let token_secret_key = ref "";
 let router_public_key = ref "";
 let router_secret_key = ref "";
 let log_mode = ref false;
 let server_secret_key_file = ref "";
+let server_secret_key = ref "";
 let version = 1;
 let identity = ref (Unix.gethostname ());
 let content_format = ref "";
@@ -598,7 +600,7 @@ let parse_cmdline () => {
     ("--router-endpoint", Arg.Set_string rout_endpoint, ": to set the router/dealer endpoint"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
     ("--secret-key-file", Arg.Set_string server_secret_key_file, ": to set the curve secret key"),
-    ("--token-key", Arg.Set_string token_secret_key, ": to set the token secret key"),
+    ("--token-key-file", Arg.Set_string token_secret_key_file, ": to set the token secret key"),
     ("--identity", Arg.Set_string identity, ": to set the server identity"),
     ("--store-dir", Arg.Set_string store_directory, ": to set the location for the database files"),
   ];
@@ -625,23 +627,35 @@ let create_stores_again () => {
   kv_binary_store := Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store");
 };
 
-let get_key_from_file file => {
+let data_from_file file => {
   Fpath.v file |>
     Bos.OS.File.read |>
       fun result =>
         switch result {
-        | Rresult.Error _ => failwith "failed to get key from file";
+        | Rresult.Error _ => failwith "failed to access file";
         | Rresult.Ok key => key;
         };
+};
+
+let set_server_key file => {
+  server_secret_key := (data_from_file file);
+};
+
+let set_token_key file => {
+  if (file != "") { 
+    token_secret_key := (data_from_file file);
+  };
 };
 
 let rec run_server () => {
   parse_cmdline ();
   !log_mode ? setup_logger () : ();
   setup_router_keys ();
+  set_server_key !server_secret_key_file;
+  set_token_key !token_secret_key_file;
   (!store_directory != default_store_directory) ? create_stores_again () : ();
   let ctx = ZMQ.Context.create ();
-  let rep_soc = setup_rep_socket !rep_endpoint ctx ZMQ.Socket.rep (get_key_from_file !server_secret_key_file);
+  let rep_soc = setup_rep_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
   let rout_soc = setup_rout_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
   let _ = Lwt_log_core.info "Ready";   
   let _ = try (Lwt_main.run {server with::rep_soc and::rout_soc}) {
