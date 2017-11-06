@@ -17,7 +17,7 @@ You can run a server and test client using [Docker](https://www.docker.com/). Ea
 #### starting server
 
 ```bash
-$ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm jptmoore/zest /app/zest/server.exe --secret-key 'EKy(xjAnIfg6AT+OGd?nS1Mi5zZ&b*VXA@WxNLLE'
+$ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm jptmoore/zest /app/zest/server.exe --secret-key-file example-server-key
 ```
 
 #### running client to post key/value data
@@ -140,7 +140,7 @@ $ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/k
 If we started our server using the same token key we will be able to verify the above request as being a valid operation. So in this case we would have started our server as follows:
 
 ```bash
-$ server.exe --secret-key 'EKy(xjAnIfg6AT+OGd?nS1Mi5zZ&b*VXA@WxNLLE' --enable-logging --token-key 'secret'
+$ server.exe --secret-key-file example-server-key --token-key-file example-token-key --enable-logging
 ```
 
 In the above example, we have turned debugging on which is useful option if you want to write your own client. A client can also be run in this mode.
