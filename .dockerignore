@@ -33,3 +33,6 @@ setup.log
 # docker files
 Dockerfile
 .dockerignore
+
+# store files
+*-store
