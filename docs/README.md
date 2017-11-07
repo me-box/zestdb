@@ -1,6 +1,6 @@
 A [CoAP](https://tools.ietf.org/html/rfc7252) inspired implementation of a RESTful-like experience implemented over [ZeroMQ](http://zeromq.org/).
 
-The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows a client to 'observe' a path to receive any POST updates.
+The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows multiple clients to 'observe' a path to directly receive any data POSTed to specific paths. Communication can take place over TCP or over Interprocess communication (IPC).
 
 Data stored can be described and queried using a built in [HyperCat](http://www.hypercat.io/).
 
@@ -121,6 +121,32 @@ A datum returned is a JSON dictionary containing a timestamp in epoch millisecon
     Method: GET
     Parameters: replace <id> with an identifier, replace <from> and <to> with epoch milliseconds
     Notes: return the number of entries in time range provided
+
+### Interprocess communication (IPC)
+
+Interprocess communication (IPC) can take place between Docker containers. As with TCP communication, the server uses two endpoints. One for request/replies and one for broadcasting messages to observing peers.
+
+#### starting server
+
+```bash
+$ docker run -v /tmp:/tmp --ipc=host -d --name zest --rm jptmoore/zest /app/zest/server.exe --secret-key-file example-server-key --request-endpoint 'ipc:///tmp/request' --router-endpoint 'ipc:///tmp/router'
+```
+
+#### observing
+
+We need to use both endpoints when observing a path.
+
+```bash
+$ docker run -v /tmp:/tmp --ipc=host jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L44/W[wXL3<' --path '/kv/foo' --mode observe --request-endpoint 'ipc:///tmp/request' --router-endpoint 'ipc:///tmp/router'
+```
+
+#### posting
+
+We only need one endpoint to post or get data.
+
+```bash
+$ docker run -v /tmp:/tmp --ipc=host jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --payload '{"name":"dave", "age":30}' --mode post --request-endpoint 'ipc:///tmp/request'
+```
 
 
 ### Security
