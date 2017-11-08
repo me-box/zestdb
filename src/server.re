@@ -9,6 +9,7 @@ let token_secret_key = ref "";
 let router_public_key = ref "";
 let router_secret_key = ref "";
 let log_mode = ref false;
+let no_db = ref false;
 let server_secret_key_file = ref "";
 let server_secret_key = ref "";
 let version = 1;
@@ -618,6 +619,7 @@ let parse_cmdline () => {
     ("--token-key-file", Arg.Set_string token_secret_key_file, ": to set the token secret key"),
     ("--identity", Arg.Set_string identity, ": to set the server identity"),
     ("--store-dir", Arg.Set_string store_directory, ": to set the location for the database files"),
+    ("--no-db", Arg.Set no_db, ": test without using database"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
@@ -673,8 +675,9 @@ let rec run_server () => {
   let rep_soc = setup_rep_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
   let rout_soc = setup_rout_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
   let _ = Lwt_log_core.info "Ready";   
-  let _ = try (Lwt_main.run {server with::rep_soc and::rout_soc}) {
-    | e => report_error e;
+  try (Lwt_main.run {!no_db ? server_test_nodb with::rep_soc and::rout_soc : 
+      server with::rep_soc and::rout_soc}) {
+        | e => report_error e;
   };
   close_socket rout_soc;
   close_socket rep_soc;
