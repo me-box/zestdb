@@ -543,6 +543,21 @@ let handle_msg msg with::rout_soc => {
         };  
 };
 
+let server_test_nodb with::rep_soc and::rout_soc => {
+  open Common.Ack;
+  let rec loop () => {
+    Lwt_zmq.Socket.recv rep_soc >>=
+      fun msg =>
+        ack (Code 65) >>=
+          fun resp =>
+            Lwt_zmq.Socket.send rep_soc resp >>=
+              fun () =>
+                Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
+                  fun () => loop ();
+  };
+  loop ();
+};
+
 let server with::rep_soc and::rout_soc => {
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
