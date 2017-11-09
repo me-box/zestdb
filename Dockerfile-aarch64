@@ -16,8 +16,8 @@ ADD src src
 ADD test test
 ADD utils utils
 RUN sudo chown -R databox:nogroup src
-RUN sudo chown -R opam:nogroup test
-RUN sudo chown -R opam:nogroup utils
+RUN sudo chown -R databox:nogroup test
+RUN sudo chown -R databox:nogroup utils
 
 # add the build script
 ADD build.sh .
