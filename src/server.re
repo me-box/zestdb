@@ -576,6 +576,7 @@ let server with::rep_soc and::rout_soc => {
 let setup_rep_socket endpoint ctx kind secret => {
   open ZMQ.Socket;
   let soc = ZMQ.Socket.create ctx kind;
+  ZMQ.Socket.set_receive_high_water_mark soc 1;
   set_linger_period soc 0;
   set_curve_server soc true;
   set_curve_secretkey soc secret; 
@@ -586,8 +587,7 @@ let setup_rep_socket endpoint ctx kind secret => {
 let setup_rout_socket endpoint ctx kind secret => {
   open ZMQ.Socket;
   let soc = ZMQ.Socket.create ctx kind;
-  /* ZMQ.Socket.set_receive_high_water_mark soc 1; */
-  /* ZMQ.Socket.set_send_high_water_mark soc 1; */
+  ZMQ.Socket.set_receive_high_water_mark soc 1;
   set_linger_period soc 0;
   set_curve_server soc true;
   set_curve_secretkey soc secret; 
