@@ -429,7 +429,7 @@ let handle_write_database content_format uri_path payload => {
   | _ => None;
   };
   switch result {
-  | Some _ => Lwt.return (Code 65);
+  | Some promise => promise >>= fun () => Lwt.return (Code 65);
   | None => Lwt.return (Code 128);
   };
 };
