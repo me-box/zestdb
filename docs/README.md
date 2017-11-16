@@ -108,6 +108,20 @@ A datum returned is a JSON dictionary containing a timestamp in epoch millisecon
     Parameters: replace <id> with an identifier, replace <n> with the number of entries
     Notes: return the number of entries requested
     
+
+#### Read first entry
+    URL: /ts/<id>/first
+    Method: GET
+    Parameters: replace <id> with an identifier
+    Notes: return the first entry
+    
+#### Read first number of entries
+    
+    URL: /ts/<id>/first/<n>
+    Method: GET
+    Parameters: replace <id> with an identifier, replace <n> with the number of entries
+    Notes: return the number of entries requested    
+    
 #### Read all entries since a time (inclusive)
     
     URL: /ts/<id>/since/<from>
