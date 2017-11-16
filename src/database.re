@@ -95,15 +95,6 @@ module Json = {
             /* returns just the dataset */
             fun cursor => read_from_cursor cursor n;     
             
-    let read_latest branch id => {
-      open Ezjsonm;
-      read branch id 1 >>=
-        fun (data, _) =>
-          switch data {
-          | [] => Lwt.return json_empty;
-          | [(t, json), ..._] => Lwt.return (dict [("timestamp", int t), ("data", value json)]);
-          };
-    };        
 
     let read_data branch id n =>
       read branch id n >>=
@@ -118,15 +109,45 @@ module Json = {
         List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
           fun l => `A l;
     };
-    
-    let read_last branch id n =>
-      read_data branch id n >>=
-        fun data => Lwt.return (with_timestamp data);    
-
+        
     let read_data_all branch id =>
       branch >>=
         /* might need to look at paging this back for large sets */
         fun branch' => Store.read_all branch' path::["ts", id];
+
+    let take n xs => {
+      open List;
+      let rec take' n xs acc =>
+        switch n {
+        | 0 => rev acc
+        | _ => take' (n - 1) (tl xs) [hd xs, ...acc]
+        };
+      take' n xs []
+    };
+        
+    let last n l => {
+      open List;
+      if (n > 0) {
+        let compare' (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
+        let n' = min n (length l);
+        let l' = sort compare' l;
+        take n' l';
+      } else [];
+    };
+        
+    let read_last branch id n =>
+      read_data_all branch id >>=
+        fun l => Lwt.return (with_timestamp (last n l));
+        
+    let read_latest branch id =>
+      read_last branch id 1 >>=
+        fun data => {
+          open Ezjsonm;
+          switch data {
+          | `A [] => json_empty;
+          | `A [item, ...rest] => item;
+          } |> Lwt.return;
+        };
 
     let read_all branch id =>
       read_data_all branch id >>=
