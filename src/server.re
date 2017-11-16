@@ -321,6 +321,23 @@ let handle_get_read_ts_latest path_list => {
   Database.Json.Ts.read_latest !ts_json_store id;
 };
 
+let handle_get_read_ts_earliest path_list => {
+  let id = List.nth path_list 2;
+  Database.Json.Ts.read_earliest !ts_json_store id;
+};
+
+let handle_get_read_ts_last path_list => {
+  let id = List.nth path_list 2;
+  let n = List.nth path_list 4;
+  Database.Json.Ts.read_last !ts_json_store id (int_of_string n);
+};
+
+let handle_get_read_ts_first path_list => {
+  let id = List.nth path_list 2;
+  let n = List.nth path_list 4;
+  Database.Json.Ts.read_first !ts_json_store id (int_of_string n);
+};
+
 let handle_get_read_ts_last path_list => {
   let id = List.nth path_list 2;
   let n = List.nth path_list 4;
@@ -345,7 +362,9 @@ let handle_get_read_ts uri_path => {
   let mode = List.nth path_list 3;
   switch mode {
   | "latest" => handle_get_read_ts_latest path_list;
+  | "earliest" => handle_get_read_ts_earliest path_list;
   | "last" => handle_get_read_ts_last path_list;
+  | "first" => handle_get_read_ts_first path_list;
   | "since" => handle_get_read_ts_since path_list;
   | "range" => handle_get_read_ts_range path_list;
   | _ => failwith ("unsupported get ts mode:" ^ mode);

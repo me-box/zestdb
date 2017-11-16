@@ -124,31 +124,49 @@ module Json = {
         };
       take' n xs []
     };
-        
-    let last n l => {
+    
+    
+    let order f n l => {
       open List;
       if (n > 0) {
-        let compare' (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
         let n' = min n (length l);
-        let l' = sort compare' l;
+        let l' = sort f l;
         take n' l';
-      } else [];
+      } else [];  
+    };
+
+    let last n l => {
+      let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
+      order f n l; 
+    };
+
+    let first n l => {
+      let f (ts,_) (ts',_) => (ts > ts') ? 1 : -1;
+      order f n l; 
     };
         
     let read_last branch id n =>
       read_data_all branch id >>=
         fun l => Lwt.return (with_timestamp (last n l));
+
+    let read_first branch id n =>
+      read_data_all branch id >>=
+        fun l => Lwt.return (with_timestamp (first n l));        
+
+    let car json => {
+        open Ezjsonm;
+        switch json {
+        | `A [] => json_empty;
+        | `A [item, ...rest] => item;
+        } |> Lwt.return;
+    };    
         
     let read_latest branch id =>
-      read_last branch id 1 >>=
-        fun data => {
-          open Ezjsonm;
-          switch data {
-          | `A [] => json_empty;
-          | `A [item, ...rest] => item;
-          } |> Lwt.return;
-        };
+      read_last branch id 1 >>= car;
 
+    let read_earliest branch id =>
+      read_first branch id 1 >>= car;
+        
     let read_all branch id =>
       read_data_all branch id >>=
         fun data => Lwt.return (with_timestamp data);
