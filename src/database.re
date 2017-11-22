@@ -177,14 +177,19 @@ module Json = {
 
     let range t1 t2 l => since t1 l |> until t2;        
 
+
+    let sort_data l => {
+      let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
+      l |> List.sort f |> with_timestamp |> Lwt.return;
+    };
+
     let read_since branch id t =>
       read_data_all branch id >>=
-        fun l => Lwt.return (with_timestamp (since t l));
+        fun l => since t l |> sort_data;
 
     let read_range branch id t1 t2 =>
       read_data_all branch id >>=
-        fun l => Lwt.return (with_timestamp (range t1 t2 l));          
-
+        fun l => range t1 t2 l |> sort_data;          
   };    
 
 };
