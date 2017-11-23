@@ -523,7 +523,7 @@ let handle_get options token => {
 };
 
 
-let handle_post options token payload with::rout_soc => {
+let handle_post options token payload rout_soc => {
   open Common.Ack;
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
@@ -545,7 +545,7 @@ let handle_post options token payload with::rout_soc => {
   };
 };
 
-let handle_msg msg with::rout_soc => {
+let handle_msg msg rout_soc => {
   handle_expire rout_soc >>=
     fun () =>
       Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
@@ -557,7 +557,7 @@ let handle_msg msg with::rout_soc => {
           let payload = Bitstring.string_of_bitstring r3;
           switch code {
           | 1 => handle_get options token;
-          | 2 => handle_post options token payload with::rout_soc;
+          | 2 => handle_post options token payload rout_soc;
           | _ => failwith "invalid code";
           };
         };  
@@ -582,7 +582,7 @@ let server rep_soc rout_soc => {
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
       fun msg =>
-        handle_msg msg with::rout_soc >>=
+        handle_msg msg rout_soc >>=
           fun resp =>
             Lwt_zmq.Socket.send rep_soc resp >>=
               fun () =>
