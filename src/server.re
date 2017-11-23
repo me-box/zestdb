@@ -563,7 +563,7 @@ let handle_msg msg with::rout_soc => {
         };  
 };
 
-let server_test_nodb with::rep_soc and::rout_soc => {
+let server_test_nodb rep_soc rout_soc => {
   open Common.Ack;
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
@@ -578,7 +578,7 @@ let server_test_nodb with::rep_soc and::rout_soc => {
   loop ();
 };
 
-let server with::rep_soc and::rout_soc => {
+let server rep_soc rout_soc => {
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
       fun msg =>
@@ -622,11 +622,6 @@ let close_socket lwt_soc => {
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
 
-let report_error e => {
-  let msg = Printexc.to_string e;
-  let stack = Printexc.get_backtrace ();
-  let _ = Lwt_log_core.error_f "Opps: %s%s" msg stack;
-};
 
 let parse_cmdline () => {
   let usage = "usage: " ^ Sys.argv.(0) ^ " [--debug] [--secret-key string]";
@@ -683,7 +678,32 @@ let set_token_key file => {
   };
 };
 
-let rec run_server () => {
+let report_error e rep_soc => {
+  let msg = Printexc.to_string e;
+  let stack = Printexc.get_backtrace ();
+  let _ = Lwt_log_core.error_f "Opps: %s%s" msg stack;
+  let _ = ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
+};
+
+let the_server rep_soc rout_soc => {
+  !no_db ? server_test_nodb rep_soc rout_soc : server rep_soc rout_soc;
+};
+
+let rec run_server rep_soc rout_soc => {
+  let _ = Lwt_log_core.info "Ready";   
+  try (Lwt_main.run {the_server rep_soc rout_soc}) {
+    | e => report_error e rep_soc;
+  };
+  run_server rep_soc rout_soc;
+};
+
+let terminate_server ctx rep_soc rout_soc => {
+  close_socket rout_soc;
+  close_socket rep_soc;
+  ZMQ.Context.terminate ctx;
+};
+
+let rec setup_server () => {
   parse_cmdline ();
   !log_mode ? setup_logger () : ();
   setup_router_keys ();
@@ -693,17 +713,8 @@ let rec run_server () => {
   let ctx = ZMQ.Context.create ();
   let rep_soc = setup_rep_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
   let rout_soc = setup_rout_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
-  let _ = Lwt_log_core.info "Ready";   
-  try (Lwt_main.run {!no_db ? server_test_nodb with::rep_soc and::rout_soc : 
-      server with::rep_soc and::rout_soc}) {
-        | e => report_error e;
-  };
-  close_socket rout_soc;
-  close_socket rep_soc;
-  ZMQ.Context.terminate ctx;
-  run_server ();
+  run_server rep_soc rout_soc |> fun () => terminate_server ctx rep_soc rout_soc;
 };
 
-/* setup_keys (); */
-run_server ();
+setup_server ();
 
