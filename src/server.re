@@ -703,7 +703,7 @@ let terminate_server ctx rep_soc rout_soc => {
   ZMQ.Context.terminate ctx;
 };
 
-let rec setup_server () => {
+let setup_server () => {
   parse_cmdline ();
   !log_mode ? setup_logger () : ();
   setup_router_keys ();
