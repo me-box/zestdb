@@ -65,6 +65,22 @@ module Json = {
       int_of_float t_ms;
     };
 
+    let without_timestamp l =>
+      List.map (fun (_, json) => Ezjsonm.value json) l |>
+        fun l => Ezjsonm.(`A l);
+      
+    let with_timestamp l => {
+      open Ezjsonm;
+        List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
+          fun l => `A l;
+    };
+
+    let since t l => List.filter (fun (ts, _) => ts >= t) l;
+    
+    let until t l => List.filter (fun (ts, _) => ts <= t) l;
+    
+    let range t1 t2 l => since t1 l |> until t2;   
+
     let create ::file =>
       Store.init root::file bare::true () >>= Store.master;
 
@@ -79,7 +95,7 @@ module Json = {
         };
       };
 
-    module Complex = {
+    module Simple = {
 
       let get_cursor branch id =>
         branch >>= (fun branch' => Store.get_cursor branch' path::["ts", id]);
@@ -97,20 +113,20 @@ module Json = {
               /* returns just the dataset */
               fun cursor => read_from_cursor cursor n;     
               
-
-      let read_data branch id n =>
-        read branch id n >>=
-          fun (data, _) => Lwt.return data;
-
-      let without_timestamp l =>
-        List.map (fun (_, json) => Ezjsonm.value json) l |>
-          fun l => Ezjsonm.(`A l);
-          
-      let with_timestamp l => {
+              
+      let read_latest branch id => {
         open Ezjsonm;
-          List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
-            fun l => `A l;
-      };
+        read branch id 1 >>=
+          fun (data, _) =>
+            switch data {
+            | [] => Lwt.return json_empty;
+            | [(t,json), ..._] => Lwt.return (dict [("timestamp", int t), ("data", value json)]);
+            };
+      };         
+
+    };
+
+    module Complex = {
           
       let read_data_all branch id =>
         branch >>=
@@ -172,13 +188,6 @@ module Json = {
       let read_all branch id =>
         read_data_all branch id >>=
           fun data => Lwt.return (with_timestamp data);
-
-      let since t l => List.filter (fun (ts, _) => ts >= t) l;
-
-      let until t l => List.filter (fun (ts, _) => ts <= t) l;
-
-      let range t1 t2 l => since t1 l |> until t2;        
-
 
       let sort_data l => {
         let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
