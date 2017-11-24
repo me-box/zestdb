@@ -55,7 +55,7 @@ module Json = {
           };  
   };
 
-  module Ts = {
+  module Ts_complex = {
 
     module Store = Ezirmin.FS_log (Tc.Pair Tc.Int Irmin.Contents.Json);
 

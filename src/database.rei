@@ -19,7 +19,7 @@ module Json: {
         let write : Lwt.t Store.branch => string => Ezjsonm.t => Lwt.t unit;
         let read : Lwt.t Store.branch => string => Lwt.t Ezjsonm.t;
     };
-    module Ts: {
+    module Ts_complex: {
         module Store: {
             type branch = Ezirmin.FS_log(Tc.Pair(Tc.Int)(Irmin.Contents.Json)).branch;
         };

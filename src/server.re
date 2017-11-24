@@ -20,7 +20,7 @@ let content_format = ref "";
 let default_store_directory = "./";
 let store_directory = ref default_store_directory;
 let kv_json_store = ref (Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store"));
-let ts_json_store = ref (Database.Json.Ts.create file::(!store_directory ^ "/ts-json-store"));
+let ts_complex_json_store = ref (Database.Json.Ts_complex.create file::(!store_directory ^ "/ts-complex-json-store"));
 let kv_text_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-text-store"));
 let kv_binary_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store"));
 
@@ -318,43 +318,43 @@ let route tuple payload socket => {
 
 let handle_get_read_ts_latest path_list => {
   let id = List.nth path_list 2;
-  Database.Json.Ts.read_latest !ts_json_store id;
+  Database.Json.Ts_complex.read_latest !ts_complex_json_store id;
 };
 
 let handle_get_read_ts_earliest path_list => {
   let id = List.nth path_list 2;
-  Database.Json.Ts.read_earliest !ts_json_store id;
+  Database.Json.Ts_complex.read_earliest !ts_complex_json_store id;
 };
 
 let handle_get_read_ts_last path_list => {
   let id = List.nth path_list 2;
   let n = List.nth path_list 4;
-  Database.Json.Ts.read_last !ts_json_store id (int_of_string n);
+  Database.Json.Ts_complex.read_last !ts_complex_json_store id (int_of_string n);
 };
 
 let handle_get_read_ts_first path_list => {
   let id = List.nth path_list 2;
   let n = List.nth path_list 4;
-  Database.Json.Ts.read_first !ts_json_store id (int_of_string n);
+  Database.Json.Ts_complex.read_first !ts_complex_json_store id (int_of_string n);
 };
 
 let handle_get_read_ts_last path_list => {
   let id = List.nth path_list 2;
   let n = List.nth path_list 4;
-  Database.Json.Ts.read_last !ts_json_store id (int_of_string n);
+  Database.Json.Ts_complex.read_last !ts_complex_json_store id (int_of_string n);
 };
 
 let handle_get_read_ts_since path_list => {
   let id = List.nth path_list 2;
   let t = List.nth path_list 4;
-  Database.Json.Ts.read_since !ts_json_store id (int_of_string t);
+  Database.Json.Ts_complex.read_since !ts_complex_json_store id (int_of_string t);
 };
 
 let handle_get_read_ts_range path_list => {
   let id = List.nth path_list 2;
   let t1 = List.nth path_list 4;
   let t2 = List.nth path_list 5;
-  Database.Json.Ts.read_range !ts_json_store id (int_of_string t1) (int_of_string t2);
+  Database.Json.Ts_complex.read_range !ts_complex_json_store id (int_of_string t1) (int_of_string t2);
 };
 
 let handle_get_read_ts uri_path => {
@@ -423,7 +423,7 @@ let handle_post_write_ts key uri_path payload => {
     Some (int_of_string (List.nth path_list 4)) : None;
   let json = to_json payload;
   switch json {
-  | Some value => Some (Database.Json.Ts.write !ts_json_store timestamp key value);
+  | Some value => Some (Database.Json.Ts_complex.write !ts_complex_json_store timestamp key value);
   | None => None;
   };  
 };
@@ -653,7 +653,7 @@ let monitor_connections ctx rep_soc rout_soc => {
 /* support overriding location of stores */
 let create_stores_again () => {
   kv_json_store := Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store");
-  ts_json_store := Database.Json.Ts.create file::(!store_directory ^ "/ts-json-store");
+  ts_complex_json_store := Database.Json.Ts_complex.create file::(!store_directory ^ "/ts-complex-json-store");
   kv_text_store := Database.String.Kv.create file::(!store_directory ^ "/kv-text-store");
   kv_binary_store := Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store");
 };
