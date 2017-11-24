@@ -110,7 +110,6 @@ module Json = {
         branch >>=
           fun branch' =>
             Store.get_cursor branch' path::["ts", id] >>=
-              /* returns just the dataset */
               fun cursor => read_from_cursor cursor n;     
               
               

@@ -21,6 +21,8 @@ let default_store_directory = "./";
 let store_directory = ref default_store_directory;
 let kv_json_store = ref (Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store"));
 let ts_complex_json_store = ref (Database.Json.Ts.create file::(!store_directory ^ "/ts-complex-json-store"));
+let ts_simple_json_store = ref (Database.Json.Ts.create file::(!store_directory ^ "/ts-simple-json-store"));
+
 let kv_text_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-text-store"));
 let kv_binary_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store"));
 
@@ -417,15 +419,37 @@ let to_json payload => {
   parsed;
 };
 
-let handle_post_write_ts key uri_path payload => {
-  let path_list = String.split_on_char '/' uri_path;
-  let timestamp = (List.length path_list == 5 && List.nth path_list 3 == "at") ? 
-    Some (int_of_string (List.nth path_list 4)) : None;
+
+let handle_post_write_ts_complex ::timestamp=None key payload => {
   let json = to_json payload;
   switch json {
   | Some value => Some (Database.Json.Ts.write !ts_complex_json_store timestamp key value);
   | None => None;
   };  
+};
+
+let handle_post_write_ts_simple ::timestamp=None key payload => {
+  let json = to_json payload;
+  switch json {
+  | Some value => Some (Database.Json.Ts.write !ts_simple_json_store timestamp key value);
+  | None => None;
+  };  
+};
+
+let handle_post_write_ts uri_path payload => {
+  open List;
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", "ts", key] => 
+    handle_post_write_ts_complex key payload;
+  | ["", "ts", key, "at", ts] => 
+    handle_post_write_ts_complex timestamp::(Some (int_of_string ts)) key payload;
+  | ["", "ts", "numeric", key] => 
+    handle_post_write_ts_simple key payload;
+  | ["", "ts", "numeric", key, "at", ts] => 
+    handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload;
+  | _ => None;
+  };
 };
 
 let handle_post_write_kv key uri_path payload => {
@@ -442,7 +466,7 @@ let handle_write_database content_format uri_path payload => {
   let (key,mode) = get_key_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/kv/", 50) => handle_post_write_kv key uri_path payload;
-  | ("/ts/", 50) => handle_post_write_ts key uri_path payload;  
+  | ("/ts/", 50) => handle_post_write_ts uri_path payload;  
   | ("/kv/", 42) => Some (Database.String.Kv.write !kv_binary_store key payload);
   | ("/kv/", 0) => Some (Database.String.Kv.write !kv_text_store key payload);
   | _ => None;
@@ -654,6 +678,7 @@ let monitor_connections ctx rep_soc rout_soc => {
 let create_stores_again () => {
   kv_json_store := Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store");
   ts_complex_json_store := Database.Json.Ts.create file::(!store_directory ^ "/ts-complex-json-store");
+  ts_simple_json_store := Database.Json.Ts.create file::(!store_directory ^ "/ts-simple-json-store");
   kv_text_store := Database.String.Kv.create file::(!store_directory ^ "/kv-text-store");
   kv_binary_store := Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store");
 };
