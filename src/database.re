@@ -55,7 +55,7 @@ module Json = {
           };  
   };
 
-  module Ts_complex = {
+  module Ts = {
 
     module Store = Ezirmin.FS_log (Tc.Pair Tc.Int Irmin.Contents.Json);
 
@@ -79,117 +79,122 @@ module Json = {
         };
       };
 
-    let get_cursor branch id =>
-      branch >>= (fun branch' => Store.get_cursor branch' path::["ts", id]);
+    module Complex = {
 
-    let read_from_cursor cursor n =>
-      switch cursor {
-      | Some c => Store.read c n
-      | None => Lwt.return ([], cursor)
-      }; /* returns dataset with cursor */
+      let get_cursor branch id =>
+        branch >>= (fun branch' => Store.get_cursor branch' path::["ts", id]);
 
-    let read branch id n =>
-      branch >>=
-        fun branch' =>
-          Store.get_cursor branch' path::["ts", id] >>=
-            /* returns just the dataset */
-            fun cursor => read_from_cursor cursor n;     
-            
+      let read_from_cursor cursor n =>
+        switch cursor {
+        | Some c => Store.read c n
+        | None => Lwt.return ([], cursor)
+        }; /* returns dataset with cursor */
 
-    let read_data branch id n =>
-      read branch id n >>=
-        fun (data, _) => Lwt.return data;
+      let read branch id n =>
+        branch >>=
+          fun branch' =>
+            Store.get_cursor branch' path::["ts", id] >>=
+              /* returns just the dataset */
+              fun cursor => read_from_cursor cursor n;     
+              
 
-    let without_timestamp l =>
-      List.map (fun (_, json) => Ezjsonm.value json) l |>
-        fun l => Ezjsonm.(`A l);
-        
-    let with_timestamp l => {
-      open Ezjsonm;
-        List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
-          fun l => `A l;
-    };
-        
-    let read_data_all branch id =>
-      branch >>=
-        /* might need to look at paging this back for large sets */
-        fun branch' => Store.read_all branch' path::["ts", id];
+      let read_data branch id n =>
+        read branch id n >>=
+          fun (data, _) => Lwt.return data;
 
-    let take n xs => {
-      open List;
-      let rec take' n xs acc =>
-        switch n {
-        | 0 => rev acc
-        | _ => take' (n - 1) (tl xs) [hd xs, ...acc]
-        };
-      take' n xs []
-    };
-    
-    
-    let order f n l => {
-      open List;
-      if (n > 0) {
-        let n' = min n (length l);
-        let l' = sort f l;
-        take n' l';
-      } else [];  
-    };
-
-    let last n l => {
-      let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
-      order f n l; 
-    };
-
-    let first n l => {
-      let f (ts,_) (ts',_) => (ts > ts') ? 1 : -1;
-      order f n l; 
-    };
-        
-    let read_last branch id n =>
-      read_data_all branch id >>=
-        fun l => Lwt.return (with_timestamp (last n l));
-
-    let read_first branch id n =>
-      read_data_all branch id >>=
-        fun l => Lwt.return (with_timestamp (first n l));        
-
-    let car json => {
+      let without_timestamp l =>
+        List.map (fun (_, json) => Ezjsonm.value json) l |>
+          fun l => Ezjsonm.(`A l);
+          
+      let with_timestamp l => {
         open Ezjsonm;
-        switch json {
-        | `A [] => json_empty;
-        | `A [item, ...rest] => item;
-        } |> Lwt.return;
-    };    
+          List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
+            fun l => `A l;
+      };
+          
+      let read_data_all branch id =>
+        branch >>=
+          /* might need to look at paging this back for large sets */
+          fun branch' => Store.read_all branch' path::["ts", id];
+
+      let take n xs => {
+        open List;
+        let rec take' n xs acc =>
+          switch n {
+          | 0 => rev acc
+          | _ => take' (n - 1) (tl xs) [hd xs, ...acc]
+          };
+        take' n xs []
+      };
+      
+      
+      let order f n l => {
+        open List;
+        if (n > 0) {
+          let n' = min n (length l);
+          let l' = sort f l;
+          take n' l';
+        } else [];  
+      };
+
+      let last n l => {
+        let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
+        order f n l; 
+      };
+
+      let first n l => {
+        let f (ts,_) (ts',_) => (ts > ts') ? 1 : -1;
+        order f n l; 
+      };
+          
+      let read_last branch id n =>
+        read_data_all branch id >>=
+          fun l => Lwt.return (with_timestamp (last n l));
+
+      let read_first branch id n =>
+        read_data_all branch id >>=
+          fun l => Lwt.return (with_timestamp (first n l));        
+
+      let car json => {
+          open Ezjsonm;
+          switch json {
+          | `A [] => json_empty;
+          | `A [item, ...rest] => item;
+          } |> Lwt.return;
+      };    
+          
+      let read_latest branch id =>
+        read_last branch id 1 >>= car;
+
+      let read_earliest branch id =>
+        read_first branch id 1 >>= car;
+          
+      let read_all branch id =>
+        read_data_all branch id >>=
+          fun data => Lwt.return (with_timestamp data);
+
+      let since t l => List.filter (fun (ts, _) => ts >= t) l;
+
+      let until t l => List.filter (fun (ts, _) => ts <= t) l;
+
+      let range t1 t2 l => since t1 l |> until t2;        
+
+
+      let sort_data l => {
+        let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
+        l |> List.sort f |> with_timestamp |> Lwt.return;
+      };
+
+      let read_since branch id t =>
+        read_data_all branch id >>=
+          fun l => since t l |> sort_data;
+
+      let read_range branch id t1 t2 =>
+        read_data_all branch id >>=
+          fun l => range t1 t2 l |> sort_data;  
         
-    let read_latest branch id =>
-      read_last branch id 1 >>= car;
-
-    let read_earliest branch id =>
-      read_first branch id 1 >>= car;
-        
-    let read_all branch id =>
-      read_data_all branch id >>=
-        fun data => Lwt.return (with_timestamp data);
-
-    let since t l => List.filter (fun (ts, _) => ts >= t) l;
-
-    let until t l => List.filter (fun (ts, _) => ts <= t) l;
-
-    let range t1 t2 l => since t1 l |> until t2;        
-
-
-    let sort_data l => {
-      let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
-      l |> List.sort f |> with_timestamp |> Lwt.return;
     };
-
-    let read_since branch id t =>
-      read_data_all branch id >>=
-        fun l => since t l |> sort_data;
-
-    let read_range branch id t1 t2 =>
-      read_data_all branch id >>=
-        fun l => range t1 t2 l |> sort_data;          
+              
   };    
 
 };
