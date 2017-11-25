@@ -452,7 +452,7 @@ let handle_post_write_ts uri_path payload => {
   };
 };
 
-let handle_post_write_kv key uri_path payload => {
+let handle_post_write_kv_json key uri_path payload => {
   let json = to_json payload;
   switch json {
   | Some value => Some (Database.Json.Kv.write !kv_json_store key value);
@@ -460,15 +460,23 @@ let handle_post_write_kv key uri_path payload => {
   };  
 };
 
+let handle_post_write_kv_binary key uri_path payload => {
+  Some (Database.String.Kv.write !kv_binary_store key payload);
+};
+
+let handle_post_write_kv_text key uri_path payload => {
+  Some (Database.String.Kv.write !kv_text_store key payload);
+};
+
 let handle_write_database content_format uri_path payload => {
   open Common.Ack;
   open Ezjsonm;
   let (key,mode) = get_key_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => handle_post_write_kv key uri_path payload;
+  | ("/kv/", 50) => handle_post_write_kv_json key uri_path payload;
   | ("/ts/", 50) => handle_post_write_ts uri_path payload;  
-  | ("/kv/", 42) => Some (Database.String.Kv.write !kv_binary_store key payload);
-  | ("/kv/", 0) => Some (Database.String.Kv.write !kv_text_store key payload);
+  | ("/kv/", 42) => handle_post_write_kv_binary key uri_path payload;
+  | ("/kv/", 0) => handle_post_write_kv_text key uri_path payload;
   | _ => None;
   };
   switch result {
