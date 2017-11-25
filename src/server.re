@@ -381,8 +381,8 @@ let handle_get_read_kv_json uri_path => {
   open Common.Response;  
   let key = get_key "kv" uri_path;
   switch key {
-  | Some k => Some (Json (Database.Json.Kv.read !kv_json_store k));
-  | _ => None;
+  | Some k => Json (Database.Json.Kv.read !kv_json_store k);
+  | _ => Empty;
   };
 };
 
@@ -390,8 +390,8 @@ let handle_get_read_kv_binary uri_path => {
   open Common.Response;  
   let key = get_key "kv" uri_path;
   switch key {
-  | Some k => Some (Binary (Database.String.Kv.read !kv_binary_store k));
-  | _ => None;
+  | Some k => Binary (Database.String.Kv.read !kv_binary_store k);
+  | _ => Empty;
   };
 };
 
@@ -399,8 +399,8 @@ let handle_get_read_kv_text uri_path => {
   open Common.Response;  
   let key = get_key "kv" uri_path;
   switch key {
-  | Some k => Some (Text (Database.String.Kv.read !kv_text_store k));
-  | _ => None;
+  | Some k => Text (Database.String.Kv.read !kv_text_store k);
+  | _ => Empty;
   };
 }; 
 
@@ -410,22 +410,19 @@ let handle_read_database content_format uri_path => {
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/kv/", 50) => handle_get_read_kv_json uri_path;
-  | ("/ts/", 50) => Some (Json (handle_get_read_ts uri_path));
+  | ("/ts/", 50) => Json (handle_get_read_ts uri_path);
   | ("/kv/", 42) => handle_get_read_kv_binary uri_path;
   | ("/kv/", 0) => handle_get_read_kv_text uri_path;
-  | _ => None;
+  | _ => Empty;
   };
   switch result {
-  | Some content =>
-    switch content {
-    | Json json => json >>= fun json' => 
+  | Json json => json >>= fun json' => 
         Lwt.return (Payload content_format (Ezjsonm.to_string json'));
-    | Text text => text >>= fun text' =>
+  | Text text => text >>= fun text' =>
         Lwt.return (Payload content_format text');
-    | Binary binary => binary >>= fun binary' =>
+  | Binary binary => binary >>= fun binary' =>
         Lwt.return (Payload content_format binary');
-    };
-  | None => Lwt.return (Code 128);
+  | Empty => Lwt.return (Code 128);
   };
 };
 

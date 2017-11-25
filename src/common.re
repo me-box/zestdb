@@ -7,5 +7,5 @@ module Ack = {
 };
 
 module Response = {
-    type t = Json (Lwt.t Ezjsonm.t) | Text (Lwt.t string) | Binary (Lwt.t string);
+    type t = Empty | Json (Lwt.t Ezjsonm.t) | Text (Lwt.t string) | Binary (Lwt.t string);
 };
