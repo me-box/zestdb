@@ -255,14 +255,6 @@ let get_max_age options => {
 };
 
 
-let get_key_mode uri_path => {
-  let key_path = Str.string_after uri_path 4;
-  let key = String.split_on_char '/' key_path |> List.hd;
-  let mode = Str.first_chars uri_path 4;
-  (key,mode);
-};
-
-
 let publish path payload socket => {
   let msg = Printf.sprintf "%s %s" path payload;
   Lwt_zmq.Socket.send socket msg;
@@ -373,15 +365,54 @@ let handle_get_read_ts uri_path => {
   };
 };
 
+let get_key mode uri_path => {
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", mode, key] => Some key; 
+  | _ => None;
+  };
+};
+
+let get_mode uri_path => {
+  Str.first_chars uri_path 4;
+};
+
+let handle_get_read_kv_json uri_path => {
+  open Common.Response;  
+  let key = get_key "kv" uri_path;
+  switch key {
+  | Some k => Some (Json (Database.Json.Kv.read !kv_json_store k));
+  | _ => None;
+  };
+};
+
+let handle_get_read_kv_binary uri_path => {
+  open Common.Response;  
+  let key = get_key "kv" uri_path;
+  switch key {
+  | Some k => Some (Binary (Database.String.Kv.read !kv_binary_store k));
+  | _ => None;
+  };
+};
+
+let handle_get_read_kv_text uri_path => {
+  open Common.Response;  
+  let key = get_key "kv" uri_path;
+  switch key {
+  | Some k => Some (Text (Database.String.Kv.read !kv_text_store k));
+  | _ => None;
+  };
+}; 
+
 let handle_read_database content_format uri_path => {
   open Common.Ack;
   open Common.Response;
-  let (key,mode) = get_key_mode uri_path;
+  let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => Some (Json (Database.Json.Kv.read !kv_json_store key));
+  | ("/kv/", 50) => handle_get_read_kv_json uri_path;
   | ("/ts/", 50) => Some (Json (handle_get_read_ts uri_path));
-  | ("/kv/", 42) => Some (Binary (Database.String.Kv.read !kv_binary_store key));
-  | ("/kv/", 0) => Some (Text (Database.String.Kv.read !kv_text_store key));
+  | ("/kv/", 42) => handle_get_read_kv_binary uri_path;
+  | ("/kv/", 0) => handle_get_read_kv_text uri_path;
   | _ => None;
   };
   switch result {
@@ -452,31 +483,41 @@ let handle_post_write_ts uri_path payload => {
   };
 };
 
-let handle_post_write_kv_json key uri_path payload => {
+let handle_post_write_kv_json uri_path payload => {
+  let key = get_key "kv" uri_path;
   let json = to_json payload;
-  switch json {
-  | Some value => Some (Database.Json.Kv.write !kv_json_store key value);
-  | None => None;
+  switch (key,json) {
+  | (Some k, Some v) => Some (Database.Json.Kv.write !kv_json_store k v);
+  | _ => None;
+  };
+};
+
+let handle_post_write_kv_binary uri_path payload => {
+  let key = get_key "kv" uri_path;
+  switch key {
+  | Some k => Some (Database.String.Kv.write !kv_binary_store k payload);
+  | _ => None;
   };  
 };
 
-let handle_post_write_kv_binary key uri_path payload => {
-  Some (Database.String.Kv.write !kv_binary_store key payload);
+let handle_post_write_kv_text uri_path payload => {
+  let key = get_key "kv" uri_path;
+  switch key {
+  | Some k => Some (Database.String.Kv.write !kv_text_store k payload);
+  | _ => None;
+  };
 };
-
-let handle_post_write_kv_text key uri_path payload => {
-  Some (Database.String.Kv.write !kv_text_store key payload);
-};
+  
 
 let handle_write_database content_format uri_path payload => {
   open Common.Ack;
   open Ezjsonm;
-  let (key,mode) = get_key_mode uri_path;
+  let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => handle_post_write_kv_json key uri_path payload;
+  | ("/kv/", 50) => handle_post_write_kv_json uri_path payload;
   | ("/ts/", 50) => handle_post_write_ts uri_path payload;  
-  | ("/kv/", 42) => handle_post_write_kv_binary key uri_path payload;
-  | ("/kv/", 0) => handle_post_write_kv_text key uri_path payload;
+  | ("/kv/", 42) => handle_post_write_kv_binary uri_path payload;
+  | ("/kv/", 0) => handle_post_write_kv_text uri_path payload;
   | _ => None;
   };
   switch result {
