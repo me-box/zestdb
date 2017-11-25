@@ -310,60 +310,57 @@ let route tuple payload socket => {
   route_message (get_ident tuple) socket (create_ack_payload content_format payload);
 };
 
-let handle_get_read_ts_latest path_list => {
-  let id = List.nth path_list 2;
-  Database.Json.Ts.Complex.read_latest !ts_complex_json_store id;
+let handle_get_read_ts_complex_latest id => {
+  open Common.Response;
+  Json (Database.Json.Ts.Complex.read_latest !ts_complex_json_store id);
 };
 
-let handle_get_read_ts_earliest path_list => {
-  let id = List.nth path_list 2;
-  Database.Json.Ts.Complex.read_earliest !ts_complex_json_store id;
+let handle_get_read_ts_simple_latest id => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Simple.read_latest !ts_simple_json_store id);
 };
 
-let handle_get_read_ts_last path_list => {
-  let id = List.nth path_list 2;
-  let n = List.nth path_list 4;
-  Database.Json.Ts.Complex.read_last !ts_complex_json_store id (int_of_string n);
+let handle_get_read_ts_complex_earliest id => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Complex.read_earliest !ts_complex_json_store id);
 };
 
-let handle_get_read_ts_first path_list => {
-  let id = List.nth path_list 2;
-  let n = List.nth path_list 4;
-  Database.Json.Ts.Complex.read_first !ts_complex_json_store id (int_of_string n);
+let handle_get_read_ts_complex_last id n => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Complex.read_last !ts_complex_json_store id (int_of_string n));
 };
 
-let handle_get_read_ts_last path_list => {
-  let id = List.nth path_list 2;
-  let n = List.nth path_list 4;
-  Database.Json.Ts.Complex.read_last !ts_complex_json_store id (int_of_string n);
+let handle_get_read_ts_complex_first id n => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Complex.read_first !ts_complex_json_store id (int_of_string n));
 };
 
-let handle_get_read_ts_since path_list => {
-  let id = List.nth path_list 2;
-  let t = List.nth path_list 4;
-  Database.Json.Ts.Complex.read_since !ts_complex_json_store id (int_of_string t);
+let handle_get_read_ts_complex_since id t => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Complex.read_since !ts_complex_json_store id (int_of_string t));
 };
 
-let handle_get_read_ts_range path_list => {
-  let id = List.nth path_list 2;
-  let t1 = List.nth path_list 4;
-  let t2 = List.nth path_list 5;
-  Database.Json.Ts.Complex.read_range !ts_complex_json_store id (int_of_string t1) (int_of_string t2);
+let handle_get_read_ts_complex_range id t1 t2 => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Complex.read_range !ts_complex_json_store id (int_of_string t1) (int_of_string t2));
 };
 
 let handle_get_read_ts uri_path => {
+  open List;
+  open Common.Response;  
   let path_list = String.split_on_char '/' uri_path;
-  let mode = List.nth path_list 3;
-  switch mode {
-  | "latest" => handle_get_read_ts_latest path_list;
-  | "earliest" => handle_get_read_ts_earliest path_list;
-  | "last" => handle_get_read_ts_last path_list;
-  | "first" => handle_get_read_ts_first path_list;
-  | "since" => handle_get_read_ts_since path_list;
-  | "range" => handle_get_read_ts_range path_list;
-  | _ => failwith ("unsupported get ts mode:" ^ mode);
+  switch path_list {
+  | ["", "ts", id, "latest"] => handle_get_read_ts_complex_latest id;
+  | ["", "ts", "numeric", id, "latest"] => handle_get_read_ts_simple_latest id;
+  | ["", "ts", id, "earliest"] => handle_get_read_ts_complex_earliest id;
+  | ["", "ts", id, "last", n] => handle_get_read_ts_complex_last id n;
+  | ["", "ts", id, "first", n] => handle_get_read_ts_complex_first id n;
+  | ["", "ts", id, "since", t] => handle_get_read_ts_complex_since id t;
+  | ["", "ts", id, "range", t1, t2] => handle_get_read_ts_complex_range id t1 t2;
+  | _ => Empty;
   };
 };
+
 
 let get_key mode uri_path => {
   let path_list = String.split_on_char '/' uri_path;
@@ -410,7 +407,7 @@ let handle_read_database content_format uri_path => {
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/kv/", 50) => handle_get_read_kv_json uri_path;
-  | ("/ts/", 50) => Json (handle_get_read_ts uri_path);
+  | ("/ts/", 50) => handle_get_read_ts uri_path;
   | ("/kv/", 42) => handle_get_read_kv_binary uri_path;
   | ("/kv/", 0) => handle_get_read_kv_text uri_path;
   | _ => Empty;
