@@ -120,6 +120,14 @@ module Json = {
 
     module Simple = {
 
+      let first n l => {
+        open List;
+        if (n > 0) {
+          let n' = min n (length l);
+          take n' (rev l);
+        } else [];  
+      };
+
       let get_cursor branch id =>
         branch >>= (fun branch' => Store.get_cursor branch' path::["ts", id]);
 
@@ -136,20 +144,20 @@ module Json = {
               fun cursor => read_from_cursor cursor n;     
                      
     
-      let read_last branch id n => {
+      let read_last branch id n =>
         read branch id n >>=
           fun (data, _) => Lwt.return (with_timestamp data);
-      };
 
-      let read_latest branch id => {
+      let read_latest branch id =>
         read_last branch id 1 >>= car;
-      };
 
-      let read_earliest branch id => {
-        open Ezjsonm;        
+      let read_first branch id n =>
         read_data_all branch id >>=
-          fun data => (with_timestamp (List.rev data)) |> car;
-      };
+          fun data => Lwt.return (with_timestamp (first n data));
+
+      let read_earliest branch id =>
+        read_first branch id 1 >>= car;
+
 
     };
 
