@@ -158,6 +158,9 @@ module Json = {
       let read_earliest branch id =>
         read_first branch id 1 >>= car;
 
+      let read_since branch id t =>
+        read_data_all branch id >>=
+          fun l => Lwt.return (with_timestamp (since t l));
 
     };
 
