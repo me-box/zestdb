@@ -162,6 +162,10 @@ module Json = {
         read_data_all branch id >>=
           fun l => Lwt.return (with_timestamp (since t l));
 
+      let read_range branch id t1 t2 =>
+        read_data_all branch id >>=
+          fun l => Lwt.return (with_timestamp (range t1 t2 l));
+
     };
 
     module Complex = {

@@ -365,6 +365,11 @@ let handle_get_read_ts_complex_range id t1 t2 => {
   Json (Database.Json.Ts.Complex.read_range !ts_complex_json_store id (int_of_string t1) (int_of_string t2));
 };
 
+let handle_get_read_ts_simple_range id t1 t2 => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Simple.read_range !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+};
+
 let handle_get_read_ts uri_path => {
   open List;
   open Common.Response;  
@@ -381,6 +386,7 @@ let handle_get_read_ts uri_path => {
   | ["", "ts", id, "since", t] => handle_get_read_ts_complex_since id t;
   | ["", "ts", "numeric", id, "since", t] => handle_get_read_ts_simple_since id t;
   | ["", "ts", id, "range", t1, t2] => handle_get_read_ts_complex_range id t1 t2;
+  | ["", "ts", "numeric", id, "range", t1, t2] => handle_get_read_ts_simple_range id t1 t2;
   | _ => Empty;
   };
 };
