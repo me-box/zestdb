@@ -325,6 +325,11 @@ let handle_get_read_ts_complex_earliest id => {
   Json (Database.Json.Ts.Complex.read_earliest !ts_complex_json_store id);
 };
 
+let handle_get_read_ts_simple_earliest id => {
+  open Common.Response;  
+  Json (Database.Json.Ts.Simple.read_earliest !ts_simple_json_store id);
+};
+
 let handle_get_read_ts_complex_last id n => {
   open Common.Response;  
   Json (Database.Json.Ts.Complex.read_last !ts_complex_json_store id (int_of_string n));
@@ -358,6 +363,7 @@ let handle_get_read_ts uri_path => {
   | ["", "ts", id, "latest"] => handle_get_read_ts_complex_latest id;
   | ["", "ts", "numeric", id, "latest"] => handle_get_read_ts_simple_latest id;
   | ["", "ts", id, "earliest"] => handle_get_read_ts_complex_earliest id;
+  | ["", "ts", "numeric", id, "earliest"] => handle_get_read_ts_simple_earliest id;
   | ["", "ts", id, "last", n] => handle_get_read_ts_complex_last id n;
   | ["", "ts", "numeric", id, "last", n] => handle_get_read_ts_simple_last id n;
   | ["", "ts", id, "first", n] => handle_get_read_ts_complex_first id n;

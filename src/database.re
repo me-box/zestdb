@@ -75,6 +75,29 @@ module Json = {
           fun l => `A l;
     };
 
+    let car json => {
+      open Ezjsonm;
+      switch json {
+      | `A [] => json_empty;
+      | `A [item, ...rest] => item;
+      } |> Lwt.return;
+    };
+
+    let read_data_all branch id =>
+      branch >>=
+        /* might need to look at paging this back for large sets */
+        fun branch' => Store.read_all branch' path::["ts", id];
+
+    let take n xs => {
+      open List;
+      let rec take' n xs acc =>
+        switch n {
+        | 0 => rev acc
+        | _ => take' (n - 1) (tl xs) [hd xs, ...acc]
+        };
+      take' n xs []
+    };
+    
     let since t l => List.filter (fun (ts, _) => ts >= t) l;
     
     let until t l => List.filter (fun (ts, _) => ts <= t) l;
@@ -116,11 +139,7 @@ module Json = {
       let read_latest branch id => {
         open Ezjsonm;
         read branch id 1 >>=
-          fun (data, _) =>
-            switch data {
-            | [] => Lwt.return json_empty;
-            | [(t,json), ..._] => Lwt.return (dict [("timestamp", int t), ("data", value json)]);
-            };
+          fun (data, _) => (with_timestamp data) |> car;
       };
     
       let read_last branch id n => {
@@ -128,26 +147,16 @@ module Json = {
           fun (data, _) => Lwt.return (with_timestamp data);
       };
 
+      let read_earliest branch id => {
+        open Ezjsonm;        
+        read_data_all branch id >>=
+          fun data => (with_timestamp (List.rev data)) |> car;
+      };
+
     };
 
     module Complex = {
-          
-      let read_data_all branch id =>
-        branch >>=
-          /* might need to look at paging this back for large sets */
-          fun branch' => Store.read_all branch' path::["ts", id];
-
-      let take n xs => {
-        open List;
-        let rec take' n xs acc =>
-          switch n {
-          | 0 => rev acc
-          | _ => take' (n - 1) (tl xs) [hd xs, ...acc]
-          };
-        take' n xs []
-      };
-      
-      
+                
       let order f n l => {
         open List;
         if (n > 0) {
@@ -174,14 +183,6 @@ module Json = {
       let read_first branch id n =>
         read_data_all branch id >>=
           fun l => Lwt.return (with_timestamp (first n l));        
-
-      let car json => {
-          open Ezjsonm;
-          switch json {
-          | `A [] => json_empty;
-          | `A [item, ...rest] => item;
-          } |> Lwt.return;
-      };    
           
       let read_latest branch id =>
         read_last branch id 1 >>= car;
