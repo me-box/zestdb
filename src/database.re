@@ -111,8 +111,8 @@ module Json = {
           fun branch' =>
             Store.get_cursor branch' path::["ts", id] >>=
               fun cursor => read_from_cursor cursor n;     
-              
-              
+                     
+
       let read_latest branch id => {
         open Ezjsonm;
         read branch id 1 >>=
@@ -121,7 +121,12 @@ module Json = {
             | [] => Lwt.return json_empty;
             | [(t,json), ..._] => Lwt.return (dict [("timestamp", int t), ("data", value json)]);
             };
-      };         
+      };
+    
+      let read_last branch id n => {
+        read branch id n >>=
+          fun (data, _) => Lwt.return (with_timestamp data);
+      };
 
     };
 
@@ -206,5 +211,3 @@ module Json = {
   };    
 
 };
-
-

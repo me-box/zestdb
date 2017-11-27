@@ -35,6 +35,7 @@ module Json: {
         };
         module Simple: {
             let read_latest: Lwt.t Store.branch => string => Lwt.t Ezjsonm.t;
+            let read_last: Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
         };
     };
 };
