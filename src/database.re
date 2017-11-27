@@ -64,10 +64,6 @@ module Json = {
       let t_ms = t_sec *. 1000.0;
       int_of_float t_ms;
     };
-
-    let without_timestamp l =>
-      List.map (fun (_, json) => Ezjsonm.value json) l |>
-        fun l => Ezjsonm.(`A l);
       
     let with_timestamp l => {
       open Ezjsonm;
