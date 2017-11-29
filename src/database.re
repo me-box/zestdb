@@ -71,6 +71,12 @@ module Json = {
           fun l => `A l;
     };
 
+    let aggregate f l => {
+      open Ezjsonm;
+      List.map (fun (_,json) => value json) l |>
+        fun l => f (`A l);
+    };  
+
     let car json => {
       open Ezjsonm;
       switch json {
