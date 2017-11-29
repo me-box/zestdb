@@ -65,7 +65,7 @@ module Json = {
       int_of_float t_ms;
     };
       
-    let add_structure l => {
+    let raw l => {
       open Ezjsonm;
         List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
           fun l => `A l;
@@ -160,25 +160,25 @@ module Json = {
     
       let read_last branch id n =>
         read branch id n >>=
-          fun (data, _) => Lwt.return (add_structure data);
+          fun (data, _) => Lwt.return (raw data);
 
       let read_latest branch id =>
         read_last branch id 1 >>= car;
 
       let read_first branch id n =>
         read_data_all branch id >>=
-          fun data => Lwt.return (add_structure (first n data));
+          fun data => Lwt.return (raw (first n data));
 
       let read_earliest branch id =>
         read_first branch id 1 >>= car;
 
       let read_since branch id t =>
         read_data_all branch id >>=
-          fun l => Lwt.return (add_structure (since t l));
+          fun l => Lwt.return (raw (since t l));
 
       let read_range branch id t1 t2 =>
         read_data_all branch id >>=
-          fun l => Lwt.return (add_structure (range t1 t2 l));
+          fun l => Lwt.return (raw (range t1 t2 l));
          
 
     };
@@ -217,11 +217,11 @@ module Json = {
           
       let read_last branch id n =>
         read_data_all branch id >>=
-          fun l => Lwt.return (add_structure (last n l));
+          fun l => Lwt.return (raw (last n l));
 
       let read_first branch id n =>
         read_data_all branch id >>=
-          fun l => Lwt.return (add_structure (first n l));        
+          fun l => Lwt.return (raw (first n l));        
           
       let read_latest branch id =>
         read_last branch id 1 >>= car;
@@ -231,11 +231,11 @@ module Json = {
           
       let read_all branch id =>
         read_data_all branch id >>=
-          fun data => Lwt.return (add_structure data);
+          fun data => Lwt.return (raw data);
 
       let sort_data l => {
         let f (ts,_) (ts',_) => (ts < ts') ? 1 : -1;
-        l |> List.sort f |> add_structure |> Lwt.return;
+        l |> List.sort f |> raw |> Lwt.return;
       };
 
       let read_since branch id t =>
