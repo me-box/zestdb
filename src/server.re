@@ -478,15 +478,20 @@ let to_json payload => {
 let handle_post_write_ts_complex ::timestamp=None key payload => {
   let json = to_json payload;
   switch json {
-  | Some value => Some (Database.Json.Ts.write !ts_complex_json_store timestamp key value);
+  | Some value => Some (Database.Json.Ts.Complex.write !ts_complex_json_store timestamp key value);
   | None => None;
   };  
 };
 
 let handle_post_write_ts_simple ::timestamp=None key payload => {
+  open Database.Json.Ts.Simple;
   let json = to_json payload;
   switch json {
-  | Some value => Some (Database.Json.Ts.write !ts_simple_json_store timestamp key value);
+  | Some value => {
+      if (is_valid value) {
+        Some (write !ts_simple_json_store timestamp key value);
+      } else None;
+    };
   | None => None;
   };  
 };

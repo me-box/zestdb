@@ -103,18 +103,30 @@ module Json = {
     let create ::file =>
       Store.init root::file bare::true () >>= Store.master;
 
-    let write branch ts id v => {
-      open Printf;
-      branch >>=
-        fun branch' => {
-          switch ts {
-          | Some t => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (t, v)
-          | None => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (get_time (), v)
-          };
+    module Simple = {
+
+      let is_valid json => {
+        open Ezjsonm;
+        let rec loop xs => {
+          switch xs {
+          | [] => false;
+          | [(label,_)] => label == "value";
+          | [_, ...rest] => loop rest;
+          }
         };
+        loop (get_dict json);
       };
 
-    module Simple = {
+      let write branch ts id v => {
+        open Printf;
+        branch >>=
+          fun branch' => {
+            switch ts {
+            | Some t => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (t, v)
+            | None => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (get_time (), v)
+            };
+          };
+      };
 
       let first n l => {
         open List;
@@ -161,10 +173,22 @@ module Json = {
       let read_range branch id t1 t2 =>
         read_data_all branch id >>=
           fun l => Lwt.return (add_structure (range t1 t2 l));
+         
 
     };
 
     module Complex = {
+
+      let write branch ts id v => {
+        open Printf;
+        branch >>=
+          fun branch' => {
+            switch ts {
+            | Some t => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (t, v)
+            | None => Store.append message::(sprintf "write_ts (%s)\n" id) branch' path::["ts", id] (get_time (), v)
+            };
+          };
+      };  
                 
       let order f n l => {
         open List;
