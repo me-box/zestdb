@@ -184,6 +184,10 @@ module Json = {
         read_data_all branch id >>=
           fun l => Lwt.return (raw (since t l));
 
+      let read_since_aggregate func branch id t =>
+        read_data_all branch id >>=
+          fun l => Lwt.return (aggregate func (since t l));    
+
       let read_range branch id t1 t2 =>
         read_data_all branch id >>=
           fun l => Lwt.return (raw (range t1 t2 l));

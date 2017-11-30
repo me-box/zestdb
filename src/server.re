@@ -375,9 +375,20 @@ let handle_get_read_ts_complex_since id t => {
   Json (Database.Json.Ts.Complex.read_since !ts_complex_json_store id (int_of_string t));
 };
 
-let handle_get_read_ts_simple_since id t => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Simple.read_since !ts_simple_json_store id (int_of_string t));
+let handle_get_read_ts_simple_since id t func => {
+  open Common.Response;
+  open Database.Json.Ts.Simple;
+  open Numeric;
+  switch func {
+  | [] => Json (read_since !ts_simple_json_store id (int_of_string t));
+  | ["sum"] => Json (read_since_aggregate sum !ts_simple_json_store id (int_of_string t));
+  | ["count"] => Json (read_since_aggregate count !ts_simple_json_store id (int_of_string t));
+  | ["min"] => Json (read_since_aggregate min !ts_simple_json_store id (int_of_string t));
+  | ["max"] => Json (read_since_aggregate max !ts_simple_json_store id (int_of_string t));
+  | ["mean"] => Json (read_since_aggregate mean !ts_simple_json_store id (int_of_string t));
+  | _ => Empty;
+  };    
+  
 };
 
 let handle_get_read_ts_complex_range id t1 t2 => {
@@ -404,7 +415,7 @@ let handle_get_read_ts uri_path => {
   | ["", "ts", id, "first", n] => handle_get_read_ts_complex_first id n;
   | ["", "ts", "numeric", id, "first", n, ...func] => handle_get_read_ts_simple_first id n func;
   | ["", "ts", id, "since", t] => handle_get_read_ts_complex_since id t;
-  | ["", "ts", "numeric", id, "since", t] => handle_get_read_ts_simple_since id t;
+  | ["", "ts", "numeric", id, "since", t, ...func] => handle_get_read_ts_simple_since id t func;
   | ["", "ts", id, "range", t1, t2] => handle_get_read_ts_complex_range id t1 t2;
   | ["", "ts", "numeric", id, "range", t1, t2] => handle_get_read_ts_simple_range id t1 t2;
   | _ => Empty;
