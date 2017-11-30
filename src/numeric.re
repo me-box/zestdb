@@ -2,11 +2,17 @@
 /* let str_json_sample = "[{\"value\": 43}, {\"event\": \"bang\", \"value\": 44}]";
 let json = Ezjsonm.from_string str_json_sample; */
 
+
 module Aggregate = {
   open List;
+  let fold_left_exn f l =>
+  switch l {
+  | [] => failwith "empty list";
+  | [h, ...t] => fold_left f h t; 
+  };
   let sum = fold_left (+.) 0.;
-  let max = fold_left (fun x y => x > y ? x : y) min_float;
-  let min = fold_left (fun x y => x < y ? x : y) max_float;
+  let max = fold_left_exn Pervasives.max;
+  let min = fold_left_exn Pervasives.min;
   let count xs => float_of_int (length xs);
 };
 
