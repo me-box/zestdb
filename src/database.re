@@ -162,6 +162,10 @@ module Json = {
         read branch id n >>=
           fun (data, _) => Lwt.return (raw data);
 
+      let read_last_aggregate func branch id n =>
+        read branch id n >>=
+          fun (data, _) => Lwt.return (aggregate func data);    
+
       let read_latest branch id =>
         read_last branch id 1 >>= car;
 
