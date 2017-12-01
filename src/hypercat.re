@@ -31,11 +31,22 @@ let is_valid_item item =>
   has_rel_term "hasDescription" item && 
   has_rel_term "isContentType" item;
 
+
+let get_href json => {
+  find json ["href"] |> get_string;
+};  
+let remove href alist => {
+  let match href item => href != get_href item;
+  List.filter (fun item => match href item) alist;  
+};
+  
 let update_cat item =>
   if (is_valid_item item) {
     let current_items = find !cat ["items"];
+    let href = get_href item;
     let current_list = get_list ident current_items;
-    let new_list = List.cons item current_list;
+    let filtered_list = remove href current_list;
+    let new_list = List.cons item filtered_list;
     let new_items = list ident new_list;
     cat := update !cat ["items"] (Some new_items);
     Result.Ok;
