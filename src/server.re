@@ -346,6 +346,8 @@ let handle_get_read_ts_simple_last id n func => {
   | ["min"] => Json (read_last_aggregate min !ts_simple_json_store id (int_of_string n));
   | ["max"] => Json (read_last_aggregate max !ts_simple_json_store id (int_of_string n));
   | ["mean"] => Json (read_last_aggregate mean !ts_simple_json_store id (int_of_string n));
+  | ["median"] => Json (read_last_aggregate median !ts_simple_json_store id (int_of_string n));
+  | ["sd"] => Json (read_last_aggregate sd !ts_simple_json_store id (int_of_string n));
   | _ => Empty;
   };  
 };
@@ -366,6 +368,8 @@ let handle_get_read_ts_simple_first id n func => {
   | ["min"] => Json (read_first_aggregate min !ts_simple_json_store id (int_of_string n));
   | ["max"] => Json (read_first_aggregate max !ts_simple_json_store id (int_of_string n));
   | ["mean"] => Json (read_first_aggregate mean !ts_simple_json_store id (int_of_string n));
+  | ["median"] => Json (read_first_aggregate median !ts_simple_json_store id (int_of_string n));
+  | ["sd"] => Json (read_first_aggregate sd !ts_simple_json_store id (int_of_string n));
   | _ => Empty;
   };    
 };
@@ -386,6 +390,8 @@ let handle_get_read_ts_simple_since id t func => {
   | ["min"] => Json (read_since_aggregate min !ts_simple_json_store id (int_of_string t));
   | ["max"] => Json (read_since_aggregate max !ts_simple_json_store id (int_of_string t));
   | ["mean"] => Json (read_since_aggregate mean !ts_simple_json_store id (int_of_string t));
+  | ["median"] => Json (read_since_aggregate median !ts_simple_json_store id (int_of_string t));
+  | ["sd"] => Json (read_since_aggregate sd !ts_simple_json_store id (int_of_string t));
   | _ => Empty;
   };    
   
@@ -407,6 +413,8 @@ let handle_get_read_ts_simple_range id t1 t2 func => {
   | ["min"] => Json (read_range_aggregate min !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
   | ["max"] => Json (read_range_aggregate max !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
   | ["mean"] => Json (read_range_aggregate mean !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["median"] => Json (read_range_aggregate median !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["sd"] => Json (read_range_aggregate sd !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
   | _ => Empty;
   }; 
   
