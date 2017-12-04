@@ -116,7 +116,12 @@ module Json = {
         let rec loop xs => {
           switch xs {
           | [] => false;
-          | [(label,_)] => label == "value";
+          | [(label,n)] => {
+              switch (label,n) {
+              | ("value",`Float n) => true;
+              | _ => false;
+              };    
+            };
           | [_, ...rest] => loop rest;
           }
         };
