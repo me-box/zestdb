@@ -1,2 +1,2 @@
 
-let equals : string => string => Ezjsonm.value => Ezjsonm.t;
+let equals : string => string => Ezjsonm.t => Ezjsonm.t;

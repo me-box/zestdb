@@ -71,6 +71,12 @@ module Json = {
           fun l => `A l;
     };
 
+    let filter f l => {
+      open Ezjsonm;
+      List.map (fun (_,json) => value json) l |>
+        fun l => f (`A l);
+    };  
+
     let aggregate f l => {
       open Ezjsonm;
       List.map (fun (_,json) => value json) l |>
@@ -166,6 +172,10 @@ module Json = {
       let read_last branch id n =>
         read branch id n >>=
           fun (data, _) => Lwt.return (raw data);
+
+      let read_last_filter func branch id n =>
+        read branch id n >>=
+          fun (data, _) => Lwt.return (filter func data);    
 
       let read_last_aggregate func branch id n =>
         read branch id n >>=

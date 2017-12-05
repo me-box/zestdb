@@ -32,6 +32,6 @@ let to_json alist => {
 
 let apply func json => from_json json |> func |> to_json;
 
-let equals term value json => apply (String.equals term value) json;
+let equals t v json => apply (String.equals t v) json;
 
 
