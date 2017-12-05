@@ -73,7 +73,7 @@ module Json = {
 
     let filter f l => {
       open Ezjsonm;
-      List.map (fun (_,json) => value json) l |>
+      List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
         fun l => f (`A l);
     };  
 

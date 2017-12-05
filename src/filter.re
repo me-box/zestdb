@@ -5,7 +5,7 @@ let json = Ezjsonm.from_string str_json_sample; */
 
 let get_value term json => {
   open Ezjsonm;
-  find json [term] |> get_string;
+  find json ["data"] |> fun x => find x [term] |> get_string;
 };  
 
 module String = {
