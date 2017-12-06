@@ -433,15 +433,24 @@ let handle_get_read_ts_simple_range id t1 t2 func => {
   open Common.Response;  
   open Database.Json.Ts.Simple;
   open Numeric;
+  open Filter;
   switch func {
   | [] => Json (read_range !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["sum"] => Json (read_range_aggregate sum !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["count"] => Json (read_range_aggregate count !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["min"] => Json (read_range_aggregate min !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["max"] => Json (read_range_aggregate max !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["mean"] => Json (read_range_aggregate mean !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["median"] => Json (read_range_aggregate median !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  | ["sd"] => Json (read_range_aggregate sd !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["sum"] => Json (read_range_apply sum !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["count"] => Json (read_range_apply count !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["min"] => Json (read_range_apply min !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["max"] => Json (read_range_apply max !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["mean"] => Json (read_range_apply mean !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["median"] => Json (read_range_apply median !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["sd"] => Json (read_range_apply sd !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2] => Json (read_range_apply (equals s1 s2) !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "sum"] => Json (read_range_apply2 (equals s1 s2) sum !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "count"] => Json (read_range_apply2 (equals s1 s2) count !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "min"] => Json (read_range_apply2 (equals s1 s2) min !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "max"] => Json (read_range_apply2 (equals s1 s2) max !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "mean"] => Json (read_range_apply2 (equals s1 s2) mean !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "median"] => Json (read_range_apply2 (equals s1 s2) median !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  | ["filter", s1, "equals", s2, "sd"] => Json (read_range_apply2 (equals s1 s2) sd !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
   | _ => Empty;
   }; 
   
