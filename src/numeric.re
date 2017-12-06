@@ -20,7 +20,7 @@ let from_json json => {
   let s = to_string json;
   let _ = Lwt_io.printf "numeric =>>>>>>>>>>>>>>>>>>>>>>>> %s\n" s;  
   List.map 
-    (fun x => get_float (find x ["value"])) 
+    (fun x => find x ["data"] |> fun y => get_float (find y ["value"])) 
     (get_list (fun x => x) (value json));  
 };
 
