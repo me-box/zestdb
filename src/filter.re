@@ -22,8 +22,6 @@ module String = {
 
 let from_json json => {
   open Ezjsonm;
-  let s = to_string json; 
-  let _ = Lwt_io.printf "filter =>>>>>>>>>>>>>>>>>>>>>>>> %s\n" s;
   get_list (fun x => x) (value json);
 };
 

@@ -339,6 +339,7 @@ let handle_get_read_ts_simple_last id n func => {
   open Common.Response;
   open Database.Json.Ts.Simple;
   open Numeric;
+  open Filter;
   switch func {
   | [] => Json (read_last !ts_simple_json_store id (int_of_string n));
   | ["sum"] => Json (read_last_aggregate sum !ts_simple_json_store id (int_of_string n));
@@ -348,8 +349,8 @@ let handle_get_read_ts_simple_last id n func => {
   | ["mean"] => Json (read_last_aggregate mean !ts_simple_json_store id (int_of_string n));
   | ["median"] => Json (read_last_aggregate median !ts_simple_json_store id (int_of_string n));
   | ["sd"] => Json (read_last_aggregate sd !ts_simple_json_store id (int_of_string n));
-  | ["filter", t, "equals", v] => Json (read_last_filter (Filter.equals t v) !ts_simple_json_store id (int_of_string n));
-  | ["filter", t, "equals", v, "sum"] => Json (read_last_filter_aggregate (Filter.equals t v) sum !ts_simple_json_store id (int_of_string n));
+  | ["filter", t, "equals", v] => Json (read_last_filter (equals t v) !ts_simple_json_store id (int_of_string n));
+  | ["filter", t, "equals", v, "sum"] => Json (read_last_filter_aggregate (equals t v) sum !ts_simple_json_store id (int_of_string n));
   | _ => Empty;
   };  
 };

@@ -16,9 +16,7 @@ module Oml = {
 
 
 let from_json json => {
-  open Ezjsonm;
-  let s = to_string json;
-  let _ = Lwt_io.printf "numeric =>>>>>>>>>>>>>>>>>>>>>>>> %s\n" s;  
+  open Ezjsonm; 
   List.map 
     (fun x => find x ["data"] |> fun y => get_float (find y ["value"])) 
     (get_list (fun x => x) (value json));  

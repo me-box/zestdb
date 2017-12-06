@@ -71,21 +71,9 @@ module Json = {
           fun l => `A l;
     };
 
-    let filter f l => {
-      open Ezjsonm;
-      List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
-        fun l => f (`A l);
-    };  
+    let apply f l => f (raw l);  
 
-    let aggregate f l => {
-      open Ezjsonm;
-      List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) l |>
-        fun l => f (`A l);
-    };
-
-    let filter_aggregate f1 f2 l => {
-      f2 (filter f1 l);
-    };
+    let apply2 f1 f2 l => f2 (apply f1 l);
      
 
     let car json => {
@@ -180,15 +168,15 @@ module Json = {
 
       let read_last_filter func branch id n =>
         read branch id n >>=
-          fun (data, _) => Lwt.return (filter func data);    
+          fun (data, _) => Lwt.return (apply func data);    
 
       let read_last_aggregate func branch id n =>
         read branch id n >>=
-          fun (data, _) => Lwt.return (aggregate func data); 
+          fun (data, _) => Lwt.return (apply func data); 
           
       let read_last_filter_aggregate f1 f2 branch id n =>
         read branch id n >>=
-          fun (data, _) => Lwt.return (filter_aggregate f1 f2 data);
+          fun (data, _) => Lwt.return (apply2 f1 f2 data);
 
       let read_latest branch id =>
         read_last branch id 1 >>= car;
@@ -199,7 +187,7 @@ module Json = {
 
       let read_first_aggregate func branch id n =>
           read_data_all branch id >>=
-            fun data => Lwt.return (aggregate func (first n data));          
+            fun data => Lwt.return (apply func (first n data));          
 
       let read_earliest branch id =>
         read_first branch id 1 >>= car;
@@ -210,7 +198,7 @@ module Json = {
 
       let read_since_aggregate func branch id t =>
         read_data_all branch id >>=
-          fun l => Lwt.return (aggregate func (since t l));    
+          fun l => Lwt.return (apply func (since t l));    
 
       let read_range branch id t1 t2 =>
         read_data_all branch id >>=
@@ -218,7 +206,7 @@ module Json = {
 
       let read_range_aggregate func branch id t1 t2 =>
         read_data_all branch id >>=
-          fun l => Lwt.return (aggregate func (range t1 t2 l));    
+          fun l => Lwt.return (apply func (range t1 t2 l));    
          
 
     };
