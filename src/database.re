@@ -166,15 +166,11 @@ module Json = {
         read branch id n >>=
           fun (data, _) => Lwt.return (raw data);
 
-      let read_last_filter func branch id n =>
+      let read_last_apply func branch id n =>
         read branch id n >>=
-          fun (data, _) => Lwt.return (apply func data);    
-
-      let read_last_aggregate func branch id n =>
-        read branch id n >>=
-          fun (data, _) => Lwt.return (apply func data); 
+          fun (data, _) => Lwt.return (apply func data);
           
-      let read_last_filter_aggregate f1 f2 branch id n =>
+      let read_last_apply2 f1 f2 branch id n =>
         read branch id n >>=
           fun (data, _) => Lwt.return (apply2 f1 f2 data);
 
@@ -185,9 +181,14 @@ module Json = {
         read_data_all branch id >>=
           fun data => Lwt.return (raw (first n data));
 
-      let read_first_aggregate func branch id n =>
-          read_data_all branch id >>=
-            fun data => Lwt.return (apply func (first n data));          
+      let read_first_apply func branch id n =>
+        read_data_all branch id >>=
+          fun data => Lwt.return (apply func (first n data));  
+
+            
+      let read_first_apply2 f1 f2 branch id n =>
+        read branch id n >>=
+          fun (data, _) => Lwt.return (apply2 f1 f2 (first n data));
 
       let read_earliest branch id =>
         read_first branch id 1 >>= car;
