@@ -16,10 +16,12 @@ module Oml = {
 
 
 let from_json json => {
-  open Ezjsonm;  
+  open Ezjsonm;
+  let s = to_string json;
+  let _ = Lwt_io.printf "numeric =>>>>>>>>>>>>>>>>>>>>>>>> %s\n" s;  
   List.map 
     (fun x => get_float (find x ["value"])) 
-    (get_list (fun x => x) json);  
+    (get_list (fun x => x) (value json));  
 };
 
 let to_json result => {

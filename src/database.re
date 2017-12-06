@@ -81,7 +81,8 @@ module Json = {
       open Ezjsonm;
       List.map (fun (_,json) => value json) l |>
         fun l => f (`A l);
-    };  
+    };
+     
 
     let car json => {
       open Ezjsonm;
@@ -179,7 +180,11 @@ module Json = {
 
       let read_last_aggregate func branch id n =>
         read branch id n >>=
-          fun (data, _) => Lwt.return (aggregate func data);    
+          fun (data, _) => Lwt.return (aggregate func data); 
+          
+      let read_last_filter_aggregate f1 f2 branch id n =>
+        read branch id n >>=
+          fun (data, _) => Lwt.return json_empty;
 
       let read_latest branch id =>
         read_last branch id 1 >>= car;

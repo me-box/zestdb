@@ -349,6 +349,7 @@ let handle_get_read_ts_simple_last id n func => {
   | ["median"] => Json (read_last_aggregate median !ts_simple_json_store id (int_of_string n));
   | ["sd"] => Json (read_last_aggregate sd !ts_simple_json_store id (int_of_string n));
   | ["filter", t, "equals", v] => Json (read_last_filter (Filter.equals t v) !ts_simple_json_store id (int_of_string n));
+  | ["filter", t, "equals", v, "sum"] => Json (read_last_filter_aggregate (Filter.equals t v) sum !ts_simple_json_store id (int_of_string n));
   | _ => Empty;
   };  
 };
