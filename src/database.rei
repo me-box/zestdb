@@ -45,7 +45,8 @@ module Json: {
             let read_first_apply: (Ezjsonm.t => Ezjsonm.t) => Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
             let read_first_apply2: (Ezjsonm.t => Ezjsonm.t) => (Ezjsonm.t => Ezjsonm.t) => Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
             let read_since: Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
-            let read_since_aggregate: (Ezjsonm.t => Ezjsonm.t) => Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
+            let read_since_apply: (Ezjsonm.t => Ezjsonm.t) => Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
+            let read_since_apply2: (Ezjsonm.t => Ezjsonm.t) => (Ezjsonm.t => Ezjsonm.t) => Lwt.t Store.branch => string => int => Lwt.t Ezjsonm.t;
             let read_range: Lwt.t Store.branch => string => int => int => Lwt.t Ezjsonm.t;
             let read_range_aggregate: (Ezjsonm.t => Ezjsonm.t) => Lwt.t Store.branch => string => int => int => Lwt.t Ezjsonm.t;            
         };

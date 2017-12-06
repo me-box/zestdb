@@ -401,15 +401,24 @@ let handle_get_read_ts_simple_since id t func => {
   open Common.Response;
   open Database.Json.Ts.Simple;
   open Numeric;
+  open Filter;
   switch func {
   | [] => Json (read_since !ts_simple_json_store id (int_of_string t));
-  | ["sum"] => Json (read_since_aggregate sum !ts_simple_json_store id (int_of_string t));
-  | ["count"] => Json (read_since_aggregate count !ts_simple_json_store id (int_of_string t));
-  | ["min"] => Json (read_since_aggregate min !ts_simple_json_store id (int_of_string t));
-  | ["max"] => Json (read_since_aggregate max !ts_simple_json_store id (int_of_string t));
-  | ["mean"] => Json (read_since_aggregate mean !ts_simple_json_store id (int_of_string t));
-  | ["median"] => Json (read_since_aggregate median !ts_simple_json_store id (int_of_string t));
-  | ["sd"] => Json (read_since_aggregate sd !ts_simple_json_store id (int_of_string t));
+  | ["sum"] => Json (read_since_apply sum !ts_simple_json_store id (int_of_string t));
+  | ["count"] => Json (read_since_apply count !ts_simple_json_store id (int_of_string t));
+  | ["min"] => Json (read_since_apply min !ts_simple_json_store id (int_of_string t));
+  | ["max"] => Json (read_since_apply max !ts_simple_json_store id (int_of_string t));
+  | ["mean"] => Json (read_since_apply mean !ts_simple_json_store id (int_of_string t));
+  | ["median"] => Json (read_since_apply median !ts_simple_json_store id (int_of_string t));
+  | ["sd"] => Json (read_since_apply sd !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v] => Json (read_since_apply (equals t v) !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "sum"] => Json (read_since_apply2 (equals t v) sum !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "count"] => Json (read_since_apply2 (equals t v) count !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "min"] => Json (read_since_apply2 (equals t v) min !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "max"] => Json (read_since_apply2 (equals t v) max !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "mean"] => Json (read_since_apply2 (equals t v) mean !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "median"] => Json (read_since_apply2 (equals t v) median !ts_simple_json_store id (int_of_string t));
+  | ["filter", t, "equals", v, "sd"] => Json (read_since_apply2 (equals t v) sd !ts_simple_json_store id (int_of_string t));
   | _ => Empty;
   };    
   
