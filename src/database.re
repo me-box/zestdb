@@ -112,19 +112,12 @@ module Json = {
 
       let is_valid json => {
         open Ezjsonm;
-        let rec loop xs => {
-          switch xs {
-          | [] => false;
-          | [(label,n)] => {
-              switch (label,n) {
-              | ("value",`Float n) => true;
-              | _ => false;
-              };    
-            };
-          | [_, ...rest] => loop rest;
-          }
+        switch (get_dict json) {
+        | [("value",`Float n)] => true;
+        | [(tag_name, `String tag_value), ("value",`Float n)] => true;
+        | [("value",`Float n), (tag_name, `String tag_value)] => true;
+        | _ => false;
         };
-        loop (get_dict json);
       };
 
       let write branch ts id v => {
