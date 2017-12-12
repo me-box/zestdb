@@ -395,6 +395,7 @@ let handle_get_read_ts_simple_first id n func => {
   | ["median"] => apply1 median;
   | ["sd"] => apply1 sd;
   | ["filter", s1, "equals", s2] => apply1 (equals s1 s2);
+  | ["filter", s1, "contains", s2] => apply1 (contains s1 s2);
   | ["filter", s1, "equals", s2, "sum"] => apply2 (equals s1 s2) sum;
   | ["filter", s1, "contains", s2, "sum"] => apply2 (contains s1 s2) sum;
   | ["filter", s1, "equals", s2, "count"] => apply2 (equals s1 s2) count;
