@@ -350,6 +350,7 @@ let handle_get_read_ts_simple_last id n func => {
   | ["median"] => Json (read_last_apply median !ts_simple_json_store id (int_of_string n));
   | ["sd"] => Json (read_last_apply sd !ts_simple_json_store id (int_of_string n));
   | ["filter", s1, "equals", s2] => Json (read_last_apply (equals s1 s2) !ts_simple_json_store id (int_of_string n));
+  | ["filter", s1, "contains", s2] => Json (read_last_apply (contains s1 s2) !ts_simple_json_store id (int_of_string n));
   | ["filter", s1, "equals", s2, "sum"] => Json (read_last_apply2 (equals s1 s2) sum !ts_simple_json_store id (int_of_string n));
   | ["filter", s1, "equals", s2, "count"] => Json (read_last_apply2 (equals s1 s2) count !ts_simple_json_store id (int_of_string n));
   | ["filter", s1, "equals", s2, "min"] => Json (read_last_apply2 (equals s1 s2) min !ts_simple_json_store id (int_of_string n));

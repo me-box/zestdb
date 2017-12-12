@@ -14,9 +14,22 @@ module String = {
     let match item => get_value s1 item == s2;
     List.filter (fun item => {
       try (match item) {
-        | _ => false;
+        | Not_found => false;
         };
       });
+  };
+  let contains s1 s2 => {
+    let match item => {
+      let re = Str.regexp_string s2;
+      let str = get_value s1 item;
+      try {
+        ignore (Str.search_forward re str 0);
+        true
+      } {
+      | Not_found => false
+      };
+    };
+    List.filter (fun item => match item);
   };
 };
 
@@ -34,4 +47,4 @@ let apply func json => from_json json |> func |> to_json;
 
 let equals t v json => apply (String.equals t v) json;
 
-
+let contains t v json => apply (String.contains t v) json;
