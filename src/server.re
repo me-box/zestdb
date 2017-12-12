@@ -505,18 +505,18 @@ let handle_get_read_ts uri_path => {
   open Common.Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "ts", id, "latest"] => handle_get_read_ts_complex_latest id;
-  | ["", "ts", "numeric", id, "latest"] => handle_get_read_ts_simple_latest id;
-  | ["", "ts", id, "earliest"] => handle_get_read_ts_complex_earliest id;
-  | ["", "ts", "numeric", id, "earliest"] => handle_get_read_ts_simple_earliest id;
-  | ["", "ts", id, "last", n] => handle_get_read_ts_complex_last id n;
-  | ["", "ts", "numeric", id, "last", n, ...func] => handle_get_read_ts_simple_last id n func;
-  | ["", "ts", id, "first", n] => handle_get_read_ts_complex_first id n;
-  | ["", "ts", "numeric", id, "first", n, ...func] => handle_get_read_ts_simple_first id n func;
-  | ["", "ts", id, "since", t] => handle_get_read_ts_complex_since id t;
-  | ["", "ts", "numeric", id, "since", t, ...func] => handle_get_read_ts_simple_since id t func;
-  | ["", "ts", id, "range", t1, t2] => handle_get_read_ts_complex_range id t1 t2;
-  | ["", "ts", "numeric", id, "range", t1, t2, ...func] => handle_get_read_ts_simple_range id t1 t2 func;
+  | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_complex_latest id;
+  | ["", "ts", id, "latest"] => handle_get_read_ts_simple_latest id;
+  | ["", "ts", "blob", id, "earliest"] => handle_get_read_ts_complex_earliest id;
+  | ["", "ts", id, "earliest"] => handle_get_read_ts_simple_earliest id;
+  | ["", "ts", "blob", id, "last", n] => handle_get_read_ts_complex_last id n;
+  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_simple_last id n func;
+  | ["", "ts", "blob", id, "first", n] => handle_get_read_ts_complex_first id n;
+  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_simple_first id n func;
+  | ["", "ts", "blob", id, "since", t] => handle_get_read_ts_complex_since id t;
+  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_simple_since id t func;
+  | ["", "ts", "blob", id, "range", t1, t2] => handle_get_read_ts_complex_range id t1 t2;
+  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_simple_range id t1 t2 func;
   | _ => Empty;
   };
 };
@@ -630,13 +630,13 @@ let handle_post_write_ts uri_path payload => {
   open List;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "ts", key] => 
+  | ["", "ts", "blob", key] => 
     handle_post_write_ts_complex key payload;
-  | ["", "ts", key, "at", ts] => 
+  | ["", "ts", "blob", key, "at", ts] => 
     handle_post_write_ts_complex timestamp::(Some (int_of_string ts)) key payload;
-  | ["", "ts", "numeric", key] => 
+  | ["", "ts", key] => 
     handle_post_write_ts_simple key payload;
-  | ["", "ts", "numeric", key, "at", ts] => 
+  | ["", "ts", key, "at", ts] => 
     handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload;
   | _ => None;
   };
