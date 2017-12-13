@@ -32,25 +32,6 @@ $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 
 $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get
 ```
 
-#### running client to post time series data
-
-```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo' --mode post --payload '[1,2,3]'
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo' --mode post --payload '[4,5,6]'
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo' --mode post --payload '[7,8,9]'
-```
-
-#### running client to return time series data
-
-```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/foo/last/3' --mode get
-```
-
-The above request will produce something like the following:
-
-```
-[{"timestamp":1509627709142,"data":[7,8,9]},{"timestamp":1509627686551,"data":[4,5,6]},{"timestamp":1509627667855,"data":[1,2,3]}]
-```
 
 #### running client to observe changes to a resource path
 
@@ -58,11 +39,6 @@ The above request will produce something like the following:
 $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe
 ```
 
-#### generating a key pair
-
-```bash
-$ docker run -it zeromq/zeromq /usr/bin/curve_keygen
-```
 
 ### Key/Value API
 
@@ -81,7 +57,11 @@ $ docker run -it zeromq/zeromq /usr/bin/curve_keygen
 
 ### Time series API
 
-A datum returned is a JSON dictionary containing a timestamp in epoch milliseconds and the actual data. For example:```{"timestamp":1509626879783,"data":[1,2,3]}```
+Time series data consists of a value together with an optional tag. A value is integer or floating point number and a tag is string identifier with corresponding string value. For example:```{"room": "lounge", "value": 1}```. Tagging a value provides a way to group values together when accessing them. In the example provided you could retrieve all values that are in a room called 'lounge'. 
+
+Data returned from a query is a JSON dictionary containing a timestamp in epoch milliseconds and the actual data. For example:```{"timestamp":1513160985841,"data":{"foo":"bar","value":1}}```. Data can also be aggregated by applying functions across values. This results in a response of a single value. For example: ```{"result":1}```. 
+
+**It is assumed that data written to the time series store is in chronological order.**
 
 #### Write entry (auto-generated time)
     URL: /ts/<id>
@@ -135,6 +115,27 @@ A datum returned is a JSON dictionary containing a timestamp in epoch millisecon
     Method: GET
     Parameters: replace <id> with an identifier, replace <from> and <to> with epoch milliseconds
     Notes: return the number of entries in time range provided
+    
+    
+#### Filtering
+    
+Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match.
+
+
+#### Aggregation
+
+Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/.../<sum|count|min|max|mean|median|sd```.
+   
+
+#### Complex queries
+
+By combining both filtering and aggregation it is possible to produce more complex queries. For example:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/sensor/last/100/filter/room/equals/lounge/max' --mode get
+```
+
+might provide the maximum value of a sensor located in a specific room based on the last 100 entries.
 
 ### Interprocess communication (IPC)
 
@@ -165,7 +166,13 @@ $ docker run -v /tmp:/tmp --ipc=host jptmoore/zest /app/zest/client.exe --server
 
 ### Security
 
-All communication is encrypted using ZeroMQ's built-in [CurveZMQ](http://curvezmq.org/) security. However, access to the server can be controlled through tokens called macaroons. A command-line utility exists to mint macaroons which restricts what path can be accessed, who is accessing it and what the operation is. For example to mint a macaroon to control a POST operations you could do:
+All communication is encrypted using ZeroMQ's built-in [CurveZMQ](http://curvezmq.org/) security. A client and server require a key pair which can be generated as follows:
+
+```bash
+$ docker run -it zeromq/zeromq /usr/bin/curve_keygen
+```
+
+However, access to the server can be controlled through tokens called macaroons. A command-line utility exists to mint macaroons which restricts what path can be accessed, who is accessing it and what the operation is. For example to mint a macaroon to control a POST operations you could do:
 
 ```bash
 $ mint.exe --path 'path = /kv/foo' --method 'method = POST' --target 'target = Johns-MacBook-Pro.local' --key 'secret'
