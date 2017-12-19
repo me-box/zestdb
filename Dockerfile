@@ -23,7 +23,7 @@ RUN sudo apk update && sudo apk add alpine-sdk bash ncurses-dev m4 perl gmp-dev 
 && rm -rf /home/opam/.opam \
 && rm -rf /home/opam/opam-repository
 
-FROM alpine:latest
+FROM alpine:3.6
 
 USER root
 WORKDIR /app/zest/
