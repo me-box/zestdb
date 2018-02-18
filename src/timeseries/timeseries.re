@@ -19,16 +19,6 @@ let create path_to_db::path max_buffer_size::mbs shard_size::ss => {
 };
 
 
-let is_valid json => {
-  open Ezjsonm;
-  switch (get_dict json) {
-  | [("value",`Float n)] => true;
-  | [(tag_name, `String tag_value), ("value",`Float n)] => true;
-  | [("value",`Float n), (tag_name, `String tag_value)] => true;
-  | _ => false;
-  };
-};
-
 let shard_range lis => {
   open List;
   let cmp x y => x > y ? 1 : -1;  

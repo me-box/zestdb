@@ -2,6 +2,16 @@ include Timeseries;
 
 open Lwt.Infix;
 
+let is_valid json => {
+  open Ezjsonm;
+  switch (get_dict json) {
+  | [("value",`Float n)] => true;
+  | [(tag_name, `String tag_value), ("value",`Float n)] => true;
+  | [("value",`Float n), (tag_name, `String tag_value)] => true;
+  | _ => false;
+  };
+};
+
 let apply fn data => {
   List.fold_left (fun acc f => f acc) data fn |> Lwt.return;
 };
