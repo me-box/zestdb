@@ -17,14 +17,8 @@ let identity = ref (Unix.gethostname ());
 let content_format = ref "";
 
 /* create stores in local directory by default */
-let default_store_directory = "./";
-let store_directory = ref default_store_directory;
-let kv_json_store = ref (Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store"));
-let ts_complex_json_store = ref (Database.Json.Ts.create file::(!store_directory ^ "/ts-complex-json-store"));
-let ts_simple_json_store = ref (Database.Json.Ts.create file::(!store_directory ^ "/ts-simple-json-store"));
+let store_directory = ref "./";
 
-let kv_text_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-text-store"));
-let kv_binary_store = ref (Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store"));
 
 let setup_logger () => {
   Lwt_log_core.default :=
@@ -310,39 +304,27 @@ let route tuple payload socket => {
   route_message (get_ident tuple) socket (create_ack_payload content_format payload);
 };
 
-let handle_get_read_ts_complex_latest id => {
+
+let handle_get_read_ts_simple_latest id ts_ctx => {
+  open Common.Response;  
+  Json (Numeric_timeseries.read_latest ctx::ts_ctx id::id fn::[]);
+};
+
+
+let handle_get_read_ts_simple_earliest id ts_ctx => {
+  open Common.Response;  
+  Json (Numeric_timeseries.read_earliest ctx::ts_ctx id::id fn::[]);
+};
+
+
+let handle_get_read_ts_simple_last id n func ts_ctx => {
   open Common.Response;
-  Json (Database.Json.Ts.Complex.read_latest !ts_complex_json_store id);
-};
-
-let handle_get_read_ts_simple_latest id => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Simple.read_latest !ts_simple_json_store id);
-};
-
-let handle_get_read_ts_complex_earliest id => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Complex.read_earliest !ts_complex_json_store id);
-};
-
-let handle_get_read_ts_simple_earliest id => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Simple.read_earliest !ts_simple_json_store id);
-};
-
-let handle_get_read_ts_complex_last id n => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Complex.read_last !ts_complex_json_store id (int_of_string n));
-};
-
-let handle_get_read_ts_simple_last id n func => {
-  open Common.Response;
-  open Database.Json.Ts.Simple;
+  open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_last !ts_simple_json_store id (int_of_string n));
-  let apply1 f1 => Json (read_last_apply f1 !ts_simple_json_store id (int_of_string n));
-  let apply2 f1 f2 => Json (read_last_apply2 f1 f2 !ts_simple_json_store id (int_of_string n)); 
+  let apply0 = Json (read_last ctx::ts_ctx id::id n::(int_of_string n) fn::[]);
+  let apply1 f => Json (read_last ctx::ts_ctx id::id n::(int_of_string n) fn::[f]);
+  let apply2 f1 f2 => Json (read_last ctx::ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -372,19 +354,15 @@ let handle_get_read_ts_simple_last id n func => {
   };  
 };
 
-let handle_get_read_ts_complex_first id n => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Complex.read_first !ts_complex_json_store id (int_of_string n));
-};
 
-let handle_get_read_ts_simple_first id n func => {
+let handle_get_read_ts_simple_first id n func ts_ctx => {
   open Common.Response;
-  open Database.Json.Ts.Simple;
+  open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_first !ts_simple_json_store id (int_of_string n));
-  let apply1 f => Json (read_first_apply f !ts_simple_json_store id (int_of_string n));
-  let apply2 f1 f2 => Json (read_first_apply2 f1 f2 !ts_simple_json_store id (int_of_string n));
+  let apply0 = Json (read_first ctx::ts_ctx id::id n::(int_of_string n) fn::[]);
+  let apply1 f => Json (read_first ctx::ts_ctx id::id n::(int_of_string n) fn::[f]);
+  let apply2 f1 f2 => Json (read_first ctx::ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -414,19 +392,15 @@ let handle_get_read_ts_simple_first id n func => {
   };    
 };
 
-let handle_get_read_ts_complex_since id t => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Complex.read_since !ts_complex_json_store id (int_of_string t));
-};
 
-let handle_get_read_ts_simple_since id t func => {
+let handle_get_read_ts_simple_since id t func ts_ctx => {
   open Common.Response;
-  open Database.Json.Ts.Simple;
+  open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_since !ts_simple_json_store id (int_of_string t));
-  let apply1 f => Json (read_since_apply f !ts_simple_json_store id (int_of_string t));
-  let apply2 f1 f2 => Json (read_since_apply2 f1 f2 !ts_simple_json_store id (int_of_string t));
+  let apply0 = Json (read_since ctx::ts_ctx id::id from::(int_of_string t) fn::[]);
+  let apply1 f => Json (read_since ctx::ts_ctx id::id from::(int_of_string t) fn::[f]);
+  let apply2 f1 f2 => Json (read_since ctx::ts_ctx id::id from::(int_of_string t) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -457,19 +431,15 @@ let handle_get_read_ts_simple_since id t func => {
   
 };
 
-let handle_get_read_ts_complex_range id t1 t2 => {
-  open Common.Response;  
-  Json (Database.Json.Ts.Complex.read_range !ts_complex_json_store id (int_of_string t1) (int_of_string t2));
-};
 
-let handle_get_read_ts_simple_range id t1 t2 func => {
+let handle_get_read_ts_simple_range id t1 t2 func ts_ctx => {
   open Common.Response;  
-  open Database.Json.Ts.Simple;
+  open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_range !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  let apply1 f => Json (read_range_apply f !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
-  let apply2 f1 f2 => Json (read_range_apply2 f1 f2 !ts_simple_json_store id (int_of_string t1) (int_of_string t2));
+  let apply0 = Json (read_range ctx::ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+  let apply1 f => Json (read_range ctx::ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+  let apply2 f1 f2 => Json (read_range ctx::ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -500,23 +470,17 @@ let handle_get_read_ts_simple_range id t1 t2 func => {
   
 };
 
-let handle_get_read_ts uri_path => {
+let handle_get_read_ts uri_path ts_ctx => {
   open List;
   open Common.Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_complex_latest id;
-  | ["", "ts", id, "latest"] => handle_get_read_ts_simple_latest id;
-  | ["", "ts", "blob", id, "earliest"] => handle_get_read_ts_complex_earliest id;
-  | ["", "ts", id, "earliest"] => handle_get_read_ts_simple_earliest id;
-  | ["", "ts", "blob", id, "last", n] => handle_get_read_ts_complex_last id n;
-  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_simple_last id n func;
-  | ["", "ts", "blob", id, "first", n] => handle_get_read_ts_complex_first id n;
-  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_simple_first id n func;
-  | ["", "ts", "blob", id, "since", t] => handle_get_read_ts_complex_since id t;
-  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_simple_since id t func;
-  | ["", "ts", "blob", id, "range", t1, t2] => handle_get_read_ts_complex_range id t1 t2;
-  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_simple_range id t1 t2 func;
+  | ["", "ts", id, "latest"] => handle_get_read_ts_simple_latest id ts_ctx;
+  | ["", "ts", id, "earliest"] => handle_get_read_ts_simple_earliest id ts_ctx;
+  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_simple_last id n func ts_ctx;
+  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_simple_first id n func ts_ctx;
+  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_simple_since id t func ts_ctx;
+  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_simple_range id t1 t2 func ts_ctx;
   | _ => Empty;
   };
 };
@@ -534,42 +498,15 @@ let get_mode uri_path => {
   Str.first_chars uri_path 4;
 };
 
-let handle_get_read_kv_json uri_path => {
-  open Common.Response;  
-  let key = get_key "kv" uri_path;
-  switch key {
-  | Some k => Json (Database.Json.Kv.read !kv_json_store k);
-  | _ => Empty;
-  };
-};
 
-let handle_get_read_kv_binary uri_path => {
-  open Common.Response;  
-  let key = get_key "kv" uri_path;
-  switch key {
-  | Some k => Binary (Database.String.Kv.read !kv_binary_store k);
-  | _ => Empty;
-  };
-};
 
-let handle_get_read_kv_text uri_path => {
-  open Common.Response;  
-  let key = get_key "kv" uri_path;
-  switch key {
-  | Some k => Text (Database.String.Kv.read !kv_text_store k);
-  | _ => Empty;
-  };
-}; 
 
-let handle_read_database content_format uri_path => {
+let handle_read_database content_format uri_path ts_ctx => {
   open Common.Ack;
   open Common.Response;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => handle_get_read_kv_json uri_path;
-  | ("/ts/", 50) => handle_get_read_ts uri_path;
-  | ("/kv/", 42) => handle_get_read_kv_binary uri_path;
-  | ("/kv/", 0) => handle_get_read_kv_text uri_path;
+  | ("/ts/", 50) => handle_get_read_ts uri_path ts_ctx;
   | _ => Empty;
   };
   switch result {
@@ -589,10 +526,10 @@ let handle_read_hypercat () => {
     fun s => (Payload 50 s) |> Lwt.return;
 };
 
-let handle_get_read content_format uri_path => {
+let handle_get_read content_format uri_path ts_ctx => {
   switch uri_path {
   | "/cat" => handle_read_hypercat ();
-  | _ => handle_read_database content_format uri_path; 
+  | _ => handle_read_database content_format uri_path ts_ctx; 
   };
 };
 
@@ -605,78 +542,42 @@ let to_json payload => {
 };
 
 
-let handle_post_write_ts_complex ::timestamp=None key payload => {
-  let json = to_json payload;
-  switch json {
-  | Some value => Some (Database.Json.Ts.Complex.write !ts_complex_json_store timestamp key value);
-  | None => None;
-  };  
-};
 
-let handle_post_write_ts_simple ::timestamp=None key payload => {
-  open Database.Json.Ts.Simple;
+
+let handle_post_write_ts_simple ::timestamp=None key payload ts_ctx => {
+  open Numeric_timeseries;
   let json = to_json payload;
   switch json {
   | Some value => {
       if (is_valid value) {
-        Some (write !ts_simple_json_store timestamp key value);
+        Some (write ctx::ts_ctx timestamp::timestamp id::key json::value);
       } else None;
     };
   | None => None;
   };  
 };
 
-let handle_post_write_ts uri_path payload => {
+let handle_post_write_ts uri_path payload ts_ctx => {
   open List;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "ts", "blob", key] => 
-    handle_post_write_ts_complex key payload;
-  | ["", "ts", "blob", key, "at", ts] => 
-    handle_post_write_ts_complex timestamp::(Some (int_of_string ts)) key payload;
   | ["", "ts", key] => 
-    handle_post_write_ts_simple key payload;
+    handle_post_write_ts_simple key payload ts_ctx;
   | ["", "ts", key, "at", ts] => 
-    handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload;
+    handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload ts_ctx;
   | _ => None;
   };
 };
 
-let handle_post_write_kv_json uri_path payload => {
-  let key = get_key "kv" uri_path;
-  let json = to_json payload;
-  switch (key,json) {
-  | (Some k, Some v) => Some (Database.Json.Kv.write !kv_json_store k v);
-  | _ => None;
-  };
-};
 
-let handle_post_write_kv_binary uri_path payload => {
-  let key = get_key "kv" uri_path;
-  switch key {
-  | Some k => Some (Database.String.Kv.write !kv_binary_store k payload);
-  | _ => None;
-  };  
-};
-
-let handle_post_write_kv_text uri_path payload => {
-  let key = get_key "kv" uri_path;
-  switch key {
-  | Some k => Some (Database.String.Kv.write !kv_text_store k payload);
-  | _ => None;
-  };
-};
   
 
-let handle_write_database content_format uri_path payload => {
+let handle_write_database content_format uri_path payload ts_ctx => {
   open Common.Ack;
   open Ezjsonm;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/kv/", 50) => handle_post_write_kv_json uri_path payload;
-  | ("/ts/", 50) => handle_post_write_ts uri_path payload;  
-  | ("/kv/", 42) => handle_post_write_kv_binary uri_path payload;
-  | ("/kv/", 0) => handle_post_write_kv_text uri_path payload;
+  | ("/ts/", 50) => handle_post_write_ts uri_path payload ts_ctx;  
   | _ => None;
   };
   switch result {
@@ -699,10 +600,10 @@ let handle_write_hypercat payload => {
   };
 };
 
-let handle_post_write content_format uri_path payload => {
+let handle_post_write content_format uri_path payload ts_ctx => {
   switch uri_path {
   | "/cat" => handle_write_hypercat payload;
-  | _ => handle_write_database content_format uri_path payload; 
+  | _ => handle_write_database content_format uri_path payload ts_ctx; 
   };
 };
 
@@ -738,7 +639,7 @@ let handle_max_age options => {
   max_age;
 };
 
-let handle_get options token => {
+let handle_get options token ts_ctx => {
   open Common.Ack;
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
@@ -750,12 +651,12 @@ let handle_get options token => {
     add_to_observe uri_path content_format uuid max_age;
     ack (Observe !router_public_key uuid);
   } else {
-    handle_get_read content_format uri_path >>= ack;
+    handle_get_read content_format uri_path ts_ctx >>= ack;
   };
 };
 
 
-let handle_post options token payload rout_soc => {
+let handle_post options token payload rout_soc ts_ctx => {
   open Common.Ack;
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
@@ -763,7 +664,7 @@ let handle_post options token payload rout_soc => {
   if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
   } else if (is_observed tuple) {
-      handle_post_write content_format uri_path payload >>=
+      handle_post_write content_format uri_path payload ts_ctx >>=
         fun resp => {
           /* we dont want to route bad requests */
           if (resp != (Code 128)) {
@@ -773,11 +674,11 @@ let handle_post options token payload rout_soc => {
           };
       };
   } else {
-    handle_post_write content_format uri_path payload >>= ack;
+    handle_post_write content_format uri_path payload ts_ctx >>= ack;
   };
 };
 
-let handle_msg msg rout_soc => {
+let handle_msg msg rout_soc ts_ctx => {
   handle_expire rout_soc >>=
     fun () =>
       Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
@@ -788,8 +689,8 @@ let handle_msg msg rout_soc => {
           let (options,r3) = handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
           switch code {
-          | 1 => handle_get options token;
-          | 2 => handle_post options token payload rout_soc;
+          | 1 => handle_get options token ts_ctx;
+          | 2 => handle_post options token payload rout_soc ts_ctx;
           | _ => failwith "invalid code";
           };
         };  
@@ -810,11 +711,11 @@ let server_test_nodb rep_soc rout_soc => {
   loop ();
 };
 
-let server rep_soc rout_soc => {
+let server rep_soc rout_soc ts_ctx => {
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
       fun msg =>
-        handle_msg msg rout_soc >>=
+        handle_msg msg rout_soc ts_ctx >>=
           fun resp =>
             Lwt_zmq.Socket.send rep_soc resp >>=
               fun () =>
@@ -883,13 +784,6 @@ let monitor_connections ctx rep_soc rout_soc => {
 };
 
 /* support overriding location of stores */
-let create_stores_again () => {
-  kv_json_store := Database.Json.Kv.create file::(!store_directory ^ "/kv-json-store");
-  ts_complex_json_store := Database.Json.Ts.create file::(!store_directory ^ "/ts-complex-json-store");
-  ts_simple_json_store := Database.Json.Ts.create file::(!store_directory ^ "/ts-simple-json-store");
-  kv_text_store := Database.String.Kv.create file::(!store_directory ^ "/kv-text-store");
-  kv_binary_store := Database.String.Kv.create file::(!store_directory ^ "/kv-binary-store");
-};
 
 let data_from_file file => {
   Fpath.v file |>
@@ -918,16 +812,16 @@ let report_error e rep_soc => {
   let _ = ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
 };
 
-let the_server rep_soc rout_soc => {
-  !no_db ? server_test_nodb rep_soc rout_soc : server rep_soc rout_soc;
+let the_server rep_soc rout_soc ts_ctx => {
+  !no_db ? server_test_nodb rep_soc rout_soc : server rep_soc rout_soc ts_ctx;
 };
 
-let rec run_server rep_soc rout_soc => {
+let rec run_server rep_soc rout_soc ts_ctx => {
   let _ = Lwt_log_core.info "Ready";   
-  try (Lwt_main.run {the_server rep_soc rout_soc}) {
+  try (Lwt_main.run {the_server rep_soc rout_soc ts_ctx}) {
     | e => report_error e rep_soc;
   };
-  run_server rep_soc rout_soc;
+  run_server rep_soc rout_soc ts_ctx;
 };
 
 let terminate_server ctx rep_soc rout_soc => {
@@ -942,11 +836,11 @@ let setup_server () => {
   setup_router_keys ();
   set_server_key !server_secret_key_file;
   set_token_key !token_secret_key_file;
-  (!store_directory != default_store_directory) ? create_stores_again () : ();
-  let ctx = ZMQ.Context.create ();
-  let rep_soc = setup_rep_socket !rep_endpoint ctx ZMQ.Socket.rep !server_secret_key;
-  let rout_soc = setup_rout_socket !rout_endpoint ctx ZMQ.Socket.router !router_secret_key;
-  run_server rep_soc rout_soc |> fun () => terminate_server ctx rep_soc rout_soc;
+  let ts_ctx = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
+  let zmq_ctx = ZMQ.Context.create ();
+  let rep_soc = setup_rep_socket !rep_endpoint zmq_ctx ZMQ.Socket.rep !server_secret_key;
+  let rout_soc = setup_rout_socket !rout_endpoint zmq_ctx ZMQ.Socket.router !router_secret_key;
+  run_server rep_soc rout_soc ts_ctx |> fun () => terminate_server zmq_ctx rep_soc rout_soc;
 };
 
 setup_server ();
