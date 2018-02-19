@@ -9,7 +9,6 @@ let token_secret_key = ref "";
 let router_public_key = ref "";
 let router_secret_key = ref "";
 let log_mode = ref false;
-let no_db = ref false;
 let server_secret_key_file = ref "";
 let server_secret_key = ref "";
 let version = 1;
@@ -696,21 +695,6 @@ let handle_msg msg rout_soc ts_ctx => {
         };  
 };
 
-let server_test_nodb rep_soc rout_soc => {
-  open Common.Ack;
-  let rec loop () => {
-    Lwt_zmq.Socket.recv rep_soc >>=
-      fun msg =>
-        ack (Code 65) >>=
-          fun resp =>
-            Lwt_zmq.Socket.send rep_soc resp >>=
-              fun () =>
-                Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
-                  fun () => loop ();
-  };
-  loop ();
-};
-
 let server rep_soc rout_soc ts_ctx => {
   let rec loop () => {
     Lwt_zmq.Socket.recv rep_soc >>=
@@ -766,7 +750,6 @@ let parse_cmdline () => {
     ("--token-key-file", Arg.Set_string token_secret_key_file, ": to set the token secret key"),
     ("--identity", Arg.Set_string identity, ": to set the server identity"),
     ("--store-dir", Arg.Set_string store_directory, ": to set the location for the database files"),
-    ("--no-db", Arg.Set no_db, ": test without using database"),
   ];
   Arg.parse speclist (fun x => raise (Arg.Bad ("Bad argument : " ^ x))) usage;
 };
@@ -776,14 +759,6 @@ let setup_router_keys () => {
   router_secret_key := private_key;
   router_public_key := public_key;
 };
-
-/* some issues running these threads so disabled */
-let monitor_connections ctx rep_soc rout_soc => {
-  let () = Connections.monitor ctx rout_soc;
-  let () = Connections.monitor ctx rep_soc;
-};
-
-/* support overriding location of stores */
 
 let data_from_file file => {
   Fpath.v file |>
@@ -812,13 +787,10 @@ let report_error e rep_soc => {
   let _ = ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
 };
 
-let the_server rep_soc rout_soc ts_ctx => {
-  !no_db ? server_test_nodb rep_soc rout_soc : server rep_soc rout_soc ts_ctx;
-};
 
 let rec run_server rep_soc rout_soc ts_ctx => {
   let _ = Lwt_log_core.info "Ready";   
-  try (Lwt_main.run {the_server rep_soc rout_soc ts_ctx}) {
+  try (Lwt_main.run {server rep_soc rout_soc ts_ctx}) {
     | e => report_error e rep_soc;
   };
   run_server rep_soc rout_soc ts_ctx;
