@@ -305,19 +305,19 @@ let route tuple payload socket => {
 };
 
 
-let handle_get_read_ts_simple_latest id ts_ctx => {
+let handle_get_read_ts_numeric_latest id ts_ctx => {
   open Common.Response;  
   Json (Numeric_timeseries.read_latest ctx::ts_ctx id::id fn::[]);
 };
 
 
-let handle_get_read_ts_simple_earliest id ts_ctx => {
+let handle_get_read_ts_numeric_earliest id ts_ctx => {
   open Common.Response;  
   Json (Numeric_timeseries.read_earliest ctx::ts_ctx id::id fn::[]);
 };
 
 
-let handle_get_read_ts_simple_last id n func ts_ctx => {
+let handle_get_read_ts_numeric_last id n func ts_ctx => {
   open Common.Response;
   open Numeric_timeseries;
   open Numeric;
@@ -355,7 +355,7 @@ let handle_get_read_ts_simple_last id n func ts_ctx => {
 };
 
 
-let handle_get_read_ts_simple_first id n func ts_ctx => {
+let handle_get_read_ts_numeric_first id n func ts_ctx => {
   open Common.Response;
   open Numeric_timeseries;
   open Numeric;
@@ -393,7 +393,7 @@ let handle_get_read_ts_simple_first id n func ts_ctx => {
 };
 
 
-let handle_get_read_ts_simple_since id t func ts_ctx => {
+let handle_get_read_ts_numeric_since id t func ts_ctx => {
   open Common.Response;
   open Numeric_timeseries;
   open Numeric;
@@ -432,7 +432,7 @@ let handle_get_read_ts_simple_since id t func ts_ctx => {
 };
 
 
-let handle_get_read_ts_simple_range id t1 t2 func ts_ctx => {
+let handle_get_read_ts_numeric_range id t1 t2 func ts_ctx => {
   open Common.Response;  
   open Numeric_timeseries;
   open Numeric;
@@ -475,12 +475,12 @@ let handle_get_read_ts uri_path ts_ctx => {
   open Common.Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "ts", id, "latest"] => handle_get_read_ts_simple_latest id ts_ctx;
-  | ["", "ts", id, "earliest"] => handle_get_read_ts_simple_earliest id ts_ctx;
-  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_simple_last id n func ts_ctx;
-  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_simple_first id n func ts_ctx;
-  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_simple_since id t func ts_ctx;
-  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_simple_range id t1 t2 func ts_ctx;
+  | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ts_ctx;
+  | ["", "ts", id, "earliest"] => handle_get_read_ts_numeric_earliest id ts_ctx;
+  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ts_ctx;
+  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_numeric_first id n func ts_ctx;
+  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_numeric_since id t func ts_ctx;
+  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_numeric_range id t1 t2 func ts_ctx;
   | _ => Empty;
   };
 };
