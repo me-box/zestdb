@@ -247,12 +247,17 @@ let read_memory_then_disk ctx k n mode => {
 };
 
 let read_last ctx::ctx id::k n::n => {
-  Membuf.get_ascending_series ctx.membuf k >>= 
-    fun is_valid_series =>
-      switch is_valid_series {
-      | true => read_memory_then_disk ctx k n `Last;
-      | false => read_only_from_disk ctx k n `Last;
-      };
+  if (Membuf.exists ctx.membuf k) {
+    Membuf.get_ascending_series ctx.membuf k >>= 
+      fun is_valid_series =>
+        switch is_valid_series {
+        | true => read_memory_then_disk ctx k n `Last;
+        | false => read_only_from_disk ctx k n `Last;
+        };
+    } else {
+      read_disk ctx k n `Last >>= 
+        fun disk => return_data sort::`Last disk;
+    };
 };
 
 let read_latest ctx::ctx id::k => {

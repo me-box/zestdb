@@ -5,7 +5,7 @@ let create : unit => t;
 let write : t => string => (int, Ezjsonm.t) => Lwt.t unit;
 let read : t => string => Lwt.t (int, Ezjsonm.t);
 let length : t => string => Lwt.t int;
-let exists : t => string => Lwt.t bool;
+let exists : t => string => bool;
 let to_list : t => string => Lwt.t (list (int, Ezjsonm.t));
 let serialise : t => Lwt.t (list (string, (list (int, Ezjsonm.t))));
 let empty : t => Lwt.t unit;
