@@ -226,8 +226,8 @@ let return_data sort::mode lis => {
   sort_result mode lis |> to_json |> Lwt.return;
 };
 
-let read_only_from_disk ctx k n mode => {
-  Lwt_io.printf "read_only_from_disk\n" >>= fun () =>  
+let flush_memory_read_from_disk ctx k n mode => {
+  Lwt_io.printf "flush_memory_read_from_disk\n" >>= fun () =>  
     read_memory_all ctx k >>=
       fun shard => flush_series ctx k shard >>=
         fun () => read_disk ctx k n mode >>= 
@@ -252,7 +252,7 @@ let read_last ctx::ctx id::k n::n => {
       fun is_valid_series =>
         switch is_valid_series {
         | true => read_memory_then_disk ctx k n `Last;
-        | false => read_only_from_disk ctx k n `Last;
+        | false => flush_memory_read_from_disk ctx k n `Last;
         };
     } else {
       read_disk ctx k n `Last >>= 
@@ -269,7 +269,7 @@ let read_first ctx::ctx id::k n::n => {
     fun is_valid_series =>
       switch is_valid_series {
       | true => read_memory_then_disk ctx k n `First;
-      | false => read_only_from_disk ctx k n `First;
+      | false => flush_memory_read_from_disk ctx k n `First;
       };
 };
 
