@@ -182,7 +182,7 @@ let read_memory ctx id n mode => {
 };
 
 let read_memory_all ctx id => {
-  Membuf.to_list ctx.membuf id;
+  Membuf.exists ctx.membuf id ? Membuf.to_list ctx.membuf id : Lwt.return [];
 };
 
 let log_shard shard => {
