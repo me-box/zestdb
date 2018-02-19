@@ -706,7 +706,7 @@ let server rep_soc rout_soc ts_ctx => {
                 Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
                   fun () => loop ();
   };
-  loop ();
+  Lwt_log_core.info_f "Ready to receive..." >>= fun () => loop ();
 };
 
 let setup_rep_socket endpoint ctx kind secret => {
@@ -780,26 +780,40 @@ let set_token_key file => {
   };
 };
 
+let terminate_server zmq_ctx ts_ctx rep_soc rout_soc => {
+  Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
+    Numeric_timeseries.flush ctx::ts_ctx >>= fun () => {
+      close_socket rout_soc;
+      close_socket rep_soc;
+      ZMQ.Context.terminate zmq_ctx;
+      exit 0;
+    };
+};
+
 let report_error e rep_soc => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
-  let _ = Lwt_log_core.error_f "Opps: %s%s" msg stack;
-  let _ = ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
+  Lwt_log_core.error_f "Opps: %s%s" msg stack >>= fun () => 
+    ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
 };
 
+exception Sigterm of string;
+exception Sigint of string;
 
-let rec run_server rep_soc rout_soc ts_ctx => {
-  let _ = Lwt_log_core.info "Ready";   
-  try (Lwt_main.run {server rep_soc rout_soc ts_ctx}) {
-    | e => report_error e rep_soc;
-  };
-  run_server rep_soc rout_soc ts_ctx;
+let register_signal_handlers () => {
+  open Lwt_unix;
+  on_signal Sys.sigterm (fun _ => raise (Sigterm "Caught SIGTERM")) |> 
+    fun id => on_signal Sys.sigint (fun _ => raise (Sigint "Caught SIGINT"));
 };
 
-let terminate_server ctx rep_soc rout_soc => {
-  close_socket rout_soc;
-  close_socket rep_soc;
-  ZMQ.Context.terminate ctx;
+let rec run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx => {
+  let _ = try {Lwt_main.run {server rep_soc rout_soc ts_ctx}} 
+    { 
+      | Sigint m => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
+      | Sigterm m => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
+      | e => report_error e rep_soc
+    };
+  run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx;
 };
 
 let setup_server () => {
@@ -812,7 +826,9 @@ let setup_server () => {
   let zmq_ctx = ZMQ.Context.create ();
   let rep_soc = setup_rep_socket !rep_endpoint zmq_ctx ZMQ.Socket.rep !server_secret_key;
   let rout_soc = setup_rout_socket !rout_endpoint zmq_ctx ZMQ.Socket.router !router_secret_key;
-  run_server rep_soc rout_soc ts_ctx |> fun () => terminate_server zmq_ctx rep_soc rout_soc;
+  let _ = register_signal_handlers ();  
+  run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx |> 
+    fun () => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
 };
 
 setup_server ();
