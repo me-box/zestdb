@@ -797,21 +797,19 @@ let report_error e rep_soc => {
     ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
 };
 
-exception Sigterm of string;
-exception Sigint of string;
+exception Interrupt of string;
 
 let register_signal_handlers () => {
   open Lwt_unix;
-  on_signal Sys.sigterm (fun _ => raise (Sigterm "Caught SIGTERM")) |>
-    fun id => on_signal Sys.sighup (fun _ => raise (Sigint "Caught SIGINT")) |>
-      fun id => on_signal Sys.sigint (fun _ => raise (Sigint "Caught SIGINT"));
+  on_signal Sys.sigterm (fun _ => raise (Interrupt "Caught SIGTERM")) |>
+    fun id => on_signal Sys.sighup (fun _ => raise (Interrupt "Caught SIGHUP")) |>
+      fun id => on_signal Sys.sigint (fun _ => raise (Interrupt "Caught SIGINT"));
 };
 
 let rec run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx => {
   let _ = try {Lwt_main.run {server rep_soc rout_soc ts_ctx}} 
     { 
-      | Sigint m => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
-      | Sigterm m => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
+      | Interrupt m => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
       | e => report_error e rep_soc
     };
   run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx;
