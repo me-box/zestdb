@@ -63,6 +63,10 @@ let length ctx id => {
   Membufq.length q |> Lwt.return;  
 };
 
+let exists ctx id => {
+  Membufhash.exists ctx.ht id |> Lwt.return;
+};
+
 let to_list ctx id => {
   let q = Membufhash.get ctx.ht id;
   Membufq.to_list q |> Lwt.return;  
