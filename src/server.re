@@ -802,8 +802,9 @@ exception Sigint of string;
 
 let register_signal_handlers () => {
   open Lwt_unix;
-  on_signal Sys.sigterm (fun _ => raise (Sigterm "Caught SIGTERM")) |> 
-    fun id => on_signal Sys.sigint (fun _ => raise (Sigint "Caught SIGINT"));
+  on_signal Sys.sigterm (fun _ => raise (Sigterm "Caught SIGTERM")) |>
+    fun id => on_signal Sys.sighup (fun _ => raise (Sigint "Caught SIGINT")) |>
+      fun id => on_signal Sys.sigint (fun _ => raise (Sigint "Caught SIGINT"));
 };
 
 let rec run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx => {
