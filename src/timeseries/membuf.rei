@@ -13,6 +13,6 @@ let empty_series : t => string => Lwt.t unit;
 let set_disk_range : t => string => option (int, int) => Lwt.t unit;
 let get_disk_range : t => string => Lwt.t (option (int, int));
 let set_ascending_series : t => string => bool => Lwt.t unit;
-let get_ascending_series : t => string => Lwt.t bool;
+let get_ascending_series : t => string => bool;
 let set_descending_series : t => string => bool => Lwt.t unit;
-let get_descending_series : t => string => Lwt.t bool;
+let get_descending_series : t => string => bool;

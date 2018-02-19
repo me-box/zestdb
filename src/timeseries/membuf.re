@@ -89,7 +89,7 @@ let set_ascending_series ctx id v => {
 
 let get_ascending_series ctx id => {
   let q = Membufhash.get ctx.ht id;
-  Membufq.get_ascending_series q |> Lwt.return;
+  Membufq.get_ascending_series q;
 };
 
 let set_descending_series ctx id v => {
@@ -99,5 +99,5 @@ let set_descending_series ctx id v => {
 
 let get_descending_series ctx id => {
   let q = Membufhash.get ctx.ht id;
-  Membufq.get_descending_series q |> Lwt.return;
+  Membufq.get_descending_series q;
 };
