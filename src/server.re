@@ -19,6 +19,14 @@ let content_format = ref "";
 let store_directory = ref "./";
 
 
+type t = {
+  ts_ctx: Numeric_timeseries.t,
+  zmq_ctx: ZMQ.Context.t, 
+  rep_soc: Lwt_zmq.Socket.t [`Rep],
+  rout_soc: Lwt_zmq.Socket.t [`Router], 
+  version: int
+};
+
 let setup_logger () => {
   Lwt_log_core.default :=
     Lwt_log.channel
@@ -248,11 +256,6 @@ let get_max_age options => {
 };
 
 
-let publish path payload socket => {
-  let msg = Printf.sprintf "%s %s" path payload;
-  Lwt_zmq.Socket.send socket msg;
-};
-
 let expire l t => {
   open List;
   let f x =>
@@ -269,13 +272,13 @@ let list_uuids alist => {
   map (fun (x,y) => hd y) alist;    
 };
 
-let route_message alist socket payload => {
+let route_message alist ctx payload => {
   open Lwt_zmq.Socket.Router;  
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry), ...rest] => {
-          send socket (id_of_string ident) [payload] >>=
+          send ctx.rout_soc (id_of_string ident) [payload] >>=
           /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
             fun _ => Lwt_log_core.debug_f "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry >>=
               fun _ => loop rest;
@@ -285,45 +288,45 @@ let route_message alist socket payload => {
   loop alist;
 };
 
-let handle_expire socket => {
+let handle_expire ctx => {
   if (observed_paths_exist ()) {
     open Lwt_zmq.Socket.Router;
     let new_notify_list = expire !notify_list (time_now ());
     let uuids = diff (list_uuids !notify_list) (list_uuids new_notify_list);
     notify_list := new_notify_list;
     /* send Service Unavailable */
-    route_message uuids socket (create_ack 163);
+    route_message uuids ctx (create_ack 163);
   } else {
     Lwt.return_unit;
   };
 };
 
-let route tuple payload socket => {
+let route tuple payload ctx => {
   let (_,content_format) = tuple;
-  route_message (get_ident tuple) socket (create_ack_payload content_format payload);
+  route_message (get_ident tuple) ctx (create_ack_payload content_format payload);
 };
 
 
-let handle_get_read_ts_numeric_latest id ts_ctx => {
+let handle_get_read_ts_numeric_latest id ctx => {
   open Common.Response;  
-  Json (Numeric_timeseries.read_latest ctx::ts_ctx id::id fn::[]);
+  Json (Numeric_timeseries.read_latest ctx::ctx.ts_ctx id::id fn::[]);
 };
 
 
-let handle_get_read_ts_numeric_earliest id ts_ctx => {
+let handle_get_read_ts_numeric_earliest id ctx => {
   open Common.Response;  
-  Json (Numeric_timeseries.read_earliest ctx::ts_ctx id::id fn::[]);
+  Json (Numeric_timeseries.read_earliest ctx::ctx.ts_ctx id::id fn::[]);
 };
 
 
-let handle_get_read_ts_numeric_last id n func ts_ctx => {
+let handle_get_read_ts_numeric_last id n func ctx => {
   open Common.Response;
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_last ctx::ts_ctx id::id n::(int_of_string n) fn::[]);
-  let apply1 f => Json (read_last ctx::ts_ctx id::id n::(int_of_string n) fn::[f]);
-  let apply2 f1 f2 => Json (read_last ctx::ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
+  let apply0 = Json (read_last ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[]);
+  let apply1 f => Json (read_last ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f]);
+  let apply2 f1 f2 => Json (read_last ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -354,14 +357,14 @@ let handle_get_read_ts_numeric_last id n func ts_ctx => {
 };
 
 
-let handle_get_read_ts_numeric_first id n func ts_ctx => {
+let handle_get_read_ts_numeric_first id n func ctx => {
   open Common.Response;
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_first ctx::ts_ctx id::id n::(int_of_string n) fn::[]);
-  let apply1 f => Json (read_first ctx::ts_ctx id::id n::(int_of_string n) fn::[f]);
-  let apply2 f1 f2 => Json (read_first ctx::ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
+  let apply0 = Json (read_first ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[]);
+  let apply1 f => Json (read_first ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f]);
+  let apply2 f1 f2 => Json (read_first ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -392,14 +395,14 @@ let handle_get_read_ts_numeric_first id n func ts_ctx => {
 };
 
 
-let handle_get_read_ts_numeric_since id t func ts_ctx => {
+let handle_get_read_ts_numeric_since id t func ctx => {
   open Common.Response;
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_since ctx::ts_ctx id::id from::(int_of_string t) fn::[]);
-  let apply1 f => Json (read_since ctx::ts_ctx id::id from::(int_of_string t) fn::[f]);
-  let apply2 f1 f2 => Json (read_since ctx::ts_ctx id::id from::(int_of_string t) fn::[f1, f2]);
+  let apply0 = Json (read_since ctx::ctx.ts_ctx id::id from::(int_of_string t) fn::[]);
+  let apply1 f => Json (read_since ctx::ctx.ts_ctx id::id from::(int_of_string t) fn::[f]);
+  let apply2 f1 f2 => Json (read_since ctx::ctx.ts_ctx id::id from::(int_of_string t) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -431,14 +434,14 @@ let handle_get_read_ts_numeric_since id t func ts_ctx => {
 };
 
 
-let handle_get_read_ts_numeric_range id t1 t2 func ts_ctx => {
+let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
   open Common.Response;  
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_range ctx::ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
-  let apply1 f => Json (read_range ctx::ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
-  let apply2 f1 f2 => Json (read_range ctx::ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
+  let apply0 = Json (read_range ctx::ctx.ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+  let apply1 f => Json (read_range ctx::ctx.ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+  let apply2 f1 f2 => Json (read_range ctx::ctx.ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -469,17 +472,17 @@ let handle_get_read_ts_numeric_range id t1 t2 func ts_ctx => {
   
 };
 
-let handle_get_read_ts uri_path ts_ctx => {
+let handle_get_read_ts uri_path ctx => {
   open List;
   open Common.Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ts_ctx;
-  | ["", "ts", id, "earliest"] => handle_get_read_ts_numeric_earliest id ts_ctx;
-  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ts_ctx;
-  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_numeric_first id n func ts_ctx;
-  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_numeric_since id t func ts_ctx;
-  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_numeric_range id t1 t2 func ts_ctx;
+  | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ctx;
+  | ["", "ts", id, "earliest"] => handle_get_read_ts_numeric_earliest id ctx;
+  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ctx;
+  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_numeric_first id n func ctx;
+  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_numeric_since id t func ctx;
+  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_numeric_range id t1 t2 func ctx;
   | _ => Empty;
   };
 };
@@ -500,12 +503,12 @@ let get_mode uri_path => {
 
 
 
-let handle_read_database content_format uri_path ts_ctx => {
+let handle_read_database content_format uri_path ctx => {
   open Common.Ack;
   open Common.Response;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/ts/", 50) => handle_get_read_ts uri_path ts_ctx;
+  | ("/ts/", 50) => handle_get_read_ts uri_path ctx;
   | _ => Empty;
   };
   switch result {
@@ -525,10 +528,10 @@ let handle_read_hypercat () => {
     fun s => (Payload 50 s) |> Lwt.return;
 };
 
-let handle_get_read content_format uri_path ts_ctx => {
+let handle_get_read content_format uri_path ctx => {
   switch uri_path {
   | "/cat" => handle_read_hypercat ();
-  | _ => handle_read_database content_format uri_path ts_ctx; 
+  | _ => handle_read_database content_format uri_path ctx; 
   };
 };
 
@@ -543,27 +546,27 @@ let to_json payload => {
 
 
 
-let handle_post_write_ts_simple ::timestamp=None key payload ts_ctx => {
+let handle_post_write_ts_simple ::timestamp=None key payload ctx => {
   open Numeric_timeseries;
   let json = to_json payload;
   switch json {
   | Some value => {
       if (is_valid value) {
-        Some (write ctx::ts_ctx timestamp::timestamp id::key json::value);
+        Some (write ctx::ctx.ts_ctx timestamp::timestamp id::key json::value);
       } else None;
     };
   | None => None;
   };  
 };
 
-let handle_post_write_ts uri_path payload ts_ctx => {
+let handle_post_write_ts uri_path payload ctx => {
   open List;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", "ts", key] => 
-    handle_post_write_ts_simple key payload ts_ctx;
+    handle_post_write_ts_simple key payload ctx;
   | ["", "ts", key, "at", ts] => 
-    handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload ts_ctx;
+    handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload ctx;
   | _ => None;
   };
 };
@@ -571,12 +574,12 @@ let handle_post_write_ts uri_path payload ts_ctx => {
 
   
 
-let handle_write_database content_format uri_path payload ts_ctx => {
+let handle_write_database content_format uri_path payload ctx => {
   open Common.Ack;
   open Ezjsonm;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/ts/", 50) => handle_post_write_ts uri_path payload ts_ctx;  
+  | ("/ts/", 50) => handle_post_write_ts uri_path payload ctx;  
   | _ => None;
   };
   switch result {
@@ -599,10 +602,10 @@ let handle_write_hypercat payload => {
   };
 };
 
-let handle_post_write content_format uri_path payload ts_ctx => {
+let handle_post_write content_format uri_path payload ctx => {
   switch uri_path {
   | "/cat" => handle_write_hypercat payload;
-  | _ => handle_write_database content_format uri_path payload ts_ctx; 
+  | _ => handle_write_database content_format uri_path payload ctx; 
   };
 };
 
@@ -638,7 +641,7 @@ let handle_max_age options => {
   max_age;
 };
 
-let handle_get options token ts_ctx => {
+let handle_get options token ctx => {
   open Common.Ack;
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
@@ -650,12 +653,12 @@ let handle_get options token ts_ctx => {
     add_to_observe uri_path content_format uuid max_age;
     ack (Observe !router_public_key uuid);
   } else {
-    handle_get_read content_format uri_path ts_ctx >>= ack;
+    handle_get_read content_format uri_path ctx >>= ack;
   };
 };
 
 
-let handle_post options token payload rout_soc ts_ctx => {
+let handle_post options token payload ctx => {
   open Common.Ack;
   let content_format = handle_content_format options;
   let uri_path = get_option_value options 11;
@@ -663,22 +666,22 @@ let handle_post options token payload rout_soc ts_ctx => {
   if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
   } else if (is_observed tuple) {
-      handle_post_write content_format uri_path payload ts_ctx >>=
+      handle_post_write content_format uri_path payload ctx >>=
         fun resp => {
           /* we dont want to route bad requests */
           if (resp != (Code 128)) {
-            route tuple payload rout_soc >>= fun () => ack resp;
+            route tuple payload ctx >>= fun () => ack resp;
           } else {
             ack resp;
           };
       };
   } else {
-    handle_post_write content_format uri_path payload ts_ctx >>= ack;
+    handle_post_write content_format uri_path payload ctx >>= ack;
   };
 };
 
-let handle_msg msg rout_soc ts_ctx => {
-  handle_expire rout_soc >>=
+let handle_msg msg ctx => {
+  handle_expire ctx >>=
     fun () =>
       Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
         fun () => {
@@ -688,20 +691,20 @@ let handle_msg msg rout_soc ts_ctx => {
           let (options,r3) = handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
           switch code {
-          | 1 => handle_get options token ts_ctx;
-          | 2 => handle_post options token payload rout_soc ts_ctx;
+          | 1 => handle_get options token ctx;
+          | 2 => handle_post options token payload ctx;
           | _ => failwith "invalid code";
           };
         };  
 };
 
-let server rep_soc rout_soc ts_ctx => {
+let server ctx => {
   let rec loop () => {
-    Lwt_zmq.Socket.recv rep_soc >>=
+    Lwt_zmq.Socket.recv ctx.rep_soc >>=
       fun msg =>
-        handle_msg msg rout_soc ts_ctx >>=
+        handle_msg msg ctx >>=
           fun resp =>
-            Lwt_zmq.Socket.send rep_soc resp >>=
+            Lwt_zmq.Socket.send ctx.rep_soc resp >>=
               fun () =>
                 Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
                   fun () => loop ();
@@ -780,21 +783,21 @@ let set_token_key file => {
   };
 };
 
-let terminate_server zmq_ctx ts_ctx rep_soc rout_soc => {
+let terminate_server ctx => {
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
-    Numeric_timeseries.flush ctx::ts_ctx >>= fun () => {
-      close_socket rout_soc;
-      close_socket rep_soc;
-      ZMQ.Context.terminate zmq_ctx;
+    Numeric_timeseries.flush ctx::ctx.ts_ctx >>= fun () => {
+      close_socket ctx.rout_soc;
+      close_socket ctx.rep_soc;
+      ZMQ.Context.terminate ctx.zmq_ctx;
       exit 0;
     };
 };
 
-let report_error e rep_soc => {
+let report_error e ctx => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
   Lwt_log_core.error_f "Opps: %s%s" msg stack >>= fun () => 
-    ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send rep_soc resp;
+    ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send ctx.rep_soc resp;
 };
 
 exception Interrupt of string;
@@ -806,13 +809,21 @@ let register_signal_handlers () => {
       fun id => on_signal Sys.sigint (fun _ => raise (Interrupt "Caught SIGINT"));
 };
 
-let rec run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx => {
-  let _ = try {Lwt_main.run {server rep_soc rout_soc ts_ctx}} 
+let rec run_server ctx => {
+  let _ = try {Lwt_main.run {server ctx}} 
     { 
-      | Interrupt m => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
-      | e => report_error e rep_soc
+      | Interrupt m => terminate_server ctx;
+      | e => report_error e ctx;
     };
-  run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx;
+  run_server ctx;
+};
+
+let init zmq_ctx => {
+  ts_ctx: Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000,
+  zmq_ctx: zmq_ctx, 
+  rep_soc: setup_rep_socket !rep_endpoint zmq_ctx ZMQ.Socket.rep !server_secret_key, 
+  rout_soc: setup_rout_socket !rout_endpoint zmq_ctx ZMQ.Socket.router !router_secret_key,
+  version: 1
 };
 
 let setup_server () => {
@@ -821,13 +832,9 @@ let setup_server () => {
   setup_router_keys ();
   set_server_key !server_secret_key_file;
   set_token_key !token_secret_key_file;
-  let ts_ctx = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
-  let zmq_ctx = ZMQ.Context.create ();
-  let rep_soc = setup_rep_socket !rep_endpoint zmq_ctx ZMQ.Socket.rep !server_secret_key;
-  let rout_soc = setup_rout_socket !rout_endpoint zmq_ctx ZMQ.Socket.router !router_secret_key;
+  let ctx = init (ZMQ.Context.create ());
   let _ = register_signal_handlers ();  
-  run_server zmq_ctx ts_ctx rep_soc rout_soc ts_ctx |> 
-    fun () => terminate_server zmq_ctx ts_ctx rep_soc rout_soc;
+  run_server ctx |> fun () => terminate_server ctx;
 };
 
 setup_server ();
