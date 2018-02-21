@@ -83,175 +83,11 @@ let add_to_observe uri_path content_format ident max_age => {
   };
 };
 
-let handle_header bits => {
-  let tuple = [%bitstring
-    switch bits {
-    | {|code : 8 : unsigned;
-        oc : 8 : unsigned;
-        tkl : 16 : bigendian;
-        rest : -1 : bitstring
-     |} => (tkl, oc, code, rest); 
-    | {|_|} => failwith "invalid header";
-    };
-  ];
-  tuple;    
-};
-
-let handle_token bits len => {
-  let tuple = [%bitstring
-    switch bits {
-    | {|token : len*8 : string; 
-        rest : -1 : bitstring
-      |} => (token, rest);
-    | {|_|} => failwith "invalid token";
-    };
-  ];
-  tuple;
-};
-
-let handle_option bits => {
-  let tuple = [%bitstring
-    switch bits {
-    | {|number : 16 : bigendian; 
-        len : 16 : bigendian;
-        value: len*8: string; 
-        rest : -1 : bitstring
-      |} => (number, value, rest);
-    | {|_|} => failwith "invalid options";
-    };
-  ];
-  tuple;
-};
-
-let handle_options oc bits => {
-  let options = Array.make oc (0,"");
-  let rec handle oc bits =>
-    if (oc == 0) {
-      bits;
-    } else {
-      let (number, value, r) = handle_option bits;
-      Array.set options (oc - 1) (number,value);
-      let _ = Lwt_log_core.debug_f "option => %d:%s" number value;
-      handle (oc - 1) r
-  };
-  (options, handle oc bits);
-};
-
-let create_header tkl::tkl oc::oc code::code => {
-  let bits = [%bitstring 
-    {|code : 8 : unsigned;
-      oc : 8 : unsigned;
-      tkl : 16 : bigendian         
-    |}
-  ];
-  (bits, 32);
-};
-
-let create_option number::number value::value => {
-  let byte_length = String.length value;
-  let bit_length = byte_length * 8;
-  let bits = [%bitstring 
-    {|number : 16 : bigendian;
-      byte_length : 16 : bigendian;
-      value : bit_length : string
-    |}
-  ];
-  (bits ,(bit_length+32));
-};
 
 
-let create_options options => {
-  let count = Array.length options;
-  let values = Array.map (fun (x,y) => x) options;
-  let value = Bitstring.concat (Array.to_list values);
-  let lengths = Array.map (fun (x,y) => y) options;
-  let length = Array.fold_left (fun x y => x + y) 0 lengths;
-  (value, length, count);
-};
 
-let create_ack code => {
-  let (header_value, header_length) = create_header tkl::0 oc::0 code::code;
-  let bits = [%bitstring {|header_value : header_length : bitstring|}];
-  Bitstring.string_of_bitstring bits;
-};
 
-let create_content_format id => {
-  let bits = [%bitstring {|id : 16 : bigendian|}];
-  Bitstring.string_of_bitstring bits  
-};
 
-let create_ack_payload_options format::format => {
-  let content_format = create_option number::12 value::format;
-  create_options [|content_format|];
-};
-
-let create_ack_payload format_code payload => {
-  let (options_value, options_length, options_count) = create_ack_payload_options format::(create_content_format format_code);
-  let (header_value, header_length) = create_header tkl::0 oc::options_count code::69;  
-  let payload_bytes = String.length payload * 8;
-  let bits = [%bitstring 
-    {|header_value : header_length : bitstring;
-      options_value : options_length : bitstring;
-      payload : payload_bytes : string
-    |}
-  ];
-  Bitstring.string_of_bitstring bits;
-};
-
-let create_ack_observe_options format::format key::key => {
-  let content_format = create_option number::12 value::format;
-  let public_key = create_option number::2048 value::key;
-  create_options [|content_format, public_key|];
-};
-
-let create_ack_observe public_key uuid::payload => {
-  let (options_value, options_length, options_count) = create_ack_observe_options format::(create_content_format 0) key::public_key;
-  let (header_value, header_length) = create_header tkl::0 oc::options_count code::69;  
-  let payload_bytes = String.length payload * 8;
-  let bits = [%bitstring 
-    {|header_value : header_length : bitstring;
-      options_value : options_length : bitstring;
-      payload : payload_bytes : string
-    |}
-  ];
-  Bitstring.string_of_bitstring bits;
-};
-
-let get_option_value options value => {
-  let rec find a x i => {
-    let (number,value) = a.(i);
-    if (number == x) {
-      value;
-    } else {
-      find a x (i + 1)
-    };
-  };
-  find options value 0;
-};
-
-let get_content_format options => {
-  let value = get_option_value options 12;
-  let bits = Bitstring.bitstring_of_string value;
-  let id = [%bitstring
-    switch bits {
-    | {|id : 16 : bigendian|} => id;
-    | {|_|} => failwith "invalid content value";
-    };
-  ];
-  id;
-};
-
-let get_max_age options => {
-  let value = get_option_value options 14;
-  let bits = Bitstring.bitstring_of_string value;
-  let seconds = [%bitstring
-    switch bits {
-    | {|seconds : 32 : bigendian|} => seconds;
-    | {|_|} => failwith "invalid max-age value";
-    };
-  ];
-  seconds;
-};
 
 
 let expire l t => {
@@ -292,7 +128,7 @@ let handle_expire ctx => {
     let uuids = diff (list_uuids !notify_list) (list_uuids new_notify_list);
     notify_list := new_notify_list;
     /* send Service Unavailable */
-    route_message uuids ctx (create_ack 163);
+    route_message uuids ctx (Protocol.Zest.create_ack 163);
   } else {
     Lwt.return_unit;
   };
@@ -300,7 +136,7 @@ let handle_expire ctx => {
 
 let route tuple payload ctx => {
   let (_,content_format) = tuple;
-  route_message (get_ident tuple) ctx (create_ack_payload content_format payload);
+  route_message (get_ident tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
 };
 
 
@@ -658,7 +494,7 @@ let handle_get options token ctx => {
 let handle_post options token payload ctx => {
   open Common.Ack;
   let content_format = handle_content_format options;
-  let uri_path = get_option_value options 11;
+  let uri_path = Protocol.Zest.get_option_value options 11;
   let tuple = (uri_path, content_format);
   if ((is_valid_token token uri_path "POST") == false) {
     ack (Code 129);
@@ -698,13 +534,10 @@ let handle_msg msg ctx => {
 let server ctx => {
   let rec loop () => {
     Protocol.Zest.recv ctx.zmq_ctx >>=
-      fun msg =>
-        handle_msg msg ctx >>=
-          fun resp =>
-            Protocol.Zest.send ctx.zmq_ctx resp >>=
-              fun () =>
-                Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
-                  fun () => loop ();
+      fun msg => handle_msg msg ctx >>=
+        fun resp => Protocol.Zest.send ctx.zmq_ctx resp >>=
+          fun () => Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
+            fun () => loop ();
   };
   Lwt_log_core.info_f "Ready to receive..." >>= fun () => loop ();
 };

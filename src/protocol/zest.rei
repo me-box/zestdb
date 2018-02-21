@@ -13,6 +13,11 @@ let create_ack : int => string;
 let create_ack_payload : int => string => string;
 let create_ack_observe : string => uuid::string => string;
 
+/* writing protocol */
+let create_header : tkl::int => oc::int => code::int => (Bitstring.t, int);
+let create_option : number::int => value::string => (Bitstring.t, int);
+let create_content_format : int => string;
+
 /* reading protocol */
 let handle_header : Bitstring.t => (int, int, int, Bitstring.t);
 let handle_token : Bitstring.t => int => (string, Bitstring.t);
