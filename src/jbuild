@@ -1,6 +1,6 @@
 (jbuild_version 1)
 
 (executables
- ((libraries (timeseries lwt-zmq bitstring ezirmin str uuidm macaroons macaroons.sodium bos oml))
+ ((libraries (protocol timeseries lwt-zmq bitstring ezirmin str uuidm macaroons macaroons.sodium bos oml))
   (preprocess  (pps (ppx_bitstring)))
    (names (server))))

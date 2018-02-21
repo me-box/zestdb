@@ -17,5 +17,7 @@ let handle_header : Bitstring.t => (int, int, int, Bitstring.t);
 let handle_token : Bitstring.t => int => (string, Bitstring.t);
 let handle_options : int => Bitstring.t => (array (int, string), Bitstring.t);
 
-
-
+/* read option values */
+let get_option_value : array (int, string) => int => string;
+let get_content_format : array (int, string) => int;
+let get_max_age : array (int, string) => int32;
