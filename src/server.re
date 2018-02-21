@@ -20,10 +20,8 @@ let store_directory = ref "./";
 
 
 type t = {
-  ts_ctx: Numeric_timeseries.t,
-  zmq_ctx: ZMQ.Context.t, 
-  rep_soc: Lwt_zmq.Socket.t [`Rep],
-  rout_soc: Lwt_zmq.Socket.t [`Router], 
+  numts_ctx: Numeric_timeseries.t,
+  zmq_ctx: Protocol.Zest.t, 
   version: int
 };
 
@@ -273,12 +271,11 @@ let list_uuids alist => {
 };
 
 let route_message alist ctx payload => {
-  open Lwt_zmq.Socket.Router;  
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry), ...rest] => {
-          send ctx.rout_soc (id_of_string ident) [payload] >>=
+          Protocol.Zest.route ctx.zmq_ctx ident payload >>=
           /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
             fun _ => Lwt_log_core.debug_f "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry >>=
               fun _ => loop rest;
@@ -309,13 +306,13 @@ let route tuple payload ctx => {
 
 let handle_get_read_ts_numeric_latest id ctx => {
   open Common.Response;  
-  Json (Numeric_timeseries.read_latest ctx::ctx.ts_ctx id::id fn::[]);
+  Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[]);
 };
 
 
 let handle_get_read_ts_numeric_earliest id ctx => {
   open Common.Response;  
-  Json (Numeric_timeseries.read_earliest ctx::ctx.ts_ctx id::id fn::[]);
+  Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
 };
 
 
@@ -324,9 +321,9 @@ let handle_get_read_ts_numeric_last id n func ctx => {
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_last ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[]);
-  let apply1 f => Json (read_last ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f]);
-  let apply2 f1 f2 => Json (read_last ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
+  let apply0 = Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
+  let apply1 f => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
+  let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -362,9 +359,9 @@ let handle_get_read_ts_numeric_first id n func ctx => {
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_first ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[]);
-  let apply1 f => Json (read_first ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f]);
-  let apply2 f1 f2 => Json (read_first ctx::ctx.ts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
+  let apply0 = Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
+  let apply1 f => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
+  let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -400,9 +397,9 @@ let handle_get_read_ts_numeric_since id t func ctx => {
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_since ctx::ctx.ts_ctx id::id from::(int_of_string t) fn::[]);
-  let apply1 f => Json (read_since ctx::ctx.ts_ctx id::id from::(int_of_string t) fn::[f]);
-  let apply2 f1 f2 => Json (read_since ctx::ctx.ts_ctx id::id from::(int_of_string t) fn::[f1, f2]);
+  let apply0 = Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
+  let apply1 f => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f]);
+  let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -439,9 +436,9 @@ let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
   open Numeric_timeseries;
   open Numeric;
   open Filter;
-  let apply0 = Json (read_range ctx::ctx.ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
-  let apply1 f => Json (read_range ctx::ctx.ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
-  let apply2 f1 f2 => Json (read_range ctx::ctx.ts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
+  let apply0 = Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+  let apply1 f => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+  let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
   switch func {
   | [] => apply0;
   | ["sum"] => apply1 sum;
@@ -552,7 +549,7 @@ let handle_post_write_ts_simple ::timestamp=None key payload ctx => {
   switch json {
   | Some value => {
       if (is_valid value) {
-        Some (write ctx::ctx.ts_ctx timestamp::timestamp id::key json::value);
+        Some (write ctx::ctx.numts_ctx timestamp::timestamp id::key json::value);
       } else None;
     };
   | None => None;
@@ -612,9 +609,9 @@ let handle_post_write content_format uri_path payload ctx => {
 let ack kind => {
   open Common.Ack;
   switch kind {
-  | Code n => create_ack n;
-  | Payload format data => create_ack_payload format data;
-  | Observe key uuid => create_ack_observe key uuid;
+  | Code n => Protocol.Zest.create_ack n;
+  | Payload format data => Protocol.Zest.create_ack_payload format data;
+  | Observe key uuid => Protocol.Zest.create_ack_observe key uuid;
   } |> Lwt.return;
 };
 
@@ -630,13 +627,13 @@ let is_valid_token token path meth => {
 };
 
 let handle_content_format options => {
-  let content_format = get_content_format options;
+  let content_format = Protocol.Zest.get_content_format options;
   let _ = Lwt_log_core.debug_f "content_format => %d" content_format;
   content_format;
 };
 
 let handle_max_age options => {
-  let max_age = get_max_age options;
+  let max_age = Protocol.Zest.get_max_age options;
   let _ = Lwt_log_core.debug_f "max_age => %lu" max_age;
   max_age;
 };
@@ -644,7 +641,7 @@ let handle_max_age options => {
 let handle_get options token ctx => {
   open Common.Ack;
   let content_format = handle_content_format options;
-  let uri_path = get_option_value options 11;
+  let uri_path = Protocol.Zest.get_option_value options 11;
   if ((is_valid_token token uri_path "GET") == false) {
     ack (Code 129)
   } else if (has_observed options) {
@@ -686,9 +683,9 @@ let handle_msg msg ctx => {
       Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
         fun () => {
           let r0 = Bitstring.bitstring_of_string msg;
-          let (tkl, oc, code, r1) = handle_header r0;
-          let (token, r2) = handle_token r1 tkl;
-          let (options,r3) = handle_options oc r2;
+          let (tkl, oc, code, r1) = Protocol.Zest.handle_header r0;
+          let (token, r2) = Protocol.Zest.handle_token r1 tkl;
+          let (options,r3) = Protocol.Zest.handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
           switch code {
           | 1 => handle_get options token ctx;
@@ -700,11 +697,11 @@ let handle_msg msg ctx => {
 
 let server ctx => {
   let rec loop () => {
-    Lwt_zmq.Socket.recv ctx.rep_soc >>=
+    Protocol.Zest.recv ctx.zmq_ctx >>=
       fun msg =>
         handle_msg msg ctx >>=
           fun resp =>
-            Lwt_zmq.Socket.send ctx.rep_soc resp >>=
+            Protocol.Zest.send ctx.zmq_ctx resp >>=
               fun () =>
                 Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
                   fun () => loop ();
@@ -785,10 +782,8 @@ let set_token_key file => {
 
 let terminate_server ctx => {
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
-    Numeric_timeseries.flush ctx::ctx.ts_ctx >>= fun () => {
-      close_socket ctx.rout_soc;
-      close_socket ctx.rep_soc;
-      ZMQ.Context.terminate ctx.zmq_ctx;
+    Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () => {
+      Protocol.Zest.close ctx.zmq_ctx;
       exit 0;
     };
 };
@@ -797,7 +792,7 @@ let report_error e ctx => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
   Lwt_log_core.error_f "Opps: %s%s" msg stack >>= fun () => 
-    ack (Common.Ack.Code 128) >>= fun resp => Lwt_zmq.Socket.send ctx.rep_soc resp;
+    ack (Common.Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
 };
 
 exception Interrupt of string;
@@ -818,11 +813,9 @@ let rec run_server ctx => {
   run_server ctx;
 };
 
-let init zmq_ctx => {
-  ts_ctx: Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000,
-  zmq_ctx: zmq_ctx, 
-  rep_soc: setup_rep_socket !rep_endpoint zmq_ctx ZMQ.Socket.rep !server_secret_key, 
-  rout_soc: setup_rout_socket !rout_endpoint zmq_ctx ZMQ.Socket.router !router_secret_key,
+let init zmq_ctx numts_ctx => {
+  numts_ctx: numts_ctx,
+  zmq_ctx: zmq_ctx,
   version: 1
 };
 
@@ -832,7 +825,9 @@ let setup_server () => {
   setup_router_keys ();
   set_server_key !server_secret_key_file;
   set_token_key !token_secret_key_file;
-  let ctx = init (ZMQ.Context.create ());
+  let zmq_ctx = Protocol.Zest.create endpoints::(!rep_endpoint, !rout_endpoint) keys::(!server_secret_key, !router_secret_key);
+  let num_ts = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
+  let ctx = init zmq_ctx num_ts;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };

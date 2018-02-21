@@ -239,7 +239,7 @@ let init ctx rep_endpoint router_endpoint server_secret_key router_secret_key =>
   version: 1
 };
 
-let create endpoints keys => {
+let create endpoints::endpoints keys::keys => {
   let (rep_endpoint, router_endpoint) = endpoints;
   let (server_secret_key, router_secret_key) = keys;
   let zmq_ctx = ZMQ.Context.create (); 

@@ -1,6 +1,7 @@
 type t;
 
-let create : (string, string) => (string, string) => t;
+let create : endpoints::(string, string) => keys::(string, string) => t;
+let close : t => unit;
 
 /* zmq routines */
 let send : t => string => Lwt.t unit;
