@@ -18,12 +18,20 @@ let content_format = ref "";
 /* create stores in local directory by default */
 let store_directory = ref "./";
 
+module Ack = {
+  type t = Code int |  Payload int string | Observe string string;
+};
+
+module Response = {
+  type t = Empty | Json (Lwt.t Ezjsonm.t) | Text (Lwt.t string) | Binary (Lwt.t string);
+};
 
 type t = {
   numts_ctx: Numeric_timeseries.t,
   zmq_ctx: Protocol.Zest.t, 
   version: int
 };
+
 
 let setup_logger () => {
   Lwt_log_core.default :=
@@ -141,19 +149,19 @@ let route tuple payload ctx => {
 
 
 let handle_get_read_ts_numeric_latest id ctx => {
-  open Common.Response;  
+  open Response;  
   Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[]);
 };
 
 
 let handle_get_read_ts_numeric_earliest id ctx => {
-  open Common.Response;  
+  open Response;  
   Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
 };
 
 
 let handle_get_read_ts_numeric_last id n func ctx => {
-  open Common.Response;
+  open Response;
   open Numeric_timeseries;
   open Numeric;
   open Filter;
@@ -191,7 +199,7 @@ let handle_get_read_ts_numeric_last id n func ctx => {
 
 
 let handle_get_read_ts_numeric_first id n func ctx => {
-  open Common.Response;
+  open Response;
   open Numeric_timeseries;
   open Numeric;
   open Filter;
@@ -229,7 +237,7 @@ let handle_get_read_ts_numeric_first id n func ctx => {
 
 
 let handle_get_read_ts_numeric_since id t func ctx => {
-  open Common.Response;
+  open Response;
   open Numeric_timeseries;
   open Numeric;
   open Filter;
@@ -268,7 +276,7 @@ let handle_get_read_ts_numeric_since id t func ctx => {
 
 
 let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
-  open Common.Response;  
+  open Response;  
   open Numeric_timeseries;
   open Numeric;
   open Filter;
@@ -307,7 +315,7 @@ let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
 
 let handle_get_read_ts uri_path ctx => {
   open List;
-  open Common.Response;  
+  open Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ctx;
@@ -337,8 +345,8 @@ let get_mode uri_path => {
 
 
 let handle_read_database content_format uri_path ctx => {
-  open Common.Ack;
-  open Common.Response;
+  open Ack;
+  open Response;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/ts/", 50) => handle_get_read_ts uri_path ctx;
@@ -356,7 +364,7 @@ let handle_read_database content_format uri_path ctx => {
 };
 
 let handle_read_hypercat () => {
-  open Common.Ack;
+  open Ack;
   Hypercat.get_cat () |> Ezjsonm.to_string |>
     fun s => (Payload 50 s) |> Lwt.return;
 };
@@ -408,7 +416,7 @@ let handle_post_write_ts uri_path payload ctx => {
   
 
 let handle_write_database content_format uri_path payload ctx => {
-  open Common.Ack;
+  open Ack;
   open Ezjsonm;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
@@ -422,7 +430,7 @@ let handle_write_database content_format uri_path payload ctx => {
 };
 
 let handle_write_hypercat payload => {
-  open Common.Ack;
+  open Ack;
   let json = to_json payload;
   switch json {
   | Some json => {
@@ -443,7 +451,7 @@ let handle_post_write content_format uri_path payload ctx => {
 };
 
 let ack kind => {
-  open Common.Ack;
+  open Ack;
   switch kind {
   | Code n => Protocol.Zest.create_ack n;
   | Payload format data => Protocol.Zest.create_ack_payload format data;
@@ -475,7 +483,7 @@ let handle_max_age options => {
 };
 
 let handle_get options token ctx => {
-  open Common.Ack;
+  open Ack;
   let content_format = handle_content_format options;
   let uri_path = Protocol.Zest.get_option_value options 11;
   if ((is_valid_token token uri_path "GET") == false) {
@@ -492,7 +500,7 @@ let handle_get options token ctx => {
 
 
 let handle_post options token payload ctx => {
-  open Common.Ack;
+  open Ack;
   let content_format = handle_content_format options;
   let uri_path = Protocol.Zest.get_option_value options 11;
   let tuple = (uri_path, content_format);
@@ -625,7 +633,7 @@ let report_error e ctx => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
   Lwt_log_core.error_f "Opps: %s%s" msg stack >>= fun () => 
-    ack (Common.Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
+    ack (Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
 };
 
 exception Interrupt of string;
