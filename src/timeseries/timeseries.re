@@ -80,11 +80,11 @@ let remove_leftover_shards ctx k keep_index remove_list => {
 let handle_shard_overlap_worker ctx k shard shard_lis overlap_list => {
   open List;    
   let new_shard = flatten (cons shard shard_lis);
-  Lwt_io.printf "shard len:%d\n" (List.length new_shard) >>= fun () =>
+  Lwt_log_core.debug_f "shard len:%d" (List.length new_shard) >>= fun () =>
     switch (shard_range new_shard) {
     | Some new_range => {
       let key = make_key k new_range;
-      Lwt_io.printf "=== Adding shard with key:%s\n" (string_of_key key) >>= fun () =>
+      Lwt_log_core.debug_f "Adding shard with key:%s" (string_of_key key) >>= fun () =>
         Index.update ctx.index k new_range overlap_list >>= fun bounds =>
           Membuf.set_disk_range ctx.membuf k bounds >>= fun () =>
             Shard.add ctx.shard key new_shard >>= fun () =>
