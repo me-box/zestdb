@@ -533,35 +533,9 @@ let server ctx => {
           fun () => Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
             fun () => loop ();
   };
-  Lwt_log_core.info_f "Ready to receive..." >>= fun () => loop ();
+  Lwt_log_core.info_f "Server active" >>= fun () => loop ();
 };
 
-let setup_rep_socket endpoint ctx kind secret => {
-  open ZMQ.Socket;
-  let soc = ZMQ.Socket.create ctx kind;
-  ZMQ.Socket.set_receive_high_water_mark soc 1;
-  set_linger_period soc 0;
-  set_curve_server soc true;
-  set_curve_secretkey soc secret; 
-  bind soc endpoint;
-  Lwt_zmq.Socket.of_socket soc;
-};
-
-let setup_rout_socket endpoint ctx kind secret => {
-  open ZMQ.Socket;
-  let soc = ZMQ.Socket.create ctx kind;
-  ZMQ.Socket.set_receive_high_water_mark soc 1;
-  set_linger_period soc 0;
-  set_curve_server soc true;
-  set_curve_secretkey soc secret; 
-  bind soc endpoint;
-  Lwt_zmq.Socket.of_socket soc;
-};
-
-let close_socket lwt_soc => {
-  let soc = Lwt_zmq.Socket.to_socket lwt_soc;
-  ZMQ.Socket.close soc;
-};
 
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
