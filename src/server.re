@@ -33,23 +33,6 @@ type t = {
 };
 
 
-let setup_logger () => {
-  Lwt_log_core.default :=
-    Lwt_log.channel
-      template::"$(date).$(milliseconds) [$(level)] $(message)"
-      close_mode::`Keep
-      channel::Lwt_io.stdout
-      ();
-  Lwt_log_core.add_rule "*" Lwt_log_core.Error;
-  Lwt_log_core.add_rule "*" Lwt_log_core.Info;
-  Lwt_log_core.add_rule "*" Lwt_log_core.Debug;
-};
-
-let to_hex msg => {
-  open Hex;
-  String.trim (of_string msg |> hexdump_s print_chars::false);
-};
-
 let has_observed options => {
   if (Array.exists (fun (number,_) => number == 6) options) {
     true;
@@ -115,6 +98,7 @@ let list_uuids alist => {
 };
 
 let route_message alist ctx payload => {
+  open Logger;
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
@@ -522,6 +506,7 @@ let handle_post options token payload ctx => {
 };
 
 let handle_msg msg ctx => {
+  open Logger;
   handle_expire ctx >>=
     fun () =>
       Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
@@ -540,6 +525,7 @@ let handle_msg msg ctx => {
 };
 
 let server ctx => {
+  open Logger;
   let rec loop () => {
     Protocol.Zest.recv ctx.zmq_ctx >>=
       fun msg => handle_msg msg ctx >>=
@@ -662,7 +648,7 @@ let init zmq_ctx numts_ctx => {
 
 let setup_server () => {
   parse_cmdline ();
-  !log_mode ? setup_logger () : ();
+  !log_mode ? Logger.init () : ();
   setup_router_keys ();
   set_server_key !server_secret_key_file;
   set_token_key !token_secret_key_file;
