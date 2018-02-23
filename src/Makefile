@@ -7,7 +7,7 @@ build:
 		jbuilder build $(BIN)
 
 clean:				
-		rm -rf _build
+		rm -rf _build *_shard *_index
 
 install:	
 		install ./_build/default/$(BIN) $(DESTDIR)

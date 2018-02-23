@@ -28,6 +28,7 @@ module Response = {
 
 type t = {
   numts_ctx: Numeric_timeseries.t,
+  blobts_ctx: Blob_timeseries.t,
   zmq_ctx: Protocol.Zest.t, 
   version: int
 };
@@ -137,6 +138,11 @@ let route tuple payload ctx => {
 let handle_get_read_ts_numeric_latest id ctx => {
   open Response;  
   Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[]);
+};
+
+let handle_get_read_ts_blob_latest id ctx => {
+  open Response;
+  Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx id::id);
 };
 
 
@@ -304,6 +310,7 @@ let handle_get_read_ts uri_path ctx => {
   open Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
+  | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_blob_latest id ctx;
   | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ctx;
   | ["", "ts", id, "earliest"] => handle_get_read_ts_numeric_earliest id ctx;
   | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ctx;
@@ -373,7 +380,7 @@ let to_json payload => {
 
 
 
-let handle_post_write_ts_simple ::timestamp=None key payload ctx => {
+let handle_post_write_ts_numeric ::timestamp=None key payload ctx => {
   open Numeric_timeseries;
   let json = to_json payload;
   switch json {
@@ -386,20 +393,32 @@ let handle_post_write_ts_simple ::timestamp=None key payload ctx => {
   };  
 };
 
+let handle_post_write_ts_blob ::timestamp=None key payload ctx => {
+  open Blob_timeseries;
+  let json = to_json payload;
+  switch json {
+  | Some value => Some (write ctx::ctx.blobts_ctx timestamp::timestamp id::key json::value);
+  | None => None;
+  };  
+};
+
 let handle_post_write_ts uri_path payload ctx => {
   open List;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
+  | ["", "ts", "blob", key] =>
+    handle_post_write_ts_blob key payload ctx;
+  | ["", "ts", "blob", key, "at", ts] => 
+    handle_post_write_ts_blob timestamp::(Some (int_of_string ts)) key payload ctx;
   | ["", "ts", key] => 
-    handle_post_write_ts_simple key payload ctx;
+    handle_post_write_ts_numeric key payload ctx;
   | ["", "ts", key, "at", ts] => 
-    handle_post_write_ts_simple timestamp::(Some (int_of_string ts)) key payload ctx;
+    handle_post_write_ts_numeric timestamp::(Some (int_of_string ts)) key payload ctx;
   | _ => None;
   };
 };
 
 
-  
 
 let handle_write_database content_format uri_path payload ctx => {
   open Ack;
@@ -602,10 +621,11 @@ let set_token_key file => {
 
 let terminate_server ctx => {
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
-    Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () => {
-      Protocol.Zest.close ctx.zmq_ctx;
-      exit 0;
-    };
+    Blob_timeseries.flush ctx::ctx.blobts_ctx >>= fun () =>
+      Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () => {
+        Protocol.Zest.close ctx.zmq_ctx;
+        exit 0;
+      };
 };
 
 let report_error e ctx => {
@@ -633,8 +653,9 @@ let rec run_server ctx => {
   run_server ctx;
 };
 
-let init zmq_ctx numts_ctx => {
+let init zmq_ctx numts_ctx blobts_ctx => {
   numts_ctx: numts_ctx,
+  blobts_ctx: blobts_ctx,
   zmq_ctx: zmq_ctx,
   version: 1
 };
@@ -647,7 +668,8 @@ let setup_server () => {
   set_token_key !token_secret_key_file;
   let zmq_ctx = Protocol.Zest.create endpoints::(!rep_endpoint, !rout_endpoint) keys::(!server_secret_key, !router_secret_key);
   let num_ts = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
-  let ctx = init zmq_ctx num_ts;
+  let blob_ts = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::100 shard_size::10;
+  let ctx = init zmq_ctx num_ts blob_ts;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };
