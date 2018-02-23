@@ -151,6 +151,10 @@ let handle_get_read_ts_numeric_earliest id ctx => {
   Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
 };
 
+let handle_get_read_ts_blob_earliest id ctx => {
+  open Response;
+  Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id::id);
+};
 
 let handle_get_read_ts_numeric_last id n func ctx => {
   open Response;
@@ -189,6 +193,10 @@ let handle_get_read_ts_numeric_last id n func ctx => {
   };  
 };
 
+let handle_get_read_ts_blob_last id n ctx => {
+  open Response;  
+  Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx id::id n::(int_of_string n));
+};
 
 let handle_get_read_ts_numeric_first id n func ctx => {
   open Response;
@@ -227,6 +235,10 @@ let handle_get_read_ts_numeric_first id n func ctx => {
   };    
 };
 
+let handle_get_read_ts_blob_first id n ctx => {
+  open Response;  
+  Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx id::id n::(int_of_string n));
+};
 
 let handle_get_read_ts_numeric_since id t func ctx => {
   open Response;
@@ -264,6 +276,11 @@ let handle_get_read_ts_numeric_since id t func ctx => {
   | _ => Empty;
   };    
   
+};
+
+let handle_get_read_ts_blob_since id t ctx => {
+  open Response;  
+  Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx id::id from::(int_of_string t));
 };
 
 
@@ -305,6 +322,11 @@ let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
   
 };
 
+let handle_get_read_ts_blob_range id t1 t2 ctx => {
+  open Response;  
+  Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id::id from::(int_of_string t1) to::(int_of_string t2));
+};
+
 let handle_get_read_ts uri_path ctx => {
   open List;
   open Response;  
@@ -312,10 +334,15 @@ let handle_get_read_ts uri_path ctx => {
   switch path_list {
   | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_blob_latest id ctx;
   | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ctx;
+  | ["", "ts", "blob", id, "earliest"] => handle_get_read_ts_blob_earliest id ctx;
   | ["", "ts", id, "earliest"] => handle_get_read_ts_numeric_earliest id ctx;
+  | ["", "ts", "blob", id, "last", n] => handle_get_read_ts_blob_last id n ctx;
   | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ctx;
+  | ["", "ts", "blob", id, "first", n] => handle_get_read_ts_blob_first id n ctx;
   | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_numeric_first id n func ctx;
+  | ["", "ts", "blob", id, "since", t] => handle_get_read_ts_blob_since id t ctx;
   | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_numeric_since id t func ctx;
+  | ["", "ts", "blob", id, "range", t1, t2] => handle_get_read_ts_blob_range id t1 t2 ctx;
   | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_numeric_range id t1 t2 func ctx;
   | _ => Empty;
   };
@@ -668,7 +695,7 @@ let setup_server () => {
   set_token_key !token_secret_key_file;
   let zmq_ctx = Protocol.Zest.create endpoints::(!rep_endpoint, !rout_endpoint) keys::(!server_secret_key, !router_secret_key);
   let num_ts = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
-  let blob_ts = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::100 shard_size::10;
+  let blob_ts = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
   let ctx = init zmq_ctx num_ts blob_ts;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
