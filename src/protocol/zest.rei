@@ -21,7 +21,7 @@ let create_content_format : int => string;
 /* reading protocol */
 let handle_header : Bitstring.t => (int, int, int, Bitstring.t);
 let handle_token : Bitstring.t => int => (string, Bitstring.t);
-let handle_options : int => Bitstring.t => (array (int, string), Bitstring.t);
+let handle_option : (string, int, int) => (int, string, Bitstring.t);
 
 /* read option values */
 let get_option_value : array (int, string) => int => string;

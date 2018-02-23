@@ -14,3 +14,15 @@ let to_hex msg => {
   open Hex;
   String.trim (of_string msg |> hexdump_s print_chars::false);
 };
+
+let info_f s1 s2 => {
+  Lwt_log_core.info_f "%s:%s" s1 s2;
+};
+
+let debug_f s1 s2 => {
+  Lwt_log_core.debug_f "%s:%s" s1 s2;
+};
+
+let error_f s1 s2 => {
+  Lwt_log_core.error_f "%s:%s" s1 s2;
+};

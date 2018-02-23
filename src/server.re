@@ -59,18 +59,21 @@ let time_now () => {
 
 let add_to_observe uri_path content_format ident max_age => {
   open Int32;
+  open Logger;
+  open Printf;
   let key = (uri_path, content_format);
   let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
   let value = (ident, expiry);
   if (is_observed key) {
-    let _ = Lwt_log_core.info_f "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age;
-    let items = get_ident key;
-    let new_items = List.cons value items;
-    let filtered = List.filter (fun (key',_) => (key' != key)) !notify_list;
-    notify_list := List.cons (key, new_items) filtered;
+    info_f "add_to_observe" (sprintf "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age) >>= fun () => {
+      let items = get_ident key;
+      let new_items = List.cons value items;
+      let filtered = List.filter (fun (key',_) => (key' != key)) !notify_list;
+      Lwt.return (notify_list := List.cons (key, new_items) filtered);
+    };
   } else {
-    let _ = Lwt_log_core.info_f "adding ident:%s to new path:%s with max-age:%lu" ident uri_path max_age;
-    notify_list := List.cons (key, [value]) !notify_list;
+    info_f "add_to_observe" (sprintf "adding ident:%s to new path:%s with max-age:%lu" ident uri_path max_age) >>= fun () =>
+      Lwt.return (notify_list := List.cons (key, [value]) !notify_list);
   };
 };
 
@@ -103,10 +106,9 @@ let route_message alist ctx payload => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry), ...rest] => {
-          Protocol.Zest.route ctx.zmq_ctx ident payload >>=
-          /*Lwt_zmq.Socket.send_all socket [ident, payload] >>=*/
-            fun _ => Lwt_log_core.debug_f "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry >>=
-              fun _ => loop rest;
+          Protocol.Zest.route ctx.zmq_ctx ident payload >>= fun () =>
+            debug_f "route_message" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry) >>= 
+            fun () => loop rest;
         };
       };    
   };
@@ -454,54 +456,71 @@ let is_valid_token token path meth => {
   };
 };
 
+let handle_options oc bits => {
+  let options = Array.make oc (0,"");
+  let rec handle oc bits =>
+    if (oc == 0) {
+      bits;
+    } else {
+      let (number, value, r) = Protocol.Zest.handle_option bits;
+      Array.set options (oc - 1) (number,value);
+      let _ = Lwt_log_core.debug_f "option => %d:%s" number value;
+      handle (oc - 1) r
+  };
+  (options, handle oc bits);
+};
+
 let handle_content_format options => {
   let content_format = Protocol.Zest.get_content_format options;
-  let _ = Lwt_log_core.debug_f "content_format => %d" content_format;
-  content_format;
+  Logger.debug_f "handle_content_format" (Printf.sprintf "content_format => %d" content_format) >>= 
+    fun () => Lwt.return content_format;
 };
 
 let handle_max_age options => {
   let max_age = Protocol.Zest.get_max_age options;
-  let _ = Lwt_log_core.debug_f "max_age => %lu" max_age;
-  max_age;
+  Logger.debug_f "handle_max_age" (Printf.sprintf "max_age => %lu" max_age) >>=
+    fun () => Lwt.return max_age;
 };
 
 let handle_get options token ctx => {
   open Ack;
-  let content_format = handle_content_format options;
-  let uri_path = Protocol.Zest.get_option_value options 11;
-  if ((is_valid_token token uri_path "GET") == false) {
-    ack (Code 129)
-  } else if (has_observed options) {
-    let max_age = handle_max_age options;  
-    let uuid = create_uuid ();
-    add_to_observe uri_path content_format uuid max_age;
-    ack (Observe !router_public_key uuid);
-  } else {
-    handle_get_read content_format uri_path ctx >>= ack;
-  };
+  handle_content_format options >>= fun content_format => {
+    let uri_path = Protocol.Zest.get_option_value options 11;
+    if ((is_valid_token token uri_path "GET") == false) {
+      ack (Code 129)
+    } else if (has_observed options) {
+      handle_max_age options >>= fun max_age => {
+        let uuid = create_uuid ();
+        add_to_observe uri_path content_format uuid max_age >>= 
+          fun () => ack (Observe !router_public_key uuid);
+      };
+    } else {
+      handle_get_read content_format uri_path ctx >>= ack;
+    };
+};
 };
 
 
 let handle_post options token payload ctx => {
   open Ack;
-  let content_format = handle_content_format options;
-  let uri_path = Protocol.Zest.get_option_value options 11;
-  let tuple = (uri_path, content_format);
-  if ((is_valid_token token uri_path "POST") == false) {
-    ack (Code 129);
-  } else if (is_observed tuple) {
-      handle_post_write content_format uri_path payload ctx >>=
-        fun resp => {
-          /* we dont want to route bad requests */
-          if (resp != (Code 128)) {
-            route tuple payload ctx >>= fun () => ack resp;
-          } else {
-            ack resp;
-          };
-      };
-  } else {
-    handle_post_write content_format uri_path payload ctx >>= ack;
+  handle_content_format options >>= fun content_format => {
+    let uri_path = Protocol.Zest.get_option_value options 11;
+    let tuple = (uri_path, content_format);
+    if ((is_valid_token token uri_path "POST") == false) {
+      ack (Code 129); 
+    } else if (is_observed tuple) {
+        handle_post_write content_format uri_path payload ctx >>=
+          fun resp => {
+            /* we dont want to route bad requests */
+            if (resp != (Code 128)) {
+              route tuple payload ctx >>= fun () => ack resp;
+            } else {
+              ack resp;
+            };
+        };
+    } else {
+      handle_post_write content_format uri_path payload ctx >>= ack;
+    };
   };
 };
 
@@ -509,12 +528,12 @@ let handle_msg msg ctx => {
   open Logger;
   handle_expire ctx >>=
     fun () =>
-      Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
+      Logger.debug_f "handle_msg" (Printf.sprintf "Received:\n%s" (to_hex msg)) >>=
         fun () => {
           let r0 = Bitstring.bitstring_of_string msg;
           let (tkl, oc, code, r1) = Protocol.Zest.handle_header r0;
           let (token, r2) = Protocol.Zest.handle_token r1 tkl;
-          let (options,r3) = Protocol.Zest.handle_options oc r2;
+          let (options,r3) = handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
           switch code {
           | 1 => handle_get options token ctx;
@@ -530,10 +549,10 @@ let server ctx => {
     Protocol.Zest.recv ctx.zmq_ctx >>=
       fun msg => handle_msg msg ctx >>=
         fun resp => Protocol.Zest.send ctx.zmq_ctx resp >>=
-          fun () => Lwt_log_core.debug_f "Sending:\n%s" (to_hex resp) >>=
+          fun () => Logger.debug_f "server" (Printf.sprintf "Sending:\n%s" (to_hex resp)) >>=
             fun () => loop ();
   };
-  Lwt_log_core.info_f "Server active" >>= fun () => loop ();
+  Logger.info_f "server" "active" >>= fun () => loop ();
 };
 
 
@@ -592,7 +611,7 @@ let terminate_server ctx => {
 let report_error e ctx => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
-  Lwt_log_core.error_f "Opps: %s%s" msg stack >>= fun () => 
+  Logger.error_f "report_error" (Printf.sprintf "Opps: %s%s" msg stack) >>= fun () => 
     ack (Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
 };
 

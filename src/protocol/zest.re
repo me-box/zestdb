@@ -49,19 +49,6 @@ let handle_option bits => {
   tuple;
 };
 
-let handle_options oc bits => {
-  let options = Array.make oc (0,"");
-  let rec handle oc bits =>
-    if (oc == 0) {
-      bits;
-    } else {
-      let (number, value, r) = handle_option bits;
-      Array.set options (oc - 1) (number,value);
-      let _ = Lwt_log_core.debug_f "option => %d:%s" number value;
-      handle (oc - 1) r
-  };
-  (options, handle oc bits);
-};
 
 let create_header tkl::tkl oc::oc code::code => {
   let bits = [%bitstring 
