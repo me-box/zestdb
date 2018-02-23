@@ -11,8 +11,8 @@ type t = {
 let create path_to_db::path max_buffer_size::mbs shard_size::ss => {
   {
     membuf: Membuf.create (),
-    index: Index.create (path ^ "/index"),
-    shard: Shard.create (path ^ "/shard"),
+    index: Index.create (path ^ "_index"),
+    shard: Shard.create (path ^ "_shard"),
     max_buffer_size: mbs,
     shard_size: ss
   };

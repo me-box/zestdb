@@ -1,5 +1,6 @@
 include (module type of Timeseries);
 
+let create : path_to_db::string => max_buffer_size::int => shard_size::int => t;
 let read_last : ctx::t => id::string => n::int => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;
 let read_latest : ctx::t => id::string => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;
 let read_first : ctx::t => id::string => n::int => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;

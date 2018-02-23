@@ -12,6 +12,10 @@ let is_valid json => {
   };
 };
 
+let create path_to_db::path max_buffer_size::mbs shard_size::ss => {
+  Timeseries.create path_to_db::(path ^ __MODULE__) max_buffer_size::mbs shard_size::ss;
+};
+
 let apply fn data => {
   List.fold_left (fun acc f => f acc) data fn |> Lwt.return;
 };
