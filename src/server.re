@@ -463,8 +463,8 @@ let handle_options oc bits => {
       bits;
     } else {
       let (number, value, r) = Protocol.Zest.handle_option bits;
+      let _ = Logger.debug_f "handle_options" (Printf.sprintf "%d:%s" number value);     
       Array.set options (oc - 1) (number,value);
-      let _ = Lwt_log_core.debug_f "option => %d:%s" number value;
       handle (oc - 1) r
   };
   (options, handle oc bits);
@@ -472,7 +472,7 @@ let handle_options oc bits => {
 
 let handle_content_format options => {
   let content_format = Protocol.Zest.get_content_format options;
-  Logger.debug_f "handle_content_format" (Printf.sprintf "content_format => %d" content_format) >>= 
+  Logger.debug_f "handle_content_format" (Printf.sprintf "%d" content_format) >>= 
     fun () => Lwt.return content_format;
 };
 
