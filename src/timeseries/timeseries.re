@@ -283,17 +283,20 @@ let number_of_records_on_disk ctx k lis => {
 };
 
 let number_of_records_in_memory ctx k => {
-  Membuf.length ctx k;
+  open Membuf;
+  exists ctx.membuf k ? length ctx.membuf k : Lwt.return 0;
 };
 
-let number_of_records ctx::ctx id::k => {
+let length ctx::ctx id::k => {
+  open Ezjsonm;
   Index.get ctx.index k >>= fun data =>
     switch data {
     | Some lis => number_of_records_on_disk ctx k lis;
     | None => 0 |> Lwt.return;
     } >>= fun disk => 
-      number_of_records_in_memory ctx.membuf k >>= 
-        fun mem => (disk + mem) |> Lwt.return;
+      number_of_records_in_memory ctx k >>= 
+        fun mem => (disk + mem) |> fun result =>
+          dict [("length", int result)] |> Lwt.return;
 };
 
 

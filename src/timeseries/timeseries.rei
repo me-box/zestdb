@@ -9,4 +9,4 @@ let read_first : ctx::t => id::string => n::int => Lwt.t Ezjsonm.t;
 let read_since : ctx::t => id::string => from::int => Lwt.t Ezjsonm.t;
 let read_range : ctx::t => id::string => from::int => to::int => Lwt.t Ezjsonm.t;
 let read_earliest : ctx::t => id::string => Lwt.t Ezjsonm.t;
-let number_of_records : ctx::t => id::string => Lwt.t int;
+let length : ctx::t => id::string => Lwt.t Ezjsonm.t;

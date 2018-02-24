@@ -327,11 +327,23 @@ let handle_get_read_ts_blob_range id t1 t2 ctx => {
   Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id::id from::(int_of_string t1) to::(int_of_string t2));
 };
 
+let handle_get_read_ts_numeric_length id ctx => {
+  open Response;
+  Json (Numeric_timeseries.length ctx::ctx.numts_ctx id::id);
+};
+
+let handle_get_read_ts_blob_length id ctx => {
+  open Response;
+  Json (Blob_timeseries.length ctx::ctx.blobts_ctx id::id);
+};
+
 let handle_get_read_ts uri_path ctx => {
   open List;
   open Response;  
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
+  | ["", "ts", "blob", id, "length"] => handle_get_read_ts_blob_length id ctx;
+  | ["", "ts", id, "length"] => handle_get_read_ts_numeric_length id ctx;
   | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_blob_latest id ctx;
   | ["", "ts", id, "latest"] => handle_get_read_ts_numeric_latest id ctx;
   | ["", "ts", "blob", id, "earliest"] => handle_get_read_ts_blob_earliest id ctx;
