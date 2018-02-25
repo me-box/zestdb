@@ -30,6 +30,8 @@ type t = {
   numts_ctx: Numeric_timeseries.t,
   blobts_ctx: Blob_timeseries.t,
   jsonkv_ctx: Keyvalue.Json.t,
+  textkv_ctx: Keyvalue.Text.t,
+  binarykv_ctx: Keyvalue.Binary.t,
   zmq_ctx: Protocol.Zest.t, 
   version: int
 };
@@ -384,6 +386,24 @@ let handle_get_read_kv_json uri_path ctx => {
   };
 };
 
+let handle_get_read_kv_text uri_path ctx => {
+  open Response;
+  open Keyvalue.Text;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => Text (read branch::ctx.textkv_ctx id::id key::key);
+  | None => Empty;
+  };
+};
+
+let handle_get_read_kv_binary uri_path ctx => {
+  open Response;
+  open Keyvalue.Binary;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => Text (read branch::ctx.binarykv_ctx id::id key::key);
+  | None => Empty;
+  };
+};
+
 let handle_read_database content_format uri_path ctx => {
   open Ack;
   open Response;
@@ -391,6 +411,8 @@ let handle_read_database content_format uri_path ctx => {
   let result = switch (mode, content_format) {
   | ("/ts/", 50) => handle_get_read_ts uri_path ctx;
   | ("/kv/", 50) => handle_get_read_kv_json uri_path ctx;
+  | ("/kv/", 0) => handle_get_read_kv_text uri_path ctx;
+  | ("/kv/", 42) => handle_get_read_kv_binary uri_path ctx;
   | _ => Empty;
   };
   switch result {
@@ -477,6 +499,22 @@ let handle_post_write_kv_json uri_path payload ctx => {
   };
 };
 
+let handle_post_write_kv_text uri_path payload ctx => {
+  open Keyvalue.Text;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => Some (write branch::ctx.textkv_ctx id::id key::key text::payload);
+  | None => None;
+  };
+};
+
+let handle_post_write_kv_binary uri_path payload ctx => {
+  open Keyvalue.Binary;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => Some (write branch::ctx.binarykv_ctx id::id key::key binary::payload);
+  | None => None;
+  };
+};
+
 let handle_write_database content_format uri_path payload ctx => {
   open Ack;
   open Ezjsonm;
@@ -484,6 +522,8 @@ let handle_write_database content_format uri_path payload ctx => {
   let result = switch (mode, content_format) {
   | ("/ts/", 50) => handle_post_write_ts uri_path payload ctx; 
   | ("/kv/", 50) => handle_post_write_kv_json uri_path payload ctx;
+  | ("/kv/", 0) => handle_post_write_kv_text uri_path payload ctx;
+  | ("/kv/", 42) => handle_post_write_kv_binary uri_path payload ctx;  
   | _ => None;
   };
   switch result {
@@ -711,10 +751,12 @@ let rec run_server ctx => {
   run_server ctx;
 };
 
-let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx => {
+let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx => {
   numts_ctx: numts_ctx,
   blobts_ctx: blobts_ctx,
   jsonkv_ctx: jsonkv_ctx,
+  textkv_ctx: textkv_ctx,
+  binarykv_ctx: binarykv_ctx,
   zmq_ctx: zmq_ctx,
   version: 1
 };
@@ -728,8 +770,10 @@ let setup_server () => {
   let zmq_ctx = Protocol.Zest.create endpoints::(!rep_endpoint, !rout_endpoint) keys::(!server_secret_key, !router_secret_key);
   let numts_ctx = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
   let jsonkv_ctx = Keyvalue.Json.create path_to_db::!store_directory;
+  let textkv_ctx = Keyvalue.Text.create path_to_db::!store_directory;
+  let binarykv_ctx = Keyvalue.Binary.create path_to_db::!store_directory;
   let blob_ts = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
-  let ctx = init zmq_ctx numts_ctx blob_ts jsonkv_ctx;
+  let ctx = init zmq_ctx numts_ctx blob_ts jsonkv_ctx textkv_ctx binarykv_ctx;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };
