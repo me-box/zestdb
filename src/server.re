@@ -29,6 +29,7 @@ module Response = {
 type t = {
   numts_ctx: Numeric_timeseries.t,
   blobts_ctx: Blob_timeseries.t,
+  jsonkv_ctx: Keyvalue.Json.t,
   zmq_ctx: Protocol.Zest.t, 
   version: int
 };
@@ -692,9 +693,10 @@ let rec run_server ctx => {
   run_server ctx;
 };
 
-let init zmq_ctx numts_ctx blobts_ctx => {
+let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx => {
   numts_ctx: numts_ctx,
   blobts_ctx: blobts_ctx,
+  jsonkv_ctx: jsonkv_ctx,
   zmq_ctx: zmq_ctx,
   version: 1
 };
@@ -706,12 +708,12 @@ let setup_server () => {
   set_server_key !server_secret_key_file;
   set_token_key !token_secret_key_file;
   let zmq_ctx = Protocol.Zest.create endpoints::(!rep_endpoint, !rout_endpoint) keys::(!server_secret_key, !router_secret_key);
-  let num_ts = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
+  let numts_ctx = Numeric_timeseries.create path_to_db::!store_directory max_buffer_size::10000 shard_size::1000;
+  let jsonkv_ctx = Keyvalue.Json.create path_to_db::!store_directory;
   let blob_ts = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
-  let ctx = init zmq_ctx num_ts blob_ts;
+  let ctx = init zmq_ctx numts_ctx blob_ts jsonkv_ctx;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };
 
 setup_server ();
-
