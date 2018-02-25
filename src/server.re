@@ -375,7 +375,14 @@ let get_mode uri_path => {
 };
 
 
-
+let handle_get_read_kv_json uri_path ctx => {
+  open Response;
+  open Keyvalue.Json;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => Json (read branch::ctx.jsonkv_ctx id::id key::key);
+  | None => Empty;
+  };
+};
 
 let handle_read_database content_format uri_path ctx => {
   open Ack;
@@ -383,6 +390,7 @@ let handle_read_database content_format uri_path ctx => {
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/ts/", 50) => handle_get_read_ts uri_path ctx;
+  | ("/kv/", 50) => handle_get_read_kv_json uri_path ctx;
   | _ => Empty;
   };
   switch result {

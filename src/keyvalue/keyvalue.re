@@ -6,6 +6,8 @@ module Json = {
 
   type t = Lwt.t (Store.branch);
 
+  let json_empty = Ezjsonm.dict [];
+
   let create path_to_db::path => {
     Store.init root::(path ^ "Json_kv") bare::true () >>= Store.master;
   };
@@ -17,7 +19,11 @@ module Json = {
 
   let read branch::branch id::id key::k => {
     branch >>= fun branch' =>
-      Store.read branch' path::[id,k];
+      Store.read branch' path::[id, k] >>=
+        fun data => switch data {
+          | Some json => Lwt.return json;
+          | None => Lwt.return json_empty;
+        };  
   };
 
 };
