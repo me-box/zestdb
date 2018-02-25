@@ -772,8 +772,8 @@ let setup_server () => {
   let jsonkv_ctx = Keyvalue.Json.create path_to_db::!store_directory;
   let textkv_ctx = Keyvalue.Text.create path_to_db::!store_directory;
   let binarykv_ctx = Keyvalue.Binary.create path_to_db::!store_directory;
-  let blob_ts = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
-  let ctx = init zmq_ctx numts_ctx blob_ts jsonkv_ctx textkv_ctx binarykv_ctx;
+  let blobts_ctx = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
+  let ctx = init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };
