@@ -9,7 +9,7 @@ module Json = {
   let json_empty = Ezjsonm.dict [];
 
   let create path_to_db::path => {
-    Store.init root::(path ^ "Json_kv") bare::true () >>= Store.master;
+    Store.init root::(path ^ "Json_kv_store") bare::true () >>= Store.master;
   };
 
   let write branch::branch id::id key::k json::v => {
@@ -37,7 +37,7 @@ module Text = {
     let text_empty = "";
   
     let create path_to_db::path => {
-      Store.init root::(path ^ "Text_kv") bare::true () >>= Store.master;
+      Store.init root::(path ^ "Text_kv_store") bare::true () >>= Store.master;
     };
   
     let write branch::branch id::id key::k text::v => {
@@ -65,7 +65,7 @@ module Text = {
       let binary_empty = "";
     
       let create path_to_db::path => {
-        Store.init root::(path ^ "Binary_kv") bare::true () >>= Store.master;
+        Store.init root::(path ^ "Binary_kv_store") bare::true () >>= Store.master;
       };
     
       let write branch::branch id::id key::k binary::v => {
