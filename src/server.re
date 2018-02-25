@@ -362,10 +362,10 @@ let handle_get_read_ts uri_path ctx => {
 };
 
 
-let get_key mode uri_path => {
+let get_id_key mode uri_path => {
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", mode, key] => Some key; 
+  | ["", mode, id, key] => Some (id, key);
   | _ => None;
   };
 };
@@ -458,14 +458,24 @@ let handle_post_write_ts uri_path payload ctx => {
   };
 };
 
-
+let handle_post_write_kv_json uri_path payload ctx => {
+  open Keyvalue.Json;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => switch (to_json payload) {
+    | Some json => Some (write branch::ctx.jsonkv_ctx id::id key::key json::json);
+    | None => None;
+    }
+  | None => None;
+  };
+};
 
 let handle_write_database content_format uri_path payload ctx => {
   open Ack;
   open Ezjsonm;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/ts/", 50) => handle_post_write_ts uri_path payload ctx;  
+  | ("/ts/", 50) => handle_post_write_ts uri_path payload ctx; 
+  | ("/kv/", 50) => handle_post_write_kv_json uri_path payload ctx;
   | _ => None;
   };
   switch result {
