@@ -159,41 +159,46 @@ let handle_get_read_ts_blob_earliest id ctx => {
   Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id::id);
 };
 
+let apply path apply0 apply1 apply2 => {
+  open Response;
+  open Numeric;
+  open Filter;
+  switch path {
+    | [] => apply0;
+    | ["sum"] => apply1 sum;
+    | ["count"] => apply1 count;
+    | ["min"] => apply1 min;
+    | ["max"] => apply1 max;
+    | ["mean"] => apply1 mean;
+    | ["median"] => apply1 median;
+    | ["sd"] => apply1 sd;
+    | ["filter", s1, "equals", s2] => apply1 (equals s1 s2);
+    | ["filter", s1, "contains", s2] => apply1 (contains s1 s2);
+    | ["filter", s1, "equals", s2, "sum"] => apply2 (equals s1 s2) sum;
+    | ["filter", s1, "contains", s2, "sum"] => apply2 (contains s1 s2) sum;
+    | ["filter", s1, "equals", s2, "count"] => apply2 (equals s1 s2) count;
+    | ["filter", s1, "contains", s2, "count"] => apply2 (contains s1 s2) count;
+    | ["filter", s1, "equals", s2, "min"] => apply2 (equals s1 s2) min;
+    | ["filter", s1, "contains", s2, "min"] => apply2 (contains s1 s2) min;
+    | ["filter", s1, "equals", s2, "max"] => apply2 (equals s1 s2) max;
+    | ["filter", s1, "contains", s2, "max"] => apply2 (contains s1 s2) max;
+    | ["filter", s1, "equals", s2, "mean"] => apply2 (equals s1 s2) mean;
+    | ["filter", s1, "contains", s2, "mean"] => apply2 (contains s1 s2) mean;
+    | ["filter", s1, "equals", s2, "median"] => apply2 (equals s1 s2) median;
+    | ["filter", s1, "contains", s2, "median"] => apply2 (contains s1 s2) median;
+    | ["filter", s1, "equals", s2, "sd"] => apply2 (equals s1 s2) sd;
+    | ["filter", s1, "contains", s2, "sd"] => apply2 (contains s1 s2) sd;
+    | _ => Empty;
+    };  
+};
+
 let handle_get_read_ts_numeric_last id n func ctx => {
   open Response;
   open Numeric_timeseries;
-  open Numeric;
-  open Filter;
   let apply0 = Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
   let apply1 f => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
   let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
-  switch func {
-  | [] => apply0;
-  | ["sum"] => apply1 sum;
-  | ["count"] => apply1 count;
-  | ["min"] => apply1 min;
-  | ["max"] => apply1 max;
-  | ["mean"] => apply1 mean;
-  | ["median"] => apply1 median;
-  | ["sd"] => apply1 sd;
-  | ["filter", s1, "equals", s2] => apply1 (equals s1 s2);
-  | ["filter", s1, "contains", s2] => apply1 (contains s1 s2);
-  | ["filter", s1, "equals", s2, "sum"] => apply2 (equals s1 s2) sum;
-  | ["filter", s1, "contains", s2, "sum"] => apply2 (contains s1 s2) sum;
-  | ["filter", s1, "equals", s2, "count"] => apply2 (equals s1 s2) count;
-  | ["filter", s1, "contains", s2, "count"] => apply2 (contains s1 s2) count;
-  | ["filter", s1, "equals", s2, "min"] => apply2 (equals s1 s2) min;
-  | ["filter", s1, "contains", s2, "min"] => apply2 (contains s1 s2) min;
-  | ["filter", s1, "equals", s2, "max"] => apply2 (equals s1 s2) max;
-  | ["filter", s1, "contains", s2, "max"] => apply2 (contains s1 s2) max;
-  | ["filter", s1, "equals", s2, "mean"] => apply2 (equals s1 s2) mean;
-  | ["filter", s1, "contains", s2, "mean"] => apply2 (contains s1 s2) mean;
-  | ["filter", s1, "equals", s2, "median"] => apply2 (equals s1 s2) median;
-  | ["filter", s1, "contains", s2, "median"] => apply2 (contains s1 s2) median;
-  | ["filter", s1, "equals", s2, "sd"] => apply2 (equals s1 s2) sd;
-  | ["filter", s1, "contains", s2, "sd"] => apply2 (contains s1 s2) sd;
-  | _ => Empty;
-  };  
+  apply func apply0 apply1 apply2;
 };
 
 let handle_get_read_ts_blob_last id n ctx => {
@@ -204,38 +209,10 @@ let handle_get_read_ts_blob_last id n ctx => {
 let handle_get_read_ts_numeric_first id n func ctx => {
   open Response;
   open Numeric_timeseries;
-  open Numeric;
-  open Filter;
   let apply0 = Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
   let apply1 f => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
   let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
-  switch func {
-  | [] => apply0;
-  | ["sum"] => apply1 sum;
-  | ["count"] => apply1 count;
-  | ["min"] => apply1 min;
-  | ["max"] => apply1 max;
-  | ["mean"] => apply1 mean;
-  | ["median"] => apply1 median;
-  | ["sd"] => apply1 sd;
-  | ["filter", s1, "equals", s2] => apply1 (equals s1 s2);
-  | ["filter", s1, "contains", s2] => apply1 (contains s1 s2);
-  | ["filter", s1, "equals", s2, "sum"] => apply2 (equals s1 s2) sum;
-  | ["filter", s1, "contains", s2, "sum"] => apply2 (contains s1 s2) sum;
-  | ["filter", s1, "equals", s2, "count"] => apply2 (equals s1 s2) count;
-  | ["filter", s1, "contains", s2, "count"] => apply2 (contains s1 s2) count;
-  | ["filter", s1, "equals", s2, "min"] => apply2 (equals s1 s2) min;
-  | ["filter", s1, "contains", s2, "min"] => apply2 (contains s1 s2) min;
-  | ["filter", s1, "equals", s2, "max"] => apply2 (equals s1 s2) max;
-  | ["filter", s1, "contains", s2, "max"] => apply2 (contains s1 s2) max;
-  | ["filter", s1, "equals", s2, "mean"] => apply2 (equals s1 s2) mean;
-  | ["filter", s1, "contains", s2, "mean"] => apply2 (contains s1 s2) mean;
-  | ["filter", s1, "equals", s2, "median"] => apply2 (equals s1 s2) median;
-  | ["filter", s1, "contains", s2, "median"] => apply2 (contains s1 s2) median;
-  | ["filter", s1, "equals", s2, "sd"] => apply2 (equals s1 s2) sd;
-  | ["filter", s1, "contains", s2, "sd"] => apply2 (contains s1 s2) sd;
-  | _ => Empty;
-  };    
+  apply func apply0 apply1 apply2;    
 };
 
 let handle_get_read_ts_blob_first id n ctx => {
@@ -246,39 +223,10 @@ let handle_get_read_ts_blob_first id n ctx => {
 let handle_get_read_ts_numeric_since id t func ctx => {
   open Response;
   open Numeric_timeseries;
-  open Numeric;
-  open Filter;
   let apply0 = Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
   let apply1 f => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f]);
-  let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);
-  switch func {
-  | [] => apply0;
-  | ["sum"] => apply1 sum;
-  | ["count"] => apply1 count;
-  | ["min"] => apply1 min;
-  | ["max"] => apply1 max;
-  | ["mean"] => apply1 mean;
-  | ["median"] => apply1 median;
-  | ["sd"] => apply1 sd;
-  | ["filter", s1, "equals", s2] => apply1 (equals s1 s2);
-  | ["filter", s1, "contains", s2] => apply1 (contains s1 s2);
-  | ["filter", s1, "equals", s2, "sum"] => apply2 (equals s1 s2) sum;
-  | ["filter", s1, "contains", s2, "sum"] => apply2 (contains s1 s2) sum;
-  | ["filter", s1, "equals", s2, "count"] => apply2 (equals s1 s2) count;
-  | ["filter", s1, "contains", s2, "count"] => apply2 (equals s1 s2) count; 
-  | ["filter", s1, "equals", s2, "min"] => apply2 (equals s1 s2) min;
-  | ["filter", s1, "contains", s2, "min"] => apply2 (contains s1 s2) min; 
-  | ["filter", s1, "equals", s2, "max"] => apply2 (equals s1 s2) max;
-  | ["filter", s1, "contains", s2, "max"] => apply2 (contains s1 s2) max;
-  | ["filter", s1, "equals", s2, "mean"] => apply2 (equals s1 s2) mean;
-  | ["filter", s1, "contains", s2, "mean"] => apply2 (contains s1 s2) mean;
-  | ["filter", s1, "equals", s2, "median"] => apply2 (equals s1 s2) median;
-  | ["filter", s1, "contains", s2, "median"] => apply2 (contains s1 s2) median;
-  | ["filter", s1, "equals", s2, "sd"] => apply2 (equals s1 s2) sd;
-  | ["filter", s1, "contains", s2, "sd"] => apply2 (contains s1 s2) sd;
-  | _ => Empty;
-  };    
-  
+  let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);   
+  apply func apply0 apply1 apply2;
 };
 
 let handle_get_read_ts_blob_since id t ctx => {
@@ -290,39 +238,10 @@ let handle_get_read_ts_blob_since id t ctx => {
 let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
   open Response;  
   open Numeric_timeseries;
-  open Numeric;
-  open Filter;
   let apply0 = Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
   let apply1 f => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
   let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
-  switch func {
-  | [] => apply0;
-  | ["sum"] => apply1 sum;
-  | ["count"] => apply1 count;
-  | ["min"] => apply1 min;
-  | ["max"] => apply1 max;
-  | ["mean"] => apply1 mean;
-  | ["median"] => apply1 median;
-  | ["sd"] => apply1 sd;
-  | ["filter", s1, "equals", s2] => apply1 (equals s1 s2);
-  | ["filter", s1, "contains", s2] => apply1 (contains s1 s2);
-  | ["filter", s1, "equals", s2, "sum"] => apply2 (equals s1 s2) sum;
-  | ["filter", s1, "contains", s2, "sum"] => apply2 (contains s1 s2) sum;
-  | ["filter", s1, "equals", s2, "count"] => apply2 (equals s1 s2) count;
-  | ["filter", s1, "contains", s2, "count"] => apply2 (contains s1 s2) count;
-  | ["filter", s1, "equals", s2, "min"] => apply2 (equals s1 s2) min;
-  | ["filter", s1, "contains", s2, "min"] => apply2 (contains s1 s2) min;
-  | ["filter", s1, "equals", s2, "max"] => apply2 (equals s1 s2) max;
-  | ["filter", s1, "contains", s2, "max"] => apply2 (contains s1 s2) max;
-  | ["filter", s1, "equals", s2, "mean"] => apply2 (equals s1 s2) mean;
-  | ["filter", s1, "contains", s2, "mean"] => apply2 (contains s1 s2) mean;
-  | ["filter", s1, "equals", s2, "median"] => apply2 (equals s1 s2) median;
-  | ["filter", s1, "contains", s2, "median"] => apply2 (contains s1 s2) median;
-  | ["filter", s1, "equals", s2, "sd"] => apply2 (equals s1 s2) sd;
-  | ["filter", s1, "contains", s2, "sd"] => apply2 (contains s1 s2) sd;
-  | _ => Empty;
-  }; 
-  
+  apply func apply0 apply1 apply2;
 };
 
 let handle_get_read_ts_blob_range id t1 t2 ctx => {
