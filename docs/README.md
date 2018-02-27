@@ -117,6 +117,14 @@ Data returned from a query is a JSON dictionary containing a timestamp in epoch 
     Parameters: replace <id> with an identifier, replace <from> and <to> with epoch milliseconds
     Notes: return the number of entries in time range provided
     
+
+#### Length of time series
+
+    URL: /ts/<id>/length
+    Method: GET
+    Parameters: replace <id> with an identifier
+    Notes: return the number of entries in the time series
+
     
 #### Filtering
     
