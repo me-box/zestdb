@@ -23,45 +23,46 @@ $ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm jptmoore/zest /app/ze
 #### running client to post key/value data
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --payload '{"name":"dave", "age":30}' --mode post
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --payload '{"name":"dave", "age":30}' --mode post
 ```
 
 #### running client to get key/value data
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode get
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
 ```
 
 
 #### running client to observe changes to a resource path
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode observe
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe
 ```
 
 
 ### Key/Value API
 
+A value is uniquely identified by an id and key pair. For example, you might write a value to id='lounge' with key='lightbulb'.
+
 #### Write entry
-    URL: /kv/<key>
+    URL: /kv/<id>/<key>
     Method: POST
-    Parameters: JSON body of data, replace <key> with a string
+    Parameters: JSON body of data, replace <id> and <key> with a string
     Notes: store data using given key
     
 #### Read entry
-    URL: /kv/<key>
+    URL: /kv/<id>/<key>
     Method: GET
-    Parameters: replace <key> with a string
+    Parameters: replace <id> and <key> with a string
     Notes: return data for given key    
 
 
 ### Time series API
 
-Time series data consists of a value together with an optional tag. A value is integer or floating point number and a tag is string identifier with corresponding string value. For example:```{"room": "lounge", "value": 1}```. Tagging a value provides a way to group values together when accessing them. In the example provided you could retrieve all values that are in a room called 'lounge'. 
+The time series API has support for writing generic JSON blobs or data in a specific format which allows extra functionality such as filtering and aggregation on the data. The generic blob API is called using the '/ts/blob' extension in the path. Otherwise it is assumed that the data consists of a value together with an optional tag. A value is integer or floating point number and a tag is an identifier with corresponding string value. For example:```{"room": "lounge", "value": 1}```. Tagging a value provides a way to group values together when accessing them. In the example provided you could retrieve all values that are in a room called 'lounge'. 
 
 Data returned from a query is a JSON dictionary containing a timestamp in epoch milliseconds and the actual data. For example:```{"timestamp":1513160985841,"data":{"foo":"bar","value":1}}```. Data can also be aggregated by applying functions across values. This results in a response of a single value. For example: ```{"result":1}```. 
 
-**It is assumed that data written to the time series store is in chronological order.**
 
 #### Write entry (auto-generated time)
     URL: /ts/<id>
@@ -119,12 +120,12 @@ Data returned from a query is a JSON dictionary containing a timestamp in epoch 
     
 #### Filtering
     
-Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match.
+Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match. This feature is not available for '/ts/blob' data.
 
 
 #### Aggregation
 
-Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/.../<sum|count|min|max|mean|median|sd```.
+Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/.../<sum|count|min|max|mean|median|sd```. This feature is not available for '/ts/blob' data.
    
 
 #### Complex queries
