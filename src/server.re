@@ -58,15 +58,14 @@ let route_message alist ctx payload => {
   loop alist;
 };
 
-let handle_expire ctx => {
-  Observe.expire ctx.observe_ctx >>=
-    fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163);
-};
-
-
 let route tuple payload ctx => {
   let (_,content_format) = tuple;
   route_message (Observe.get ctx.observe_ctx tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
+};
+
+let handle_expire ctx => {
+  Observe.expire ctx.observe_ctx >>=
+    fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163);
 };
 
 
@@ -567,13 +566,19 @@ let set_token_key file => {
   };
 };
 
+let terminate_router ctx => {
+  Observe.get_all ctx.observe_ctx |>
+    fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163) >>=
+      fun () => Lwt_unix.sleep 1.0;
+};
+
 let terminate_server ctx => {
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
     Blob_timeseries.flush ctx::ctx.blobts_ctx >>= fun () =>
-      Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () => {
-        Protocol.Zest.close ctx.zmq_ctx;
-        exit 0;
-      };
+      Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () =>
+        terminate_router ctx >>= fun () =>
+          Protocol.Zest.close ctx.zmq_ctx |> 
+            fun () => exit 0;
 };
 
 let report_error e ctx => {

@@ -76,3 +76,7 @@ let expire ctx => {
     Lwt.return [];
   };
 };
+
+let get_all ctx => {
+  list_uuids ctx.notify_list;
+};
