@@ -463,7 +463,7 @@ let handle_get options token ctx => {
     let uri_path = Protocol.Zest.get_option_value options 11;
     if ((is_valid_token token uri_path "GET") == false) {
       ack (Ack.Code 129)
-    } else if (Observe.has_observed options) {
+    } else if (Observe.option_set options) {
       handle_max_age options >>= fun max_age => {
         let uuid = create_uuid ();
         Observe.add_to_observe ctx.observe_ctx uri_path content_format uuid max_age >>=

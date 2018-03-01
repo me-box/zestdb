@@ -21,7 +21,7 @@ let unwrap ctx => {
 };
 
 
-let has_observed options => {
+let option_set options => {
   (Array.exists (fun (number,_) => number == 6) options) ? true : false;
 };
 
