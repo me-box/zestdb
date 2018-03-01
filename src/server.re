@@ -566,7 +566,7 @@ let set_token_key file => {
   };
 };
 
-let terminate_router ctx => {
+let cleanup_router ctx => {
   Observe.get_all ctx.observe_ctx |>
     fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163) >>=
       fun () => Lwt_unix.sleep 1.0;
@@ -576,16 +576,22 @@ let terminate_server ctx => {
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
     Blob_timeseries.flush ctx::ctx.blobts_ctx >>= fun () =>
       Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () =>
-        terminate_router ctx >>= fun () =>
+        cleanup_router ctx >>= fun () =>
           Protocol.Zest.close ctx.zmq_ctx |> 
             fun () => exit 0;
 };
 
-let report_error e ctx => {
+let unhandled_error e ctx => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
-  Logger.error_f "report_error" (Printf.sprintf "Opps: %s%s" msg stack) >>= fun () => 
-    ack (Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
+  Logger.error_f "unhandled_error" (Printf.sprintf "%s%s" msg stack) >>= 
+    fun () => ack (Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
+};
+
+let handle_zmq_error ctx e m => {
+  /* try and send service unavailable */
+  Logger.error_f "handle_zmq_error" m >>=
+    fun () => ack (Ack.Code 163) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
 };
 
 exception Interrupt of string;
@@ -601,7 +607,8 @@ let rec run_server ctx => {
   let _ = try {Lwt_main.run {server ctx}} 
     { 
       | Interrupt m => terminate_server ctx;
-      | e => report_error e ctx;
+      | ZMQ.ZMQ_exception e m => handle_zmq_error ctx e m;
+      | e => unhandled_error e ctx;
     };
   run_server ctx;
 };

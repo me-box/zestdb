@@ -318,7 +318,8 @@ let post_loop socket count => {
                   Lwt.return_unit; 
                 };
           };
-        | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
+        | Response.Error msg => Lwt_io.printf "=> %s\n" msg; 
+        | Response.Unavailable => Lwt_io.printf "=> server unavailable\n";
         | _ => failwith "unhandled response";
         };
   };
@@ -347,6 +348,7 @@ let get_loop socket count => {
                 };
           };
         | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
+        | Response.Unavailable => Lwt_io.printf "=> server unavailable\n";
         | _ => failwith "unhandled response";
         };
 
@@ -376,8 +378,7 @@ let observe_loop socket count => {
           | Response.Payload msg => 
               Lwt_io.printf "%s\n" msg >>=
                 fun () => loop ();
-          | Response.Unavailable => 
-              Lwt.return_unit;
+          | Response.Unavailable => Lwt_io.printf "=> observation ended\n";
           | _ => failwith "unhandled response";
           };
   };
