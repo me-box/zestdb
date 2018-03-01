@@ -37,15 +37,6 @@ type t = {
 };
 
 
-let has_observed options => {
-  if (Array.exists (fun (number,_) => number == 6) options) {
-    true;
-  } else {
-    false;
-  }
-};
-
-
 let time_now () => {
   Int32.of_float (Unix.time ());
 };
@@ -472,7 +463,7 @@ let handle_get options token ctx => {
     let uri_path = Protocol.Zest.get_option_value options 11;
     if ((is_valid_token token uri_path "GET") == false) {
       ack (Ack.Code 129)
-    } else if (has_observed options) {
+    } else if (Observe.has_observed options) {
       handle_max_age options >>= fun max_age => {
         let uuid = create_uuid ();
         Observe.add_to_observe ctx.observe_ctx uri_path content_format uuid max_age >>=
