@@ -130,6 +130,10 @@ let create_ack_observe public_key uuid::payload => {
   Bitstring.string_of_bitstring bits;
 };
 
+let observed options => {
+  (Array.exists (fun (number,_) => number == 6) options) ? true : false;
+};
+
 let get_option_value options value => {
   let rec find a x i => {
     let (number,value) = a.(i);

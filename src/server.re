@@ -59,22 +59,14 @@ let route_message alist ctx payload => {
 };
 
 let handle_expire ctx => {
-  open Observe;
-  if (observed_paths_exist ctx.observe_ctx) {
-    open Lwt_zmq.Socket.Router;
-    let new_notify_list = expire ctx.observe_ctx (time_now ());
-    let uuids = diff (list_uuids (unwrap ctx.observe_ctx)) (list_uuids new_notify_list);
-    update ctx.observe_ctx new_notify_list;
-    route_message uuids ctx (Protocol.Zest.create_ack 163);
-  } else {
-    Lwt.return_unit;
-  };
+  Observe.expire ctx.observe_ctx >>=
+    fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163);
 };
 
 
 let route tuple payload ctx => {
   let (_,content_format) = tuple;
-  route_message (Observe.get_ident ctx.observe_ctx tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
+  route_message (Observe.get ctx.observe_ctx tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
 };
 
 
@@ -463,16 +455,16 @@ let handle_get options token ctx => {
     let uri_path = Protocol.Zest.get_option_value options 11;
     if ((is_valid_token token uri_path "GET") == false) {
       ack (Ack.Code 129)
-    } else if (Observe.option_set options) {
+    } else if (Protocol.Zest.observed options) {
       handle_max_age options >>= fun max_age => {
         let uuid = create_uuid ();
-        Observe.add_to_observe ctx.observe_ctx uri_path content_format uuid max_age >>=
+        Observe.add ctx.observe_ctx uri_path content_format uuid max_age >>=
           fun x => ack (Ack.Observe !router_public_key uuid);
       };
     } else {
       handle_get_read content_format uri_path ctx >>= ack;
     };
-};
+  };
 };
 
 

@@ -12,32 +12,19 @@ let create () => {
   notify_list: []
 };
 
-let update ctx l => {
-  ctx.notify_list = l;
-};
-
-let unwrap ctx => {
-  ctx.notify_list;
-};
-
-
-let option_set options => {
-  (Array.exists (fun (number,_) => number == 6) options) ? true : false;
-};
-
 let is_observed ctx path => {
   List.mem_assoc path ctx.notify_list;
 };
 
-let observed_paths_exist ctx => {
-  List.length ctx.notify_list > 0;
+let observed_paths_exist lis => {
+  List.length lis > 0;
 };
 
-let get_ident ctx path => {
+let get ctx path => {
   List.assoc path ctx.notify_list;
 };
 
-let add_to_observe ctx uri_path content_format ident max_age => {
+let add ctx uri_path content_format ident max_age => {
   open Int32;
   open Logger;
   open Printf;
@@ -46,7 +33,7 @@ let add_to_observe ctx uri_path content_format ident max_age => {
   let value = (ident, expiry);
   if (is_observed ctx key) {
     info_f "add_to_observe" (sprintf "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age) >>= fun () => {
-      let items = get_ident ctx key;
+      let items = get ctx key;
       let new_items = List.cons value items;
       let filtered = List.filter (fun (key',_) => (key' != key)) ctx.notify_list;
       ctx.notify_list = (List.cons (key, new_items) filtered);
@@ -60,14 +47,6 @@ let add_to_observe ctx uri_path content_format ident max_age => {
   };
 };
 
-let expire ctx t => {
-  open List;
-  let f x =>
-    switch x {
-    | (k,v) => (k, filter (fun (_,t') => (t' > t) || (t' == Int32.of_int 0)) v);
-    };
-  filter (fun (x,y) => y != []) (map f ctx.notify_list);
-};
 
 let diff l1 l2 => List.filter (fun x => not (List.mem x l2)) l1;
 
@@ -76,3 +55,24 @@ let list_uuids lis => {
   map (fun (x,y) => hd y) lis;    
 };
 
+
+let handle_expire lis t => {
+  open List;
+  let f x =>
+    switch x {
+    | (k,v) => (k, filter (fun (_,t') => (t' > t) || (t' == Int32.of_int 0)) v);
+    };
+  filter (fun (x,y) => y != []) (map f lis);
+};
+
+
+let expire ctx => {
+  if (observed_paths_exist ctx.notify_list) {
+    let remaining = handle_expire ctx.notify_list (time_now ());
+    let expired_uuids = diff (list_uuids ctx.notify_list) (list_uuids remaining);
+    ctx.notify_list = remaining;
+    Lwt.return expired_uuids;
+  } else {
+    Lwt.return [];
+  };
+};
