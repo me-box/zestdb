@@ -3,7 +3,6 @@ open Lwt.Infix;
 let rep_endpoint = ref "tcp://0.0.0.0:5555";
 let rout_endpoint = ref "tcp://0.0.0.0:5556";
 /* let notify_list  = ref [(("",0),[("", Int32.of_int 0)])]; */
-let notify_list  = ref [];
 let token_secret_key_file = ref "";
 let token_secret_key = ref "";
 let router_public_key = ref "";
@@ -27,6 +26,7 @@ module Response = {
 };
 
 type t = {
+  observe_ctx: Observe.t,
   numts_ctx: Numeric_timeseries.t,
   blobts_ctx: Blob_timeseries.t,
   jsonkv_ctx: Keyvalue.Json.t,
@@ -45,64 +45,12 @@ let has_observed options => {
   }
 };
 
-let is_observed path => {
-  List.mem_assoc path !notify_list;
-};
-
-let observed_paths_exist () => {
-  List.length !notify_list > 0;
-};
-
-let get_ident path => {
-  List.assoc path !notify_list;
-};
 
 let time_now () => {
   Int32.of_float (Unix.time ());
 };
 
-let add_to_observe uri_path content_format ident max_age => {
-  open Int32;
-  open Logger;
-  open Printf;
-  let key = (uri_path, content_format);
-  let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
-  let value = (ident, expiry);
-  if (is_observed key) {
-    info_f "add_to_observe" (sprintf "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age) >>= fun () => {
-      let items = get_ident key;
-      let new_items = List.cons value items;
-      let filtered = List.filter (fun (key',_) => (key' != key)) !notify_list;
-      Lwt.return (notify_list := List.cons (key, new_items) filtered);
-    };
-  } else {
-    info_f "add_to_observe" (sprintf "adding ident:%s to new path:%s with max-age:%lu" ident uri_path max_age) >>= fun () =>
-      Lwt.return (notify_list := List.cons (key, [value]) !notify_list);
-  };
-};
 
-
-
-
-
-
-
-
-let expire l t => {
-  open List;
-  let f x =>
-    switch x {
-    | (k,v) => (k, filter (fun (_,t') => (t' > t) || (t' == Int32.of_int 0)) v);
-    };
-  filter (fun (x,y) => y != []) (map f l);
-};
-
-let diff l1 l2 => List.filter (fun x => not (List.mem x l2)) l1;
-
-let list_uuids alist => {
-  open List;  
-  map (fun (x,y) => hd y) alist;    
-};
 
 let route_message alist ctx payload => {
   open Logger;
@@ -120,21 +68,22 @@ let route_message alist ctx payload => {
 };
 
 let handle_expire ctx => {
-  if (observed_paths_exist ()) {
+  open Observe;
+  if (observed_paths_exist ctx.observe_ctx) {
     open Lwt_zmq.Socket.Router;
-    let new_notify_list = expire !notify_list (time_now ());
-    let uuids = diff (list_uuids !notify_list) (list_uuids new_notify_list);
-    notify_list := new_notify_list;
-    /* send Service Unavailable */
+    let new_notify_list = expire ctx.observe_ctx (time_now ());
+    let uuids = diff (list_uuids (unwrap ctx.observe_ctx)) (list_uuids new_notify_list);
+    update ctx.observe_ctx new_notify_list;
     route_message uuids ctx (Protocol.Zest.create_ack 163);
   } else {
     Lwt.return_unit;
   };
 };
 
+
 let route tuple payload ctx => {
   let (_,content_format) = tuple;
-  route_message (get_ident tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
+  route_message (Observe.get_ident ctx.observe_ctx tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
 };
 
 
@@ -519,16 +468,15 @@ let handle_max_age options => {
 };
 
 let handle_get options token ctx => {
-  open Ack;
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
     if ((is_valid_token token uri_path "GET") == false) {
-      ack (Code 129)
+      ack (Ack.Code 129)
     } else if (has_observed options) {
       handle_max_age options >>= fun max_age => {
         let uuid = create_uuid ();
-        add_to_observe uri_path content_format uuid max_age >>= 
-          fun () => ack (Observe !router_public_key uuid);
+        Observe.add_to_observe ctx.observe_ctx uri_path content_format uuid max_age >>=
+          fun x => ack (Ack.Observe !router_public_key uuid);
       };
     } else {
       handle_get_read content_format uri_path ctx >>= ack;
@@ -544,7 +492,7 @@ let handle_post options token payload ctx => {
     let tuple = (uri_path, content_format);
     if ((is_valid_token token uri_path "POST") == false) {
       ack (Code 129); 
-    } else if (is_observed tuple) {
+    } else if (Observe.is_observed ctx.observe_ctx tuple) {
         handle_post_write content_format uri_path payload ctx >>=
           fun resp => {
             /* we dont want to route bad requests */
@@ -670,7 +618,8 @@ let rec run_server ctx => {
   run_server ctx;
 };
 
-let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx => {
+let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx => {
+  observe_ctx: observe_ctx,
   numts_ctx: numts_ctx,
   blobts_ctx: blobts_ctx,
   jsonkv_ctx: jsonkv_ctx,
@@ -692,7 +641,8 @@ let setup_server () => {
   let textkv_ctx = Keyvalue.Text.create path_to_db::!store_directory;
   let binarykv_ctx = Keyvalue.Binary.create path_to_db::!store_directory;
   let blobts_ctx = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
-  let ctx = init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx;
+  let observe_ctx = Observe.create ();
+  let ctx = init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };
