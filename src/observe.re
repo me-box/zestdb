@@ -32,7 +32,7 @@ let add ctx uri_path content_format ident max_age mode => {
   let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
   let value = (ident, expiry);
   if (is_observed ctx key) {
-    info_f "add_to_observe" (sprintf "adding ident:%s to existing path:%s with max-age:%lu" ident uri_path max_age) >>= fun () => {
+    info_f "observing" (sprintf "adding ident:%s to existing path:%s with max-age:%lu and mode:%s" ident uri_path max_age mode) >>= fun () => {
       let items = get ctx key;
       let new_items = List.cons value items;
       let filtered = List.filter (fun (key',_) => (key' != key)) ctx.notify_list;
@@ -40,7 +40,7 @@ let add ctx uri_path content_format ident max_age mode => {
       Lwt.return_unit;
     };
   } else {
-    info_f "add_to_observe" (sprintf "adding ident:%s to new path:%s with max-age:%lu" ident uri_path max_age) >>= fun () => {
+    info_f "observing" (sprintf "adding ident:%s to new path:%s with max-age:%lu and mode:%s" ident uri_path max_age mode) >>= fun () => {
       ctx.notify_list = (List.cons (key, [value]) ctx.notify_list);
       Lwt.return_unit;
     }; 
