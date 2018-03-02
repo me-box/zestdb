@@ -130,8 +130,20 @@ let create_ack_observe public_key uuid::payload => {
   Bitstring.string_of_bitstring bits;
 };
 
+
 let observed options => {
-  (Array.exists (fun (number,_) => number == 6) options) ? true : false;
+  let rec loop lis => {
+    switch lis {
+    | [] => None;
+    | [(code,mode), ...rest] => 
+      code == 6 ? Some mode : loop rest;
+    };
+  };
+  switch (loop (Array.to_list options)) {
+  | Some ("" | "data") => `Data;
+  | Some "audit" => `Audit;
+  | _ => `None;
+  };
 };
 
 let get_option_value options value => {
