@@ -449,15 +449,17 @@ let handle_max_age options => {
     fun () => Lwt.return max_age;
 };
 
+
 let handle_get options token ctx => {
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
+    let observe_mode = Protocol.Zest.observed options;
     if ((is_valid_token token uri_path "GET") == false) {
       ack (Ack.Code 129)
-    } else if (Protocol.Zest.observed options == `Data) {
+    } else if ((observe_mode == "data") || (observe_mode == "audit")) {
       handle_max_age options >>= fun max_age => {
         let uuid = create_uuid ();
-        Observe.add ctx.observe_ctx uri_path content_format uuid max_age >>=
+        Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
           fun x => ack (Ack.Observe !router_public_key uuid);
       };
     } else {
@@ -465,7 +467,6 @@ let handle_get options token ctx => {
     };
   };
 };
-
 
 let handle_post options token payload ctx => {
   open Ack;

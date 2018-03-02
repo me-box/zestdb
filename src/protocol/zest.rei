@@ -24,7 +24,7 @@ let handle_token : Bitstring.t => int => (string, Bitstring.t);
 let handle_option : (string, int, int) => (int, string, Bitstring.t);
 
 /* read option values */
-let observed : array (int, string) => [> `Data | `Audit | `None];
+let observed : array (int, string) => string;
 let get_option_value : array (int, string) => int => string;
 let get_content_format : array (int, string) => int;
 let get_max_age : array (int, string) => int32;

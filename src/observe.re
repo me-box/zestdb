@@ -24,7 +24,7 @@ let get ctx path => {
   List.assoc path ctx.notify_list;
 };
 
-let add ctx uri_path content_format ident max_age => {
+let add ctx uri_path content_format ident max_age mode => {
   open Int32;
   open Logger;
   open Printf;

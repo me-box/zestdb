@@ -134,16 +134,12 @@ let create_ack_observe public_key uuid::payload => {
 let observed options => {
   let rec loop lis => {
     switch lis {
-    | [] => None;
+    | [] => "data";
     | [(code,mode), ...rest] => 
-      code == 6 ? Some mode : loop rest;
+      code == 6 ? mode : loop rest;
     };
   };
-  switch (loop (Array.to_list options)) {
-  | Some ("" | "data") => `Data;
-  | Some "audit" => `Audit;
-  | _ => `None;
-  };
+  loop (Array.to_list options)
 };
 
 let get_option_value options value => {
