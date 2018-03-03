@@ -50,8 +50,8 @@ let route_message alist ctx payload => {
       | [] => Lwt.return_unit;
       | [(ident,expiry,mode), ...rest] => {
           Protocol.Zest.route ctx.zmq_ctx ident payload >>= fun () =>
-            debug_f "route_message" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry) >>= 
-            fun () => loop rest;
+            debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload) ident expiry mode) >>= 
+              fun () => loop rest;
         };
       };    
   };
@@ -454,6 +454,7 @@ let handle_get options token ctx => {
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
     let observe_mode = Protocol.Zest.observed options;
+    let key = (uri_path, content_format);
     if ((is_valid_token token uri_path "GET") == false) {
       ack (Ack.Code 129)
     } else if ((observe_mode == "data") || (observe_mode == "audit")) {
@@ -462,7 +463,17 @@ let handle_get options token ctx => {
         Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
           fun x => ack (Ack.Observe !router_public_key uuid);
       };
-    } else {
+    } else if (Observe.is_observed ctx.observe_ctx key) {
+      handle_get_read content_format uri_path ctx >>=
+        fun resp => {
+          /* we dont want to route bad requests */
+          if (resp != (Code 128)) {
+            route key "GET" ctx >>= fun () => ack resp;
+          } else {
+            ack resp;
+          };
+      };
+    } else {      
       handle_get_read content_format uri_path ctx >>= ack;
     };
   };
