@@ -1,7 +1,7 @@
 open Lwt.Infix;
 
 type t = {
-  mutable notify_list: list ((string, int), list (string, Int32.t))
+  mutable notify_list: list ((string, int), list (string, Int32.t, string))
 };
 
 let time_now () => {
@@ -12,8 +12,8 @@ let create () => {
   notify_list: []
 };
 
-let is_observed ctx path => {
-  List.mem_assoc path ctx.notify_list;
+let is_observed ctx key => {
+  List.mem_assoc key ctx.notify_list;
 };
 
 let observed_paths_exist lis => {
@@ -30,7 +30,7 @@ let add ctx uri_path content_format ident max_age mode => {
   open Printf;
   let key = (uri_path, content_format);
   let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
-  let value = (ident, expiry);
+  let value = (ident, expiry, mode);
   if (is_observed ctx key) {
     info_f "observing" (sprintf "adding ident:%s to existing path:%s with max-age:%lu and mode:%s" ident uri_path max_age mode) >>= fun () => {
       let items = get ctx key;
@@ -60,7 +60,7 @@ let handle_expire lis t => {
   open List;
   let f x =>
     switch x {
-    | (k,v) => (k, filter (fun (_,t') => (t' > t) || (t' == Int32.of_int 0)) v);
+    | (k,v) => (k, filter (fun (_,t',_) => (t' > t) || (t' == Int32.of_int 0)) v);
     };
   filter (fun (x,y) => y != []) (map f lis);
 };

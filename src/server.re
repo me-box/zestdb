@@ -48,7 +48,7 @@ let route_message alist ctx payload => {
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
-      | [(ident,expiry), ...rest] => {
+      | [(ident,expiry,mode), ...rest] => {
           Protocol.Zest.route ctx.zmq_ctx ident payload >>= fun () =>
             debug_f "route_message" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu" (to_hex payload) ident expiry) >>= 
             fun () => loop rest;
@@ -472,15 +472,15 @@ let handle_post options token payload ctx => {
   open Ack;
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
-    let tuple = (uri_path, content_format);
+    let key = (uri_path, content_format);
     if ((is_valid_token token uri_path "POST") == false) {
       ack (Code 129); 
-    } else if (Observe.is_observed ctx.observe_ctx tuple) {
+    } else if (Observe.is_observed ctx.observe_ctx key) {
         handle_post_write content_format uri_path payload ctx >>=
           fun resp => {
             /* we dont want to route bad requests */
             if (resp != (Code 128)) {
-              route tuple payload ctx >>= fun () => ack resp;
+              route key payload ctx >>= fun () => ack resp;
             } else {
               ack resp;
             };
