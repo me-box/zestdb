@@ -16,6 +16,7 @@ let token = ref "";
 let uri_path = ref "";
 let content_format = ref (create_content_format 50);
 let max_age = ref 60;
+let observe_mode = ref "";
 let payload = ref "";
 let loop_count = ref 0;
 let call_freq = ref 1.0;
@@ -226,7 +227,7 @@ let create_observe_options ::format=(!content_format) ::age=(!max_age) uri::uri 
   let uri_path = create_option number::11 value::uri;
   let uri_host = create_option number::3 value::(Unix.gethostname ());
   let content_format = create_option number::12 value::format;    
-  let observe = create_option number::6 value::"";
+  let observe = create_option number::6 value::!observe_mode;
   let max_age = create_option number::14 value::(create_max_age (Int32.of_int age));
   create_options [|uri_path, uri_host, observe, content_format, max_age|];
 };
@@ -440,6 +441,10 @@ let handle_format format => {
   content_format := create_content_format id;
 };
 
+let handle_observe_mode kind => {
+  observe_mode := kind;
+};
+
 let parse_cmdline () => { 
   let usage = "usage: " ^ Sys.argv.(0);
   let speclist = [
@@ -457,6 +462,7 @@ let parse_cmdline () => {
     ("--mode", Arg.Symbol ["post", "get", "observe"] handle_mode, " : to set the mode of operation"),
     ("--file", Arg.Set file, ": payload contents comes from a file"),
     ("--max-age", Arg.Set_int max_age, ": time in seconds to observe a path"),
+    ("--observe-mode", Arg.Symbol ["data", "audit"] handle_observe_mode, ": to set the observe mode"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
   ];
   Arg.parse speclist (fun err => raise (Arg.Bad ("Bad argument : " ^ err))) usage;
