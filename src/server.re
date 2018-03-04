@@ -42,10 +42,17 @@ let time_now () => {
 };
 
 
+let valid_payload payload => {
+  let bs = Bitstring.bitstring_of_string payload;
+  let (_, _, code, _) = Protocol.Zest.handle_header bs;
+  /* check for service unavailable */
+  code != 163;
+};
+
 let create_router_payload mode payload => {
   switch mode {
   | "data" => payload;
-  | "audit" => Protocol.Zest.create_ack_payload 69 "some log format";
+  | "audit" => valid_payload payload ? Protocol.Zest.create_ack_payload 69 "some log format" : payload;
   | _ => Protocol.Zest.create_ack 128;
   };
 };
