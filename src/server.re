@@ -42,6 +42,13 @@ let time_now () => {
 };
 
 
+let create_router_payload mode payload => {
+  switch mode {
+  | "data" => payload;
+  | "audit" => Protocol.Zest.create_ack_payload 69 "some log format";
+  | _ => Protocol.Zest.create_ack 128;
+  };
+};
 
 let route_message alist ctx payload => {
   open Logger;
@@ -49,8 +56,9 @@ let route_message alist ctx payload => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry,mode), ...rest] => {
-          Protocol.Zest.route ctx.zmq_ctx ident payload >>= fun () =>
-            debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload) ident expiry mode) >>= 
+          let payload' = (create_router_payload mode payload);
+          Protocol.Zest.route ctx.zmq_ctx ident payload' >>= fun () =>
+            debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload') ident expiry mode) >>= 
               fun () => loop rest;
         };
       };    
@@ -58,9 +66,9 @@ let route_message alist ctx payload => {
   loop alist;
 };
 
-let route tuple payload ctx => {
-  let (_,content_format) = tuple;
-  route_message (Observe.get ctx.observe_ctx tuple) ctx (Protocol.Zest.create_ack_payload content_format payload);
+let route key payload ctx => {
+  let (_,content_format) = key;
+  route_message (Observe.get ctx.observe_ctx key) ctx (Protocol.Zest.create_ack_payload content_format payload);
 };
 
 let handle_expire ctx => {
