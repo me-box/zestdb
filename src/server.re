@@ -42,28 +42,41 @@ let time_now () => {
 };
 
 
-let valid_payload payload => {
+let create_audit_payload code options payload => {
   let bs = Bitstring.bitstring_of_string payload;
-  let (_, _, code, _) = Protocol.Zest.handle_header bs;
-  /* check for service unavailable */
-  code != 163;
+  let (_, _, ret_code, _) = Protocol.Zest.handle_header bs;
+  if (ret_code == 163) {
+    payload;
+  } else {
+    let uri_path = Protocol.Zest.get_uri_path options;
+    let uri_host = Protocol.Zest.get_uri_host options;
+    let op = switch code {
+      | 1 => "GET"; 
+      | 2 => "POST";
+      | _ => "UNKNOWN";
+    };
+    let timestamp = Printf.sprintf "%lu" (time_now ()); 
+    let server = !identity;
+    let entry = Printf.sprintf "%s %s %s %s %s" timestamp server uri_host op uri_path;
+    Protocol.Zest.create_ack_payload 69 entry;
+  };
 };
 
-let create_router_payload mode payload => {
+let create_router_payload mode code options payload => {
   switch mode {
   | "data" => payload;
-  | "audit" => valid_payload payload ? Protocol.Zest.create_ack_payload 69 "some log format" : payload;
+  | "audit" => create_audit_payload code options payload;
   | _ => Protocol.Zest.create_ack 128;
   };
 };
 
-let route_message alist ctx payload => {
+let route_message alist ctx code options payload => {
   open Logger;
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry,mode), ...rest] => {
-          let payload' = (create_router_payload mode payload);
+          let payload' = (create_router_payload mode code options payload);
           Protocol.Zest.route ctx.zmq_ctx ident payload' >>= fun () =>
             debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload') ident expiry mode) >>= 
               fun () => loop rest;
@@ -73,14 +86,14 @@ let route_message alist ctx payload => {
   loop alist;
 };
 
-let route key payload ctx => {
+let route key code options payload ctx => {
   let (_,content_format) = key;
-  route_message (Observe.get ctx.observe_ctx key) ctx (Protocol.Zest.create_ack_payload content_format payload);
+  route_message (Observe.get ctx.observe_ctx key) ctx code options (Protocol.Zest.create_ack_payload content_format payload);
 };
 
 let handle_expire ctx => {
   Observe.expire ctx.observe_ctx >>=
-    fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163);
+    fun uuids => route_message uuids ctx 163 [||] (Protocol.Zest.create_ack 163);
 };
 
 
@@ -465,7 +478,7 @@ let handle_max_age options => {
 };
 
 
-let handle_get options token ctx => {
+let handle_get code options token ctx => {
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
     let observe_mode = Protocol.Zest.observed options;
@@ -483,7 +496,7 @@ let handle_get options token ctx => {
         fun resp => {
           /* we dont want to route bad requests */
           if (resp != (Code 128)) {
-            route key "GET" ctx >>= fun () => ack resp;
+            route key code options "" ctx >>= fun () => ack resp;
           } else {
             ack resp;
           };
@@ -494,7 +507,7 @@ let handle_get options token ctx => {
   };
 };
 
-let handle_post options token payload ctx => {
+let handle_post code options token payload ctx => {
   open Ack;
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
@@ -506,7 +519,7 @@ let handle_post options token payload ctx => {
           fun resp => {
             /* we dont want to route bad requests */
             if (resp != (Code 128)) {
-              route key payload ctx >>= fun () => ack resp;
+              route key code options payload ctx >>= fun () => ack resp;
             } else {
               ack resp;
             };
@@ -529,8 +542,8 @@ let handle_msg msg ctx => {
           let (options,r3) = handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
           switch code {
-          | 1 => handle_get options token ctx;
-          | 2 => handle_post options token payload ctx;
+          | 1 => handle_get code options token ctx;
+          | 2 => handle_post code options token payload ctx;
           | _ => failwith "invalid code";
           };
         };  
@@ -595,7 +608,7 @@ let set_token_key file => {
 
 let cleanup_router ctx => {
   Observe.get_all ctx.observe_ctx |>
-    fun uuids => route_message uuids ctx (Protocol.Zest.create_ack 163) >>=
+    fun uuids => route_message uuids ctx 163 [||] (Protocol.Zest.create_ack 163) >>=
       fun () => Lwt_unix.sleep 1.0;
 };
 

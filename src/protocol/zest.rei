@@ -28,3 +28,5 @@ let observed : array (int, string) => string;
 let get_option_value : array (int, string) => int => string;
 let get_content_format : array (int, string) => int;
 let get_max_age : array (int, string) => int32;
+let get_uri_path : array (int, string) => string;
+let get_uri_host : array (int, string) => string;

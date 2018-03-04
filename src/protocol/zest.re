@@ -182,6 +182,14 @@ let get_max_age options => {
   seconds;
 };
 
+let get_uri_path options => {
+  get_option_value options 11;
+};
+
+let get_uri_host options => {
+  get_option_value options 3;
+};
+
 let close_socket lwt_soc => {
   let soc = Lwt_zmq.Socket.to_socket lwt_soc;
   ZMQ.Socket.close soc;
