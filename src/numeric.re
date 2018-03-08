@@ -28,7 +28,8 @@ let to_json result => {
 };
 
 let apply func json => {
-  from_json json |> Array.of_list |> func |> to_json;
+  let lis = from_json json; 
+  lis == [] ? Ezjsonm.dict [] : Array.of_list lis |> func |> to_json;
 };
 
 let sum json => apply Oml.sum json;
