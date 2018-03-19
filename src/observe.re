@@ -26,7 +26,7 @@ let get_keys lis => {
 
 let get_values lis => {
   open List;  
-  map (fun (k,v) => v) lis |> flatten;
+  map (fun (k,v) => v) lis |> hd;
 };
 
 let is_observed ctx key => {
