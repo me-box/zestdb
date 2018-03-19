@@ -29,17 +29,36 @@ let get_values lis => {
   map (fun (k,v) => v) lis |> hd;
 };
 
-let is_observed ctx key => {
-  List.mem_assoc key ctx.notify_list;
-};
 
+let is_observed ctx key => {
+  let (path,cf) = key;
+  let rec loop lis => {
+    switch lis {
+    | [] => false;
+    | [(path',cf'), ..._] when (path' == path) && (cf' == cf) => true;
+    | [(path',cf'), ..._] when (has_prefix path' path) && (cf' == cf) => true;
+    | [_, ...rest] => loop rest;
+    };
+  };
+  loop (get_keys ctx.notify_list);
+};
 
 let observed_paths_exist lis => {
   List.length lis > 0;
 };
 
-let get ctx path => {
-  List.assoc path ctx.notify_list;
+
+let get ctx key => {
+  let (path,cf) = key;
+  let rec loop acc lis => {
+    switch lis {
+    | [] => acc;
+    | [((path',cf'), v), ...rest] when (has_prefix path' path) && (cf' == cf) => loop (List.append v acc) rest;  
+    | [((path',cf'), v), ...rest] when (path' == path) && (cf' == cf) => loop (List.append v acc) rest;
+    | [_, ...rest] => loop acc rest;
+    };
+  };
+  loop [] ctx.notify_list;
 };
 
 let add ctx uri_path content_format ident max_age mode => {
