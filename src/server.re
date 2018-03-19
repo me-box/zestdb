@@ -43,9 +43,7 @@ let time_now () => {
 
 
 let create_audit_payload code options payload => {
-  let bs = Bitstring.bitstring_of_string payload;
-  let (_, _, ret_code, _) = Protocol.Zest.handle_header bs;
-  if (ret_code == 163) {
+  if (code == 163) {
     payload;
   } else {
     let uri_path = Protocol.Zest.get_uri_path options;
@@ -62,9 +60,26 @@ let create_audit_payload code options payload => {
   };
 };
 
+let create_data_payload code options payload => {
+  if (code == 163) {
+    payload;
+  } else {
+    let uri_path = Protocol.Zest.get_uri_path options;
+    let content_format = switch (Protocol.Zest.get_content_format options) {
+      | 0 => "text"; 
+      | 50 => "json";
+      | 42 => "binary";
+      | _ => "unknown";
+    };    
+    let timestamp = Printf.sprintf "%lu" (time_now ()); 
+    let entry = Printf.sprintf "%s %s %s %s" timestamp uri_path content_format payload;
+    Protocol.Zest.create_ack_payload 69 entry;
+  };
+};
+
 let create_router_payload mode code options payload => {
   switch mode {
-  | "data" => payload;
+  | "data" => create_data_payload code options payload;
   | "audit" => create_audit_payload code options payload;
   | _ => Protocol.Zest.create_ack 128;
   };
@@ -87,8 +102,7 @@ let route_message alist ctx code options payload => {
 };
 
 let route key code options payload ctx => {
-  let (_,content_format) = key;
-  route_message (Observe.get ctx.observe_ctx key) ctx code options (Protocol.Zest.create_ack_payload content_format payload);
+  route_message (Observe.get ctx.observe_ctx key) ctx code options payload;
 };
 
 let handle_expire ctx => {
