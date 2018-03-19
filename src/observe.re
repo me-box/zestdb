@@ -26,7 +26,7 @@ let get_keys lis => {
 
 let get_values lis => {
   open List;  
-  map (fun (k,v) => v) lis |> hd;
+  map (fun (k,v) => v) lis |> flatten;
 };
 
 
@@ -68,7 +68,7 @@ let add ctx uri_path content_format ident max_age mode => {
   let key = (uri_path, content_format);
   let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
   let value = (ident, expiry, mode);
-  if (is_observed ctx key) {
+  if (List.mem_assoc key ctx.notify_list) {
     info_f "observing" (sprintf "adding ident:%s to existing path:%s with max-age:%lu and mode:%s" ident uri_path max_age mode) >>= fun () => {
       let items = get ctx key;
       let new_items = List.cons value items;
