@@ -12,9 +12,27 @@ let create () => {
   notify_list: []
 };
 
+let has_prefix s1 s2 => {
+  open String;
+  length s1 <= length s2 &&
+    s1 == (sub s2 0 (length s1 - 1)) ^ "*";
+};
+
+
+let get_keys lis => {
+  open List;  
+  map (fun (k,v) => k) lis;    
+};
+
+let get_values lis => {
+  open List;  
+  map (fun (k,v) => v) lis |> flatten;
+};
+
 let is_observed ctx key => {
   List.mem_assoc key ctx.notify_list;
 };
+
 
 let observed_paths_exist lis => {
   List.length lis > 0;
@@ -50,11 +68,6 @@ let add ctx uri_path content_format ident max_age mode => {
 
 let diff l1 l2 => List.filter (fun x => not (List.mem x l2)) l1;
 
-let list_uuids lis => {
-  open List;  
-  map (fun (x,y) => hd y) lis;    
-};
-
 
 let handle_expire lis t => {
   open List;
@@ -69,7 +82,7 @@ let handle_expire lis t => {
 let expire ctx => {
   if (observed_paths_exist ctx.notify_list) {
     let remaining = handle_expire ctx.notify_list (time_now ());
-    let expired_uuids = diff (list_uuids ctx.notify_list) (list_uuids remaining);
+    let expired_uuids = diff (get_values ctx.notify_list) (get_values remaining);
     ctx.notify_list = remaining;
     Lwt.return expired_uuids;
   } else {
@@ -78,5 +91,5 @@ let expire ctx => {
 };
 
 let get_all ctx => {
-  list_uuids ctx.notify_list;
+  get_values ctx.notify_list;
 };
