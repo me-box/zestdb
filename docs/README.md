@@ -1,3 +1,5 @@
+### Introduction
+
 A [CoAP](https://tools.ietf.org/html/rfc7252) inspired implementation of a RESTful-like experience implemented over [ZeroMQ](http://zeromq.org/).
 
 The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows multiple clients to 'observe' a path to directly receive any data POSTed to specific paths. Communication can take place over TCP or over Interprocess communication (IPC).
@@ -32,12 +34,47 @@ $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 
 $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
 ```
 
+### Observation
 
-#### running client to observe changes to a resource path
+One benefit of the Zest protocol being built on top of ZeroMQ means that it is easy to support features such as observing data written or read from the server in real-time. There are two types of observation modes: data and audit which provide data in a simple space-separated meta-format. Observing data is used to get a copy of what is POSTed to a specific path, whereas an audit request can be used to provide meta-data on a POST or GET containing information such as the hostnames involved and the type of query etc.
+
+A typical use case for observation might consist of multiple deployed servers that you need to monitor from a single client. The client could make individual observation requests to each server and collate the data received in real-time to display on a dashboard.
+
+#### running client to observe data POSTed to a resource path
 
 ```bash
 $ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe
 ```
+
+The above will produce data written in a format such as:
+
+```bash
+#timestamp #uri-path #content-format #data
+1521554211213 /kv/foo/bar json {"room": "lounge", "value": 1} 
+```
+
+#### running client to observe audit information at a resource path
+
+```bash
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe --observe-mode audit
+```
+
+The above will produce data written in a format such as:
+
+```bash
+#timestamp #server-name #host-name #operation #uri-path
+1521553488680 Johns-MacBook-Pro.local Johns-MacBook-Pro.local POST /kv/foo/bar
+```
+
+As well as observing exact paths it is possible to use wildcard paths to receive information on a range of paths.
+
+#### running client to observe audit information using a wildcard path
+
+```bash
+$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/*' --mode observe --observe-mode audit
+```
+
+The example above is similar to the previous example but this time we will also receive audit information on any path that starts with '/kv/foo/'.
 
 
 ### Key/Value API
@@ -133,7 +170,7 @@ Filtering is an extension of the API path applied to tags to restrict the values
 
 #### Aggregation
 
-Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/.../<sum|count|min|max|mean|median|sd```. This feature is not available for '/ts/blob' data.
+Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/.../<sum|count|min|max|mean|median|sd>```. This feature is not available for '/ts/blob' data.
    
 
 #### Complex queries
