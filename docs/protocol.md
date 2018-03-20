@@ -46,7 +46,7 @@ Some options must be present depending on the type of message.
 * uri_path
 * uri_host
 * content_format
-* observe
+* observe (contains string 'data' or '' or 'audit')
 * max_age
 
 *GET response*
@@ -55,7 +55,7 @@ Some options must be present depending on the type of message.
 
 *GET response (observe)*
 
-* content_format (payload contains a UUID)
+* content_format 
 * public_key (number 2048, contains key)
 
 *POST request*
