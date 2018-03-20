@@ -36,11 +36,11 @@ type t = {
   version: int
 };
 
-
-let time_now () => {
-  Int32.of_float (Unix.time ());
+let get_time () => {
+  let t_sec = Unix.gettimeofday ();
+  let t_ms = t_sec *. 1000.0;
+  int_of_float t_ms;
 };
-
 
 let create_audit_payload code options payload => {
   if (code == 163) {
@@ -53,7 +53,7 @@ let create_audit_payload code options payload => {
       | 2 => "POST";
       | _ => "UNKNOWN";
     };
-    let timestamp = Printf.sprintf "%lu" (time_now ()); 
+    let timestamp = Printf.sprintf "%d" (get_time ()); 
     let server = !identity;
     let entry = Printf.sprintf "%s %s %s %s %s" timestamp server uri_host op uri_path;
     Protocol.Zest.create_ack_payload 69 entry;
@@ -71,7 +71,7 @@ let create_data_payload code options payload => {
       | 42 => "binary";
       | _ => "unknown";
     };    
-    let timestamp = Printf.sprintf "%lu" (time_now ()); 
+    let timestamp = Printf.sprintf "%d" (get_time ()); 
     let entry = Printf.sprintf "%s %s %s %s" timestamp uri_path content_format payload;
     Protocol.Zest.create_ack_payload 69 entry;
   };
