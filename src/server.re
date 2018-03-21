@@ -272,9 +272,11 @@ let get_mode uri_path => {
 let handle_get_read_kv_json uri_path ctx => {
   open Response;
   open Keyvalue.Json;
-  switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Json (read branch::ctx.jsonkv_ctx id::id key::key);
-  | None => Empty;
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.jsonkv_ctx id::id);
+  | ["", "kv", id, key] => Json (read ctx::ctx.jsonkv_ctx id::id key::key);
+  | _ => Empty;
   };
 };
 
@@ -384,7 +386,7 @@ let handle_post_write_kv_json uri_path payload ctx => {
   open Keyvalue.Json;
   switch (get_id_key "kv" uri_path) {
   | Some (id, key) => switch (to_json payload) {
-    | Some json => Some (write branch::ctx.jsonkv_ctx id::id key::key json::json);
+    | Some json => Some (write ctx::ctx.jsonkv_ctx id::id key::key json::json);
     | None => None;
     }
   | None => None;

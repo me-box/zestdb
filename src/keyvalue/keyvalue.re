@@ -4,26 +4,37 @@ module Json = {
 
   module Store = Ezirmin.FS_lww_register (Irmin.Contents.Json);
 
-  type t = Lwt.t (Store.branch);
+  type t = {
+    branch: Lwt.t (Store.branch),    
+    keys: Lwt.t Keys.t
+  };
 
   let json_empty = Ezjsonm.dict [];
 
   let create path_to_db::path => {
-    Store.init root::(path ^ "Json_kv_store") bare::true () >>= Store.master;
+    { 
+      branch: Store.init root::(path ^ "Json_kv_store") bare::true () >>= Store.master,      
+      keys: Keys.create file::(path ^ "Json_kv_keys_store")
+    };
   };
 
-  let write branch::branch id::id key::k json::v => {
-    branch >>= fun branch' =>
-      Store.write message::(id ^ "|" ^ k) branch' path::[id, k] v
+  let write ctx::ctx id::id key::k json::v => {
+    ctx.branch >>= fun branch' =>
+      Store.write message::(id ^ "|" ^ k) branch' path::[id, k] v >>=
+        fun () => Keys.update ctx.keys id k;
   };
 
-  let read branch::branch id::id key::k => {
-    branch >>= fun branch' =>
+  let read ctx::ctx id::id key::k => {
+    ctx.branch >>= fun branch' =>
       Store.read branch' path::[id, k] >>=
         fun data => switch data {
           | Some json => Lwt.return json;
           | None => Lwt.return json_empty;
         };  
+  };
+
+  let keys ctx::ctx id::id => {
+    Keys.get ctx.keys id;
   };
 
 };

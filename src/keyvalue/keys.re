@@ -32,7 +32,7 @@ let get branch id => {
   read branch id >>= fun data =>
     switch data {
     | Some lis => strings lis;
-    | None => dict [];
+    | None => `A [];
     } |> Lwt.return;
 };
 
