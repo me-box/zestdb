@@ -1,4 +1,4 @@
-# REST over ZeroMQ
+# ZestDB
 
 A CoAP inspired implementation of a RESTful-like experience implemented over ZeroMQ.
 
