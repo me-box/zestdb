@@ -283,18 +283,22 @@ let handle_get_read_kv_json uri_path ctx => {
 let handle_get_read_kv_text uri_path ctx => {
   open Response;
   open Keyvalue.Text;
-  switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Text (read branch::ctx.textkv_ctx id::id key::key);
-  | None => Empty;
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.textkv_ctx id::id);
+  | ["", "kv", id, key]  => Text (read ctx::ctx.textkv_ctx id::id key::key);
+  | _ => Empty;
   };
 };
 
 let handle_get_read_kv_binary uri_path ctx => {
   open Response;
   open Keyvalue.Binary;
-  switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Text (read branch::ctx.binarykv_ctx id::id key::key);
-  | None => Empty;
+  let path_list = String.split_on_char '/' uri_path;  
+  switch path_list {
+  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.binarykv_ctx id::id);
+  | ["", "kv", id, key] => Text (read ctx::ctx.binarykv_ctx id::id key::key);
+  | _ => Empty;
   };
 };
 
@@ -396,7 +400,7 @@ let handle_post_write_kv_json uri_path payload ctx => {
 let handle_post_write_kv_text uri_path payload ctx => {
   open Keyvalue.Text;
   switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Some (write branch::ctx.textkv_ctx id::id key::key text::payload);
+  | Some (id, key) => Some (write ctx::ctx.textkv_ctx id::id key::key text::payload);
   | None => None;
   };
 };
@@ -404,7 +408,7 @@ let handle_post_write_kv_text uri_path payload ctx => {
 let handle_post_write_kv_binary uri_path payload ctx => {
   open Keyvalue.Binary;
   switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Some (write branch::ctx.binarykv_ctx id::id key::key binary::payload);
+  | Some (id, key) => Some (write ctx::ctx.binarykv_ctx id::id key::key binary::payload);
   | None => None;
   };
 };
