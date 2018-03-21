@@ -94,6 +94,12 @@ A value is uniquely identified by an id and key pair. For example, you might wri
     Notes: return data for given key    
 
 
+#### List keys
+    URL: /kv/<id>/keys
+    Method: GET
+    Parameters: replace <id> with a string
+    Notes: return keys for given key id 
+
 ### Time series API
 
 The time series API has support for writing generic JSON blobs or data in a specific format which allows extra functionality such as filtering and aggregation on the data. The generic blob API is called using the '/ts/blob' extension in the path. Otherwise it is assumed that the data consists of a value together with an optional tag. A value is integer or floating point number and a tag is an identifier with corresponding string value. For example:```{"room": "lounge", "value": 1}```. Tagging a value provides a way to group values together when accessing them. In the example provided you could retrieve all values that are in a room called 'lounge'. 
