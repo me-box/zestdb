@@ -26,6 +26,7 @@ module Response = {
 };
 
 type t = {
+  hc_ctx: Hc.t,
   observe_ctx: Observe.t,
   numts_ctx: Numeric_timeseries.t,
   blobts_ctx: Blob_timeseries.t,
@@ -330,9 +331,17 @@ let handle_read_hypercat () => {
     fun s => (Payload 50 s) |> Lwt.return;
 };
 
+let handle_read_hypercat2 ctx => {
+  open Ack;
+  Hc.get ctx::ctx.hc_ctx >>=
+    fun json => Ezjsonm.to_string json |>
+      fun s => (Payload 50 s) |> Lwt.return;
+};
+
 let handle_get_read content_format uri_path ctx => {
   switch uri_path {
   | "/cat" => handle_read_hypercat ();
+  | "/cat2" => handle_read_hypercat2 ctx;
   | _ => handle_read_database content_format uri_path ctx; 
   };
 };
@@ -444,9 +453,25 @@ let handle_write_hypercat payload => {
   };
 };
 
+let handle_write_hypercat2 ctx payload => {
+  open Ack;
+  let json = to_json payload;
+  switch json {
+  | Some json => {
+      Hc.update ctx::ctx.hc_ctx item::json >>=
+        fun result => switch result {
+        | Ok => (Code 65)
+        | Error n => (Code n)
+        } |> Lwt.return;
+    };
+  | None => Lwt.return (Code 128);
+  };
+};
+
 let handle_post_write content_format uri_path payload ctx => {
   switch uri_path {
   | "/cat" => handle_write_hypercat payload;
+  | "/cat2" => handle_write_hypercat2 ctx payload;
   | _ => handle_write_database content_format uri_path payload ctx; 
   };
 };
@@ -673,7 +698,8 @@ let rec run_server ctx => {
   run_server ctx;
 };
 
-let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx => {
+let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx hc_ctx => {
+  hc_ctx: hc_ctx,
   observe_ctx: observe_ctx,
   numts_ctx: numts_ctx,
   blobts_ctx: blobts_ctx,
@@ -697,7 +723,8 @@ let setup_server () => {
   let binarykv_ctx = Keyvalue.Binary.create path_to_db::!store_directory;
   let blobts_ctx = Blob_timeseries.create path_to_db::!store_directory max_buffer_size::1000 shard_size::100;
   let observe_ctx = Observe.create ();
-  let ctx = init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx;
+  let hc_ctx = Hc.create store::jsonkv_ctx;
+  let ctx = init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx hc_ctx;
   let _ = register_signal_handlers ();  
   run_server ctx |> fun () => terminate_server ctx;
 };
