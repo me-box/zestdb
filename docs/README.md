@@ -12,6 +12,8 @@ Access control is supported through [macaroons](https://github.com/rescrv/libmac
 
 The zest protocol is documented [here](protocol).
 
+Implementations are currently available in [Go](https://github.com/Toshbrown/goZestClient) and [Node.js](https://github.com/Toshbrown/nodeZestClient).
+
 ### Basic usage examples
 
 You can run a server and test client using [Docker](https://www.docker.com/). Each command supports --help to get a list of parameters.
