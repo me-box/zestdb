@@ -325,13 +325,8 @@ let handle_read_database content_format uri_path ctx => {
   };
 };
 
-let handle_read_hypercat () => {
-  open Ack;
-  Hypercat.get_cat () |> Ezjsonm.to_string |>
-    fun s => (Payload 50 s) |> Lwt.return;
-};
 
-let handle_read_hypercat2 ctx => {
+let handle_read_hypercat ctx => {
   open Ack;
   Hc.get ctx::ctx.hc_ctx >>=
     fun json => Ezjsonm.to_string json |>
@@ -340,8 +335,7 @@ let handle_read_hypercat2 ctx => {
 
 let handle_get_read content_format uri_path ctx => {
   switch uri_path {
-  | "/cat" => handle_read_hypercat ();
-  | "/cat2" => handle_read_hypercat2 ctx;
+  | "/cat" => handle_read_hypercat ctx;
   | _ => handle_read_database content_format uri_path ctx; 
   };
 };
@@ -439,21 +433,9 @@ let handle_write_database content_format uri_path payload ctx => {
   };
 };
 
-let handle_write_hypercat payload => {
-  open Ack;
-  let json = to_json payload;
-  switch json {
-  | Some json => {
-      switch (Hypercat.update_cat json) {
-        | Ok => (Code 65)
-        | Error n => (Code n)
-        } |> Lwt.return;
-    };
-  | None => Lwt.return (Code 128);
-  };
-};
 
-let handle_write_hypercat2 ctx payload => {
+
+let handle_write_hypercat ctx payload => {
   open Ack;
   let json = to_json payload;
   switch json {
@@ -470,8 +452,7 @@ let handle_write_hypercat2 ctx payload => {
 
 let handle_post_write content_format uri_path payload ctx => {
   switch uri_path {
-  | "/cat" => handle_write_hypercat payload;
-  | "/cat2" => handle_write_hypercat2 ctx payload;
+  | "/cat" => handle_write_hypercat ctx payload;
   | _ => handle_write_database content_format uri_path payload ctx; 
   };
 };
