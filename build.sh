@@ -9,6 +9,7 @@ cp example-server-key ../
 cp example-token-key ../
 cp ./_build/default/server.exe ../
 cd ../test && jbuilder build client.exe
+cp item1.json ../
 cp ./_build/default/client.exe ../
 cd ../utils && jbuilder build mint.exe
 cp ./_build/default/mint.exe ../

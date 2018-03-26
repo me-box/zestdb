@@ -34,6 +34,24 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
 ```
 
+
+### Hypercat
+
+The hypercat provides a standard way to describe what data might exist within the database.
+
+To add an entry to the in-built HyperCat:
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --file --payload item1.json
+```
+
+To query the in-built HyperCat:
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode get
+```
+
+
 ### Observation
 
 One benefit of the Zest protocol being built on top of ZeroMQ means that it is easy to support features such as observing data written or read from the server in real-time. There are two types of observation modes: data and audit which provide data in a simple space-separated meta-format. Observing data is used to get a copy of what is POSTed to a specific path, whereas an audit request can be used to provide meta-data on a POST or GET containing information such as the hostnames involved and the type of query etc.
@@ -245,18 +263,6 @@ $ server.exe --secret-key-file example-server-key --token-key-file example-token
 In the above example, we have turned debugging on which is useful option if you want to write your own client. A client can also be run in this mode.
 
 ### More advanced usage
-
-To add an entry to the in-built HyperCat:
-
-```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --file --payload item1.json
-```
-
-To query the in-built HyperCat:
-
-```bash
-$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode get
-```
 
 You can write a binary such as a image to the database:
 
