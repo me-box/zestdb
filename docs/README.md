@@ -1,6 +1,6 @@
 ### Introduction
 
-A [CoAP](https://tools.ietf.org/html/rfc7252) inspired implementation of a RESTful-like experience implemented over [ZeroMQ](http://zeromq.org/).
+ZestDB is a light-weight IoT database. It currently provides the storage component within the [Databox Project](http://www.databoxproject.uk/). ZestDB is built using a [CoAP](https://tools.ietf.org/html/rfc7252) inspired protocol implemented over [ZeroMQ](http://zeromq.org/).
 
 The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows multiple clients to 'observe' a path to directly receive any data POSTed to specific paths. Communication can take place over TCP or over Interprocess communication (IPC).
 
