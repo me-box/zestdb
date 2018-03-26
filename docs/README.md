@@ -19,19 +19,19 @@ You can run a server and test client using [Docker](https://www.docker.com/). Ea
 #### starting server
 
 ```bash
-$ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm jptmoore/zest /app/zest/server.exe --secret-key-file example-server-key
+$ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm jptmoore/zestdb /app/zest/server.exe --secret-key-file example-server-key
 ```
 
 #### running client to post key/value data
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --payload '{"name":"dave", "age":30}' --mode post
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --payload '{"name":"dave", "age":30}' --mode post
 ```
 
 #### running client to get key/value data
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
 ```
 
 ### Observation
@@ -43,7 +43,7 @@ A typical use case for observation might consist of multiple deployed servers th
 #### running client to observe data POSTed to a resource path
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe
 ```
 
 The above will produce data written in a format such as:
@@ -56,7 +56,7 @@ The above will produce data written in a format such as:
 #### running client to observe audit information at a resource path
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe --observe-mode audit
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe --observe-mode audit
 ```
 
 The above will produce data written in a format such as:
@@ -71,7 +71,7 @@ As well as observing exact paths it is possible to use wildcard paths to receive
 #### running client to observe audit information using a wildcard path
 
 ```bash
-$ docker run --network host -it jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/*' --mode observe --observe-mode audit
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/*' --mode observe --observe-mode audit
 ```
 
 The example above is similar to the previous example but this time we will also receive audit information on any path that starts with '/kv/foo/'.
@@ -196,7 +196,7 @@ Interprocess communication (IPC) can take place between Docker containers. As wi
 #### starting server
 
 ```bash
-$ docker run -v /tmp:/tmp --ipc=host -d --name zest --rm jptmoore/zest /app/zest/server.exe --secret-key-file example-server-key --request-endpoint 'ipc:///tmp/request' --router-endpoint 'ipc:///tmp/router'
+$ docker run -v /tmp:/tmp --ipc=host -d --name zest --rm jptmoore/zestdb /app/zest/server.exe --secret-key-file example-server-key --request-endpoint 'ipc:///tmp/request' --router-endpoint 'ipc:///tmp/router'
 ```
 
 #### observing
@@ -204,7 +204,7 @@ $ docker run -v /tmp:/tmp --ipc=host -d --name zest --rm jptmoore/zest /app/zest
 We need to use both endpoints when observing a path.
 
 ```bash
-$ docker run -v /tmp:/tmp --ipc=host jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L44/W[wXL3<' --path '/kv/foo' --mode observe --request-endpoint 'ipc:///tmp/request' --router-endpoint 'ipc:///tmp/router'
+$ docker run -v /tmp:/tmp --ipc=host jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L44/W[wXL3<' --path '/kv/foo' --mode observe --request-endpoint 'ipc:///tmp/request' --router-endpoint 'ipc:///tmp/router'
 ```
 
 #### posting
@@ -212,7 +212,7 @@ $ docker run -v /tmp:/tmp --ipc=host jptmoore/zest /app/zest/client.exe --server
 We only need one endpoint to post or get data.
 
 ```bash
-$ docker run -v /tmp:/tmp --ipc=host jptmoore/zest /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --payload '{"name":"dave", "age":30}' --mode post --request-endpoint 'ipc:///tmp/request'
+$ docker run -v /tmp:/tmp --ipc=host jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --payload '{"name":"dave", "age":30}' --mode post --request-endpoint 'ipc:///tmp/request'
 ```
 
 
