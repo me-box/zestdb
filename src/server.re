@@ -533,26 +533,42 @@ let handle_get code options token ctx => {
   };
 };
 
-let handle_post code options token payload ctx => {
-  open Ack;
-  handle_content_format options >>= fun content_format => {
-    let uri_path = Protocol.Zest.get_option_value options 11;
-    let key = (uri_path, content_format);
-    if ((is_valid_token token uri_path "POST") == false) {
-      ack (Code 129); 
-    } else if (Observe.is_observed ctx.observe_ctx key) {
-        handle_post_write content_format uri_path payload ctx >>=
-          fun resp => {
-            /* we dont want to route bad requests */
-            if (resp != (Code 128)) {
-              route key code options payload ctx >>= fun () => ack resp;
-            } else {
-              ack resp;
-            };
+let handle_post_unobserved key token payload ctx => {
+  let (uri_path, content_format) = key;    
+  if (is_valid_token token uri_path "POST") {
+    handle_post_write content_format uri_path payload ctx >>= ack;
+  } else {
+    ack (Code 129);
+  };
+};
+
+let handle_post_observed key code options token payload ctx => {
+  let (uri_path, content_format) = key;  
+  if (is_valid_token token uri_path "POST") {
+    handle_post_write content_format uri_path payload ctx >>=
+      fun resp => {
+        /* we dont want to route bad requests */
+        if (resp != (Code 128)) {
+          route key code options payload ctx >>= fun () => ack resp;
+        } else {
+          ack resp;
         };
-    } else {
-      handle_post_write content_format uri_path payload ctx >>= ack;
-    };
+      };
+   } else {
+    ack (Code 129);
+  };
+};
+
+let handle_post code options token payload ctx => {
+  handle_content_format options >>= 
+    fun content_format => {
+      let uri_path = Protocol.Zest.get_option_value options 11;
+      let key = (uri_path, content_format);
+      if (Observe.is_observed ctx.observe_ctx key) {
+        handle_post_observed key code options token payload ctx;
+      } else {
+        handle_post_unobserved key token payload ctx;
+      };
   };
 };
 
