@@ -504,31 +504,57 @@ let handle_max_age options => {
 };
 
 
+let handle_get_observed key code options token ctx => {
+  let (uri_path, content_format) = key;      
+  if (is_valid_token token uri_path "GET") {
+    handle_get_read content_format uri_path ctx >>=
+      fun resp => {
+        /* we dont want to route bad requests */
+        if (resp != (Code 128)) {
+          route key code options "" ctx >>= fun () => ack resp;
+        } else {
+          ack resp;
+        };
+      }; 
+  } else {
+    ack (Ack.Code 129)
+  }; 
+};
+
+let handle_get_unobserved key token ctx => {
+  let (uri_path, content_format) = key;      
+  if (is_valid_token token uri_path "GET") {
+    handle_get_read content_format uri_path ctx >>= ack;
+   } else {
+    ack (Ack.Code 129)
+  };  
+};
+
+
+let handle_get_observation_request key token options observe_mode ctx => {
+  let (uri_path, content_format) = key;
+  if (is_valid_token token uri_path "GET") {
+    handle_max_age options >>= fun max_age => {
+      let uuid = create_uuid ();
+      Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
+        fun () => ack (Ack.Observe !router_public_key uuid);
+    };
+  } else {
+    ack (Ack.Code 129)
+  };
+};
+
 let handle_get code options token ctx => {
   handle_content_format options >>= fun content_format => {
     let uri_path = Protocol.Zest.get_option_value options 11;
+    let key = (uri_path, content_format);        
     let observe_mode = Protocol.Zest.observed options;
-    let key = (uri_path, content_format);
-    if ((is_valid_token token uri_path "GET") == false) {
-      ack (Ack.Code 129)
-    } else if ((observe_mode == "data") || (observe_mode == "audit")) {
-      handle_max_age options >>= fun max_age => {
-        let uuid = create_uuid ();
-        Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
-          fun x => ack (Ack.Observe !router_public_key uuid);
-      };
+    if ((observe_mode == "data") || (observe_mode == "audit")) {
+      handle_get_observation_request key token options observe_mode ctx
     } else if (Observe.is_observed ctx.observe_ctx key) {
-      handle_get_read content_format uri_path ctx >>=
-        fun resp => {
-          /* we dont want to route bad requests */
-          if (resp != (Code 128)) {
-            route key code options "" ctx >>= fun () => ack resp;
-          } else {
-            ack resp;
-          };
-      };
-    } else {      
-      handle_get_read content_format uri_path ctx >>= ack;
+      handle_get_observed key code options token ctx;
+    } else {
+      handle_get_unobserved key token ctx;
     };
   };
 };
