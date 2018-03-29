@@ -545,7 +545,7 @@ let handle_get_observation_request key code token options observe_mode ctx => {
     handle_max_age options >>= fun max_age => {
       let uuid = create_uuid ();
       Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
-        fun () => route (Ack.Observe "" "") key options "" ctx >>=
+        fun () => route (Ack.Observe !router_public_key uuid) key options "" ctx >>=
           fun () => ack (Ack.Observe !router_public_key uuid);
     };
   } else {
