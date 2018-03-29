@@ -68,7 +68,7 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 
 The above will produce data written in a format such as:
 
-```bash
+```
 #timestamp #uri-path #content-format #data
 1521554211213 /kv/foo/bar json {"room": "lounge", "value": 1} 
 ```
@@ -81,7 +81,7 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 
 The above will produce data written in a format with response codes based on the CoAP protocol:
 
-```bash
+```
 #timestamp #server-name #host-name #operation #uri-path #response-code
 1521553488680 Johns-MacBook-Pro.local Johns-MacBook-Pro.local POST /kv/foo/bar 65
 ```
