@@ -83,10 +83,12 @@ let create_data_payload_worker code options payload => {
 let create_data_payload status code options payload => {
   switch status {
   | Ack.Code 163 => Some payload;
+  | Ack.Observe _ => None;
   | Ack.Code 128 => None;
   | Ack.Code 129 => None;
   | Ack.Code 143 => None;
-  | _ => Some (create_data_payload_worker code options payload);
+  | Ack.Payload _ => None;
+  | Ack.Code _ => Some (create_data_payload_worker code options payload);
   };
 };
 
@@ -542,16 +544,18 @@ let handle_get_unobserved key token ctx => {
 };
 
 
-let handle_get_observation_request key token options observe_mode ctx => {
+let handle_get_observation_request key code token options observe_mode ctx => {
   let (uri_path, content_format) = key;
   if (is_valid_token token uri_path "GET") {
     handle_max_age options >>= fun max_age => {
       let uuid = create_uuid ();
       Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
-        fun () => ack (Ack.Observe !router_public_key uuid);
+        fun () => route (Ack.Observe "" "") key code options "" ctx >>=
+          fun () => ack (Ack.Observe !router_public_key uuid);
     };
   } else {
-    ack (Ack.Code 129)
+    route (Ack.Code 129) key code options "" ctx >>= 
+      fun () => ack (Ack.Code 129);
   };
 };
 
@@ -561,7 +565,7 @@ let handle_get code options token ctx => {
     let key = (uri_path, content_format);        
     let observe_mode = Protocol.Zest.observed options;
     if ((observe_mode == "data") || (observe_mode == "audit")) {
-      handle_get_observation_request key token options observe_mode ctx
+      handle_get_observation_request key code token options observe_mode ctx
     } else if (Observe.is_observed ctx.observe_ctx key) {
       handle_get_observed key code options token ctx;
     } else {

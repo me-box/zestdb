@@ -408,7 +408,8 @@ let observe_test ctx => {
                     fun () => close_socket deal_soc |> Lwt.return;
                 };
             };
-          | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
+          | Response.Error msg => close_socket req_soc |> 
+              fun () => Lwt_io.printf "=> %s\n" msg;
           | _ => failwith "unhandled response";
           };
 
