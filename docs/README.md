@@ -79,14 +79,12 @@ The above will produce data written in a format such as:
 $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe --observe-mode audit
 ```
 
-The above will produce data written in a format such as:
+The above will produce data written in a format with response codes based on the CoAP protocol:
 
 ```bash
 #timestamp #server-name #host-name #operation #uri-path #response-code
 1521553488680 Johns-MacBook-Pro.local Johns-MacBook-Pro.local POST /kv/foo/bar 65
 ```
-
-The response codes are based on the CoAP protocol.
 
 As well as observing exact paths it is possible to use wildcard paths to receive information on a range of paths.
 
