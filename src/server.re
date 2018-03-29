@@ -43,72 +43,88 @@ let get_time () => {
   int_of_float t_ms;
 };
 
-let create_audit_payload code options payload => {
-  if (code == 163) {
-    payload;
-  } else {
-    let uri_path = Protocol.Zest.get_uri_path options;
-    let uri_host = Protocol.Zest.get_uri_host options;
-    let op = switch code {
-      | 1 => "GET"; 
-      | 2 => "POST";
-      | _ => "UNKNOWN";
-    };
-    let timestamp = Printf.sprintf "%d" (get_time ()); 
-    let server = !identity;
-    let entry = Printf.sprintf "%s %s %s %s %s" timestamp server uri_host op uri_path;
-    Protocol.Zest.create_ack_payload 69 entry;
+let create_audit_payload_worker code options resp_code => {
+  open Protocol.Zest;
+  let uri_path = get_uri_path options;
+  let uri_host = get_uri_host options;
+  let op = switch code {
+    | 1 => "GET"; 
+    | 2 => "POST";
+    | _ => "UNKNOWN";
+  };
+  let timestamp = get_time (); 
+  let server = !identity;
+  create_ack_payload 69 (Printf.sprintf "%d %s %s %s %s %d" timestamp server uri_host op uri_path resp_code);
+};
+
+let create_audit_payload status code options payload => {
+  switch status {
+  | Ack.Code 163 => Some payload;
+  | Ack.Code n => Some (create_audit_payload_worker code options n);
+  | Ack.Payload _ => Some (create_audit_payload_worker code options 69); 
+  | Ack.Observe _ => Some (create_audit_payload_worker code options 69); 
   };
 };
 
-let create_data_payload code options payload => {
-  if (code == 163) {
-    payload;
-  } else {
-    let uri_path = Protocol.Zest.get_uri_path options;
-    let content_format = switch (Protocol.Zest.get_content_format options) {
-      | 0 => "text"; 
-      | 50 => "json";
-      | 42 => "binary";
-      | _ => "unknown";
-    };    
-    let timestamp = Printf.sprintf "%d" (get_time ()); 
-    let entry = Printf.sprintf "%s %s %s %s" timestamp uri_path content_format payload;
-    Protocol.Zest.create_ack_payload 69 entry;
+
+let create_data_payload_worker code options payload => {
+  let uri_path = Protocol.Zest.get_uri_path options;
+  let content_format = switch (Protocol.Zest.get_content_format options) {
+    | 0 => "text"; 
+    | 50 => "json";
+    | 42 => "binary";
+    | _ => "unknown";
+  };    
+  let timestamp = get_time (); 
+  let entry = Printf.sprintf "%d %s %s %s" timestamp uri_path content_format payload;
+  Protocol.Zest.create_ack_payload 69 entry;
+};
+
+let create_data_payload status code options payload => {
+  switch status {
+  | Ack.Code 163 => Some payload;
+  | Ack.Code 128 => None;
+  | Ack.Code 129 => None;
+  | Ack.Code 143 => None;
+  | _ => Some (create_data_payload_worker code options payload);
   };
 };
 
-let create_router_payload mode code options payload => {
+let create_router_payload mode status code options payload => {
   switch mode {
-  | "data" => create_data_payload code options payload;
-  | "audit" => create_audit_payload code options payload;
-  | _ => Protocol.Zest.create_ack 128;
+  | "data" => create_data_payload status code options payload;
+  | "audit" => create_audit_payload status code options payload;
+  | _ => Some (Protocol.Zest.create_ack 128);
   };
 };
 
-let route_message alist ctx code options payload => {
+let route_message alist ctx status code options payload => {
   open Logger;
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry,mode), ...rest] => {
-          let payload' = (create_router_payload mode code options payload);
-          Protocol.Zest.route ctx.zmq_ctx ident payload' >>= fun () =>
-            debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload') ident expiry mode) >>= 
-              fun () => loop rest;
+          switch (create_router_payload mode status code options payload) {
+          | Some payload' => {
+              Protocol.Zest.route ctx.zmq_ctx ident payload' >>= fun () =>
+                debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload') ident expiry mode) >>= 
+                  fun () => loop rest;
+            }
+          | None => loop rest;
+          };
         };
       };    
   };
   loop alist;
 };
 
-let route key code options payload ctx => {
-  route_message (Observe.get ctx.observe_ctx key) ctx code options payload;
+let route status key code options payload ctx => {
+  route_message (Observe.get ctx.observe_ctx key) ctx status code options payload; 
 };
 
 let handle_expire ctx => {
   Observe.expire ctx.observe_ctx >>=
-    fun uuids => route_message uuids ctx 163 [||] (Protocol.Zest.create_ack 163);
+    fun uuids => route_message uuids ctx (Ack.Code 163) 0 [||] (Protocol.Zest.create_ack 163);
 };
 
 
@@ -508,16 +524,11 @@ let handle_get_observed key code options token ctx => {
   let (uri_path, content_format) = key;      
   if (is_valid_token token uri_path "GET") {
     handle_get_read content_format uri_path ctx >>=
-      fun resp => {
-        /* we dont want to route bad requests */
-        if (resp != (Code 128)) {
-          route key code options "" ctx >>= fun () => ack resp;
-        } else {
-          ack resp;
-        };
-      }; 
+      fun resp => route resp key code options "" ctx >>= 
+        fun () => ack resp;
   } else {
-    ack (Ack.Code 129)
+    route (Ack.Code 129) key code options "" ctx >>= 
+      fun () => ack (Ack.Code 129);
   }; 
 };
 
@@ -572,16 +583,11 @@ let handle_post_observed key code options token payload ctx => {
   let (uri_path, content_format) = key;  
   if (is_valid_token token uri_path "POST") {
     handle_post_write content_format uri_path payload ctx >>=
-      fun resp => {
-        /* we dont want to route bad requests */
-        if (resp != (Code 128)) {
-          route key code options payload ctx >>= fun () => ack resp;
-        } else {
-          ack resp;
-        };
-      };
+      fun resp => route resp key code options payload ctx >>= 
+        fun () => ack resp;
    } else {
-    ack (Code 129);
+    route (Ack.Code 129) key code options payload ctx >>= 
+      fun () => ack (Code 129);
   };
 };
 
@@ -676,7 +682,7 @@ let set_token_key file => {
 
 let cleanup_router ctx => {
   Observe.get_all ctx.observe_ctx |>
-    fun uuids => route_message uuids ctx 163 [||] (Protocol.Zest.create_ack 163) >>=
+    fun uuids => route_message uuids ctx (Ack.Code 163) 0 [||] (Protocol.Zest.create_ack 163) >>=
       fun () => Lwt_unix.sleep 1.0;
 };
 
