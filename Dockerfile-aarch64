@@ -24,7 +24,8 @@ ADD build.sh .
 
 # setup ocaml
 RUN sudo apk add --no-cache --virtual .build-deps alpine-sdk bash ncurses-dev m4 perl gmp-dev zlib-dev libsodium-dev opam zeromq-dev \
-&& opam init \ 
+&& opam init --comp 4.04.2 \
+&& opam update \
 && opam pin add -n sodium https://github.com/me-box/ocaml-sodium.git#with_auth_hmac256 \
 && opam install -y reason.1.13.7 lwt tls sodium macaroons ezirmin bitstring ppx_bitstring uuidm lwt-zmq bos oml \
 && sudo chmod +x build.sh && sync \
