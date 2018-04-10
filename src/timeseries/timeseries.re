@@ -287,7 +287,13 @@ let number_of_records_in_memory ctx k => {
   exists ctx.membuf k ? length ctx.membuf k : Lwt.return 0;
 };
 
-let length ctx::ctx id::k => {
+
+let length_of_json result => {
+  open Ezjsonm;
+  dict [("length", int result)] |> Lwt.return;
+};
+
+let length_worker ctx::ctx id::k => {
   open Ezjsonm;
   Index.get ctx.index k >>= fun data =>
     switch data {
@@ -295,11 +301,21 @@ let length ctx::ctx id::k => {
     | None => 0 |> Lwt.return;
     } >>= fun disk => 
       number_of_records_in_memory ctx k >>= 
-        fun mem => (disk + mem) |> fun result =>
-          dict [("length", int result)] |> Lwt.return;
+        fun mem => Lwt.return (disk + mem);
 };
 
+let length ctx::ctx id::k => {
+  length_worker ctx::ctx id::k >>= 
+    fun result => length_of_json result;
+};
 
+let lengths ctx::ctx id_list::id_list => {
+  open Ezjsonm;
+  Lwt_list.fold_left_s (fun acc id => 
+    length_worker ctx::ctx id::id >>=
+      fun x => x + acc |> Lwt.return) 0 id_list >>=
+        fun result => length_of_json result;
+};
 
 let make_filter_elt k tup mode => {
   (mode, make_key k tup);

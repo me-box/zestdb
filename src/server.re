@@ -241,9 +241,14 @@ let handle_get_read_ts_blob_range id t1 t2 ctx => {
   Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id::id from::(int_of_string t1) to::(int_of_string t2));
 };
 
+
 let handle_get_read_ts_numeric_length id ctx => {
   open Response;
-  Json (Numeric_timeseries.length ctx::ctx.numts_ctx id::id);
+  switch (String.split_on_char ',' id) {
+  | [] => Empty;
+  | [id] => Json (Numeric_timeseries.length ctx::ctx.numts_ctx id::id);
+  | [x, ...xs] => Json (Numeric_timeseries.lengths ctx::ctx.numts_ctx id_list::[x, ...xs]);
+  };
 };
 
 let handle_get_read_ts_blob_length id ctx => {
