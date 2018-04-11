@@ -230,8 +230,7 @@ let flush_memory_read_from_disk ctx k n mode => {
   Lwt_io.printf "flush_memory_read_from_disk\n" >>= fun () =>  
     read_memory_all ctx k >>=
       fun shard => flush_series ctx k shard >>=
-        fun () => read_disk ctx k n mode >>= 
-          fun disk => return_data sort::mode disk;
+        fun () => read_disk ctx k n mode;
 };
 
 let read_memory_then_disk ctx k n mode => {
@@ -239,37 +238,47 @@ let read_memory_then_disk ctx k n mode => {
   read_memory ctx k n mode >>= fun (leftover, mem) => {
     if (leftover > 0) {
       read_disk ctx k leftover mode >>= fun disk =>
-        List.append mem disk |> return_data sort::mode;
+        List.append mem disk |> Lwt.return;
     } else {
-      return_data sort::`None mem;
+      mem |> Lwt.return;
     };
   };
 };
 
-let read_last ctx::ctx id::k n::n => {
+let read_last_worker ctx::ctx id::k n::n => {
   if (Membuf.exists ctx.membuf k) {
     switch (Membuf.get_ascending_series ctx.membuf k) {
     | true => read_memory_then_disk ctx k n `Last;
     | false => flush_memory_read_from_disk ctx k n `Last;
     };
     } else {
-      read_disk ctx k n `Last >>= fun disk => return_data sort::`Last disk;
+      read_disk ctx k n `Last;
     };
+};
+
+let read_last ctx::ctx id::k n::n => {
+  read_last_worker ctx::ctx id::k n::n >>=
+    fun result => return_data sort::`Last result;
 };
 
 let read_latest ctx::ctx id::k => {
   read_last ctx k 1;
 };
 
-let read_first ctx::ctx id::k n::n => {
+let read_first_worker ctx::ctx id::k n::n => {
   if (Membuf.exists ctx.membuf k) {    
     switch (Membuf.get_descending_series ctx.membuf k) { 
     | true => read_memory_then_disk ctx k n `First;
     | false => flush_memory_read_from_disk ctx k n `First;
     };
     } else {
-      read_disk ctx k n `First >>= fun disk => return_data sort::`First disk;
+      read_disk ctx k n `First;
   };
+};
+
+let read_first ctx::ctx id::k n::n => {
+  read_first_worker ctx::ctx id::k n::n >>=
+    fun result => return_data sort::`First result;
 };
 
 let read_earliest ctx::ctx id::k => {
@@ -367,10 +376,15 @@ let read_since_memory ctx k ts => {
     fun data => filter_since ts data |> Lwt.return;
 };
 
-let read_since ctx::ctx id::k from::ts => {
+let read_since_worker ctx::ctx id::k from::ts => {
   read_since_memory ctx k ts >>= fun mem =>
     read_since_disk ctx k ts >>= fun disk => 
-      List.append mem disk |> return_data sort::`Last;
+      List.append mem disk |> Lwt.return;
+};
+
+let read_since ctx::ctx id::k from::ts => {
+  read_since_worker ctx::ctx id::k from::ts >>=
+    fun result => return_data sort::`Last result;
 };
 
 
@@ -378,8 +392,13 @@ let filter_until ts lis => {
   List.filter (fun (t,_) => t <= ts) lis;
 };
 
-let read_range ctx::ctx id::k from::t1 to::t2 => {
+let read_range_worker ctx::ctx id::k from::t1 to::t2 => {
   read_since_memory ctx k t1 >>= fun mem =>
     read_since_disk ctx k t1 >>= fun disk =>
-      List.append mem disk |> filter_until t2 |> return_data sort::`Last;
+      List.append mem disk |> filter_until t2 |> Lwt.return;
+};
+
+let read_range ctx::ctx id::k from::t1 to::t2 => {
+  read_range_worker ctx::ctx id::k from::t1 to::t2 >>=
+    fun result => return_data sort::`Last result;
 };
