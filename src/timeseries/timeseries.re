@@ -203,7 +203,7 @@ let read_disk ctx k n mode =>   {
           if (leftover > 0) {
             loop leftover (cons shard acc) rest;
           } else {
-            cons (take n shard) acc |> return_data;
+            cons (take n (sort_result mode shard)) acc |> return_data;
           };
         };              
     };
