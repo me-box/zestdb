@@ -193,17 +193,16 @@ let log_shard shard => {
 
 let read_disk ctx k n mode =>   {
   open List;
-  let return_data lis => flatten lis |> Lwt.return;
   let rec loop n acc lis => {
     switch lis {
-    | [] => return_data acc;
+    | [] => acc |> Lwt.return;
     | [tup, ...rest] =>
         Shard.get ctx.shard (make_key k tup) >>= fun shard => {
           let leftover = (n - length shard); 
           if (leftover > 0) {
-            loop leftover (cons shard acc) rest;
+            loop leftover (rev_append shard acc) rest;
           } else {
-            cons (take n (sort_result mode shard)) acc |> return_data;
+            rev_append (take n (sort_result mode shard)) acc |> Lwt.return;
           };
         };              
     };
