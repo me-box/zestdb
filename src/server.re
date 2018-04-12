@@ -201,10 +201,21 @@ let handle_get_read_ts_blob_last id n ctx => {
 let handle_get_read_ts_numeric_first id n func ctx => {
   open Response;
   open Numeric_timeseries;
-  let apply0 = Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
-  let apply1 f => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
-  let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
-  apply func apply0 apply1 apply2;    
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => {
+        let apply0 = Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
+        let apply1 f => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
+        let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
+        apply func apply0 apply1 apply2;  
+      };
+    | [x, ...xs] => {
+        let apply0 = Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
+        let apply1 f => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f]);
+        let apply2 f1 f2 => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f1, f2]);
+        apply func apply0 apply1 apply2;  
+      };
+    };
 };
 
 let handle_get_read_ts_blob_first id n ctx => {

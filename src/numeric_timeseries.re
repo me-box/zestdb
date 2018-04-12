@@ -32,6 +32,10 @@ let read_first ctx::branch id::id n::n fn::fn => {
   Timeseries.read_first ctx::branch id::id n::n >>= apply fn;
 };
 
+let read_firsts ctx::branch id_list::id_list n::n fn::fn => {
+  Timeseries.read_firsts ctx::branch id_list::id_list n::n >>= apply fn;
+};
+
 let read_earliest ctx::branch id::id fn::fn => {
   Timeseries.read_earliest ctx::branch id::id >>= apply fn;
 };
