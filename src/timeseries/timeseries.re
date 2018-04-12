@@ -352,8 +352,7 @@ let read_since_disk_worker ctx k ts status => {
 let handle_read_since_disk ctx ts lis => {
   Lwt_list.fold_left_s (fun acc (status, key) => 
     read_since_disk_worker ctx key ts status >>= 
-      fun x => List.cons x acc |> Lwt.return) [] lis >>= 
-        fun lis' => List.flatten lis' |> Lwt.return;
+      fun x => List.rev_append x acc |> Lwt.return) [] lis;
 };
 
 
