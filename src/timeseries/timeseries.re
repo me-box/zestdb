@@ -391,7 +391,7 @@ let read_since_memory ctx k ts => {
 let read_since_worker ctx::ctx id::k from::ts => {
   read_since_memory ctx k ts >>= fun mem =>
     read_since_disk ctx k ts >>= fun disk => 
-      List.append mem disk |> Lwt.return;
+      List.rev_append mem disk |> Lwt.return;
 };
 
 let read_since ctx::ctx id::k from::ts => {
