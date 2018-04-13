@@ -146,7 +146,7 @@ let apply path apply0 apply1 apply2 => {
   open Numeric;
   open Filter;
   switch path {
-    | [] => apply0;
+    | [] => apply0 ();
     | ["sum"] => apply1 sum;
     | ["count"] => apply1 count;
     | ["min"] => apply1 min;
@@ -180,13 +180,13 @@ let handle_get_read_ts_numeric_earliest id func ctx => {
   switch (String.split_on_char ',' id) {
     | [] => Empty;
     | [id] => {   
-        let apply0 = Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
+        let apply0 () => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
         let apply1 f => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[f]);
         let apply2 f1 f2 => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[f1, f2]);
         apply func apply0 apply1 apply2;
       };
     | [x, ...xs] => {
-        let apply0 = Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
+        let apply0 () => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
         let apply1 f => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f]);
         let apply2 f1 f2 => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f1, f2]);
         apply func apply0 apply1 apply2;
@@ -199,13 +199,13 @@ let handle_get_read_ts_numeric_latest id func ctx => {
   switch (String.split_on_char ',' id) {
     | [] => Empty;
     | [id] => {
-        let apply0 = Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[]);
+        let apply0 () => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[]);
         let apply1 f => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[f]);
         let apply2 f1 f2 => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[f1, f2]);
         apply func apply0 apply1 apply2; 
       };   
     | [x, ...xs] => {
-        let apply0 = Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
+        let apply0 () => Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
         let apply1 f => Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f]);
         let apply2 f1 f2 => Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f1, f2]);
         apply func apply0 apply1 apply2; 
@@ -219,13 +219,13 @@ let handle_get_read_ts_numeric_last id n func ctx => {
   switch (String.split_on_char ',' id) {
     | [] => Empty;
     | [id] => {
-        let apply0 = Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
+        let apply0 () => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
         let apply1 f => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
         let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
         apply func apply0 apply1 apply2;  
       };
     | [x, ...xs] => {
-        let apply0 = Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
+        let apply0 () => Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
         let apply1 f => Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f]);
         let apply2 f1 f2 => Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f1, f2]);
         apply func apply0 apply1 apply2;  
@@ -244,13 +244,13 @@ let handle_get_read_ts_numeric_first id n func ctx => {
   switch (String.split_on_char ',' id) {
     | [] => Empty;
     | [id] => {
-        let apply0 = Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
+        let apply0 () => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
         let apply1 f => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
         let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
         apply func apply0 apply1 apply2;  
       };
     | [x, ...xs] => {
-        let apply0 = Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
+        let apply0 () => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
         let apply1 f => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f]);
         let apply2 f1 f2 => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f1, f2]);
         apply func apply0 apply1 apply2;  
@@ -266,7 +266,7 @@ let handle_get_read_ts_blob_first id n ctx => {
 let handle_get_read_ts_numeric_since id t func ctx => {
   open Response;
   open Numeric_timeseries;
-  let apply0 = Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
+  let apply0 () => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
   let apply1 f => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f]);
   let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);   
   apply func apply0 apply1 apply2;
@@ -281,7 +281,7 @@ let handle_get_read_ts_blob_since id t ctx => {
 let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
   open Response;  
   open Numeric_timeseries;
-  let apply0 = Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+  let apply0 () => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
   let apply1 f => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
   let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
   apply func apply0 apply1 apply2;
