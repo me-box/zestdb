@@ -243,7 +243,7 @@ let read_memory_then_disk ctx k n mode => {
   read_memory ctx k n mode >>= fun (leftover, mem) => {
     if (leftover > 0) {
       read_disk ctx k leftover mode >>= fun disk =>
-        List.append mem disk |> Lwt.return;
+        List.rev_append mem disk |> Lwt.return;
     } else {
       mem |> Lwt.return;
     };
