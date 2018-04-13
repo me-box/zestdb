@@ -136,15 +136,6 @@ let handle_get_read_ts_blob_latest id ctx => {
 };
 
 
-let handle_get_read_ts_numeric_earliest id ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
-    | [x, ...xs] => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
-    };  
-};
-
 let handle_get_read_ts_blob_earliest id ctx => {
   open Response;
   Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id::id);
@@ -183,6 +174,25 @@ let apply path apply0 apply1 apply2 => {
     };  
 };
 
+
+let handle_get_read_ts_numeric_earliest id func ctx => {
+  open Response;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => {   
+        let apply0 = Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
+        let apply1 f => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[f]);
+        let apply2 f1 f2 => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[f1, f2]);
+        apply func apply0 apply1 apply2;
+      };
+    | [x, ...xs] => {
+        let apply0 = Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
+        let apply1 f => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f]);
+        let apply2 f1 f2 => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f1, f2]);
+        apply func apply0 apply1 apply2;
+      };
+    };  
+};
 
 let handle_get_read_ts_numeric_latest id func ctx => {
   open Response;
@@ -307,7 +317,7 @@ let handle_get_read_ts uri_path ctx => {
   | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_blob_latest id ctx;
   | ["", "ts", id, "latest", ...func] => handle_get_read_ts_numeric_latest id func ctx;
   | ["", "ts", "blob", id, "earliest"] => handle_get_read_ts_blob_earliest id ctx;
-  | ["", "ts", id, "earliest"] => handle_get_read_ts_numeric_earliest id ctx;
+  | ["", "ts", id, "earliest", ...func] => handle_get_read_ts_numeric_earliest id func ctx;
   | ["", "ts", "blob", id, "last", n] => handle_get_read_ts_blob_last id n ctx;
   | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ctx;
   | ["", "ts", "blob", id, "first", n] => handle_get_read_ts_blob_first id n ctx;
