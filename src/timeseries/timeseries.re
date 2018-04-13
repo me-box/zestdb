@@ -277,6 +277,10 @@ let read_latest ctx::ctx id::k => {
   read_last ctx k 1;
 };
 
+let read_latests ctx::ctx id_list::id_list => {
+  read_lasts ctx::ctx id_list::id_list n::1
+};
+
 let read_first_worker ctx::ctx id::k n::n => {
   if (Membuf.exists ctx.membuf k) {    
     switch (Membuf.get_descending_series ctx.membuf k) { 
