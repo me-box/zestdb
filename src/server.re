@@ -142,8 +142,15 @@ let handle_get_read_ts_blob_latest id ctx => {
 
 
 let handle_get_read_ts_numeric_earliest id ctx => {
-  open Response;  
-  Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
+  open Response;
+  
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
+    | [x, ...xs] => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
+    };
+
+  
 };
 
 let handle_get_read_ts_blob_earliest id ctx => {

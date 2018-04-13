@@ -296,7 +296,11 @@ let read_firsts ctx::ctx id_list::id_list n::n => {
 
 let read_earliest ctx::ctx id::k => {
   read_first ctx k 1;
-}; 
+};
+
+let read_earliests ctx::ctx id_list::id_list => {
+  read_firsts ctx::ctx id_list::id_list n::1
+};
 
 let number_of_records_on_disk ctx k lis => {
   Lwt_list.fold_left_s (fun acc x => 
