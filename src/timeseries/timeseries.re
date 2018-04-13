@@ -18,7 +18,6 @@ let create path_to_db::path max_buffer_size::mbs shard_size::ss => {
   };
 };
 
-
 let shard_range lis => {
   open List;
   let cmp x y => x > y ? 1 : -1;  
@@ -109,14 +108,21 @@ let handle_shard ctx k shard => {
   };
 };
 
+let init_disk_range ctx k => {
+  Index.range ctx.index k >>=
+    fun range => switch range {
+    | None => Membuf.set_disk_range ctx.membuf k (Some (max_int,min_int));
+    | Some bounds => Membuf.set_disk_range ctx.membuf k (Some bounds);
+    };
+};
 
-let validate_series ctx k t => {
+let rec validate_series ctx k t => {
   Membuf.get_disk_range ctx.membuf k >>= 
     fun range => switch range {
-      | None => Lwt.return_unit;
-      | Some (lb,ub) =>
-          t < ub ? Membuf.set_ascending_series ctx.membuf k false : Lwt.return_unit >>= 
-            fun () => t > lb ? Membuf.set_descending_series ctx.membuf k false : Lwt.return_unit;
+      | None => init_disk_range ctx k >>= fun () => validate_series ctx k t;
+      | Some (lb,ub) when t < ub => Membuf.set_ascending_series ctx.membuf k false;
+      | Some (lb,ub) when t > lb => Membuf.set_descending_series ctx.membuf k false;
+      | Some (lb,ub) => Lwt.return_unit;
       };
 };
 
