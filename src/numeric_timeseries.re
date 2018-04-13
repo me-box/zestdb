@@ -24,6 +24,10 @@ let read_last ctx::branch id::id n::n fn::fn => {
   Timeseries.read_last ctx::branch id::id n::n >>= apply fn;
 };
 
+let read_lasts ctx::branch id_list::id_list n::n fn::fn => {
+  Timeseries.read_lasts ctx::branch id_list::id_list n::n >>= apply fn;
+};
+
 let read_latest ctx::branch id::id fn::fn => {
   Timeseries.read_latest ctx::branch id::id >>= apply fn;
 };

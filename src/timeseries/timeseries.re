@@ -266,6 +266,13 @@ let read_last ctx::ctx id::k n::n => {
     fun result => return_data sort::`Last result;
 };
 
+let read_lasts ctx::ctx id_list::id_list n::n => {
+  Lwt_list.fold_left_s (fun acc id => 
+    read_last_worker ctx::ctx id::id n::n >>=
+      fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
+        fun result => return_data sort::`First result;   
+};
+
 let read_latest ctx::ctx id::k => {
   read_last ctx k 1;
 };
@@ -287,7 +294,6 @@ let read_first ctx::ctx id::k n::n => {
 };
 
 let read_firsts ctx::ctx id_list::id_list n::n => {
-  open Ezjsonm;
   Lwt_list.fold_left_s (fun acc id => 
     read_first_worker ctx::ctx id::id n::n >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
