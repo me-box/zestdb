@@ -6,6 +6,8 @@ let push : t => (int, Ezjsonm.t) => unit;
 let pop : t => (int, Ezjsonm.t);
 let length : t => int;
 let to_list : t => list (int, Ezjsonm.t);
+let is_ascending_queue : t => bool;
+let is_descending_queue : t => bool;
 let clear : t => unit;
 let set_disk_range : t => option (int, int) => unit;
 let get_disk_range : t => option (int, int);

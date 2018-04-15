@@ -7,6 +7,8 @@ let read : t => string => Lwt.t (int, Ezjsonm.t);
 let length : t => string => Lwt.t int;
 let exists : t => string => bool;
 let to_list : t => string => Lwt.t (list (int, Ezjsonm.t));
+let is_ascending_queue : t => string => bool;
+let is_descending_queue : t => string => bool;
 let serialise : t => Lwt.t (list (string, (list (int, Ezjsonm.t))));
 let empty : t => Lwt.t unit;
 let empty_series : t => string => Lwt.t unit;

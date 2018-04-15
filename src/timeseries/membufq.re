@@ -33,6 +33,27 @@ let to_list ctx => {
   Queue.fold (fun x y => List.cons y x) [] ctx.q;
 };
 
+
+let is_ascending_queue ctx => {
+  let rec is_sorted lis => {
+    switch lis {
+    | [x, y, ...l] => x <= y && is_sorted [y, ...l]
+    | _ => true;
+    };
+  };
+  is_sorted (to_list ctx);
+};
+
+let is_descending_queue ctx => {
+  let rec is_sorted lis => {
+    switch lis {
+    | [x, y, ...l] => x >= y && is_sorted [y, ...l]
+    | _ => true;
+    };
+  };
+  is_sorted (to_list ctx);
+};
+
 let clear ctx => {
   Queue.clear ctx.q;
 };

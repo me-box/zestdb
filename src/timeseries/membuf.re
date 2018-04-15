@@ -72,6 +72,16 @@ let to_list ctx id => {
   Membufq.to_list q |> Lwt.return;  
 };
 
+let is_ascending_queue ctx id => {
+  let q = Membufhash.get ctx.ht id;
+  Membufq.is_ascending_queue q;  
+};
+
+let is_descending_queue ctx id => {
+  let q = Membufhash.get ctx.ht id;
+  Membufq.is_descending_queue q;  
+};
+
 let set_disk_range ctx id range => {
   let q = Membufhash.get ctx.ht id;
   Membufq.set_disk_range q range |> Lwt.return;
