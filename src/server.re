@@ -132,13 +132,21 @@ let handle_expire ctx => {
 
 let handle_get_read_ts_blob_latest id ctx => {
   open Response;
-  Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx id::id);
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx id::id);
+    | [x, ...xs] => Json (Blob_timeseries.read_latests ctx::ctx.blobts_ctx id_list::[x, ...xs]);
+  };
 };
 
 
 let handle_get_read_ts_blob_earliest id ctx => {
   open Response;
-  Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id::id);
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id::id);
+    | [x, ...xs] => Json (Blob_timeseries.read_earliests ctx::ctx.blobts_ctx id_list::[x, ...xs]);
+  };
 };
 
 let apply path apply0 apply1 apply2 => {
@@ -234,8 +242,12 @@ let handle_get_read_ts_numeric_last id n func ctx => {
 };
 
 let handle_get_read_ts_blob_last id n ctx => {
-  open Response;  
-  Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx id::id n::(int_of_string n));
+  open Response;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx id::id n::(int_of_string n));
+    | [x, ...xs] => Json (Blob_timeseries.read_lasts ctx::ctx.blobts_ctx id_list::[x, ...xs] n::(int_of_string n));
+  };
 };
 
 let handle_get_read_ts_numeric_first id n func ctx => {
@@ -259,8 +271,12 @@ let handle_get_read_ts_numeric_first id n func ctx => {
 };
 
 let handle_get_read_ts_blob_first id n ctx => {
-  open Response;  
-  Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx id::id n::(int_of_string n));
+  open Response;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx id::id n::(int_of_string n));
+    | [x, ...xs] => Json (Blob_timeseries.read_firsts ctx::ctx.blobts_ctx id_list::[x, ...xs] n::(int_of_string n));
+  };
 };
 
 let handle_get_read_ts_numeric_since id t func ctx => {
@@ -284,8 +300,12 @@ let handle_get_read_ts_numeric_since id t func ctx => {
 };
 
 let handle_get_read_ts_blob_since id t ctx => {
-  open Response;  
-  Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx id::id from::(int_of_string t));
+  open Response;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx id::id from::(int_of_string t));
+    | [x, ...xs] => Json (Blob_timeseries.read_sinces ctx::ctx.blobts_ctx id_list::[x, ...xs] from::(int_of_string t));
+  };
 };
 
 
@@ -310,8 +330,12 @@ let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
 };
 
 let handle_get_read_ts_blob_range id t1 t2 ctx => {
-  open Response;  
-  Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id::id from::(int_of_string t1) to::(int_of_string t2));
+  open Response;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id::id from::(int_of_string t1) to::(int_of_string t2));
+    | [x, ...xs] => Json (Blob_timeseries.read_ranges ctx::ctx.blobts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2));
+  };
 };
 
 
@@ -326,7 +350,11 @@ let handle_get_read_ts_numeric_length id ctx => {
 
 let handle_get_read_ts_blob_length id ctx => {
   open Response;
-  Json (Blob_timeseries.length ctx::ctx.blobts_ctx id::id);
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => Json (Blob_timeseries.length ctx::ctx.blobts_ctx id::id);
+    | [x, ...xs] => Json (Blob_timeseries.lengths ctx::ctx.blobts_ctx id_list::[x, ...xs]);
+  };
 };
 
 let handle_get_read_ts uri_path ctx => {
