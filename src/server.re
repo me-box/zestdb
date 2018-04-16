@@ -292,10 +292,21 @@ let handle_get_read_ts_blob_since id t ctx => {
 let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
   open Response;  
   open Numeric_timeseries;
-  let apply0 () => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
-  let apply1 f => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
-  let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
-  apply func apply0 apply1 apply2;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => {
+        let apply0 () => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+        let apply1 f => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+        let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
+        apply func apply0 apply1 apply2;
+      };
+    | [x, ...xs] => {
+        let apply0 () => Json (read_ranges ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+        let apply1 f => Json (read_ranges ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+        let apply2 f1 f2 => Json (read_ranges ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
+        apply func apply0 apply1 apply2;
+      };
+    };
 };
 
 let handle_get_read_ts_blob_range id t1 t2 ctx => {

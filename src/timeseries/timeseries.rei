@@ -12,6 +12,7 @@ let read_firsts : ctx::t => id_list::list string => n::int => Lwt.t Ezjsonm.t;
 let read_since : ctx::t => id::string => from::int => Lwt.t Ezjsonm.t;
 let read_sinces : ctx::t => id_list::list string => from::int => Lwt.t Ezjsonm.t;
 let read_range : ctx::t => id::string => from::int => to::int => Lwt.t Ezjsonm.t;
+let read_ranges : ctx::t => id_list::list string => from::int => to::int => Lwt.t Ezjsonm.t;
 let read_earliest : ctx::t => id::string => Lwt.t Ezjsonm.t;
 let read_earliests : ctx::t => id_list::list string => Lwt.t Ezjsonm.t;
 let length : ctx::t => id::string => Lwt.t Ezjsonm.t;

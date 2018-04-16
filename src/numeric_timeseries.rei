@@ -12,4 +12,5 @@ let read_earliests : ctx::t => id_list::list string => fn::list (Ezjsonm.t => Ez
 let read_since : ctx::t => id::string => from::int => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;
 let read_sinces : ctx::t => id_list::list string => from::int => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;
 let read_range : ctx::t => id::string => from::int => to::int => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;
+let read_ranges : ctx::t => id_list::list string => from::int => to::int => fn::list (Ezjsonm.t => Ezjsonm.t) => Lwt.t Ezjsonm.t;
 let is_valid : Ezjsonm.value => bool;

@@ -435,3 +435,10 @@ let read_range ctx::ctx id::k from::t1 to::t2 => {
   read_range_worker ctx::ctx id::k from::t1 to::t2 >>=
     fun result => return_data sort::`Last result;
 };
+
+let read_ranges ctx::ctx id_list::id_list from::t1 to::t2 => {
+  Lwt_list.fold_left_s (fun acc id => 
+    read_range_worker ctx::ctx id::id from::t1 to::t2 >>=
+      fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
+        fun result => return_data sort::`Last result;   
+};
