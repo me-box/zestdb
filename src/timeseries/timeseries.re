@@ -269,7 +269,7 @@ let read_lasts ctx::ctx id_list::id_list n::n => {
   Lwt_list.fold_left_s (fun acc id => 
     read_last_worker ctx::ctx id::id n::n >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
-        fun result => return_data sort::`First result;   
+        fun result => return_data sort::`Last result;   
 };
 
 let read_latest ctx::ctx id::k => {
