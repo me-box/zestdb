@@ -85,7 +85,7 @@ let handle_shard_overlap_worker ctx k shard shard_lis overlap_list => {
       let key = make_key k new_range;
       Lwt_log_core.debug_f "Adding shard with key:%s" (string_of_key key) >>= fun () =>
         Index.update ctx.index k new_range overlap_list >>= fun bounds =>
-          Membuf.set_disk_range ctx.membuf k bounds >>= fun () =>
+          Membuf.set_disk_range ctx.membuf k bounds |> fun () =>
             Shard.add ctx.shard key new_shard >>= fun () =>
               remove_leftover_shards ctx k new_range overlap_list;
     };
@@ -109,25 +109,19 @@ let handle_shard ctx k shard => {
 };
 
 
-let validate_series_worker ctx k t (lb,ub) => {
-  (t < ub) ? Membuf.set_ascending_series ctx.membuf k false : Lwt.return_unit >>=
-    fun () => (t > lb) ? Membuf.set_descending_series ctx.membuf k false : Lwt.return_unit;
+let is_ascending ctx k => {
+  Membuf.get_disk_range ctx.membuf k |>
+    fun range => switch range {
+      | None => false;
+      | Some (lb,ub) => Membuf.is_ascending ctx.membuf k ub;
+      };
 };
 
-let init_disk_range ctx k t => {
-  Index.range ctx.index k >>=
+let is_descending ctx k => {
+  Membuf.get_disk_range ctx.membuf k |> 
     fun range => switch range {
-    | None => Lwt.return_unit;
-    | Some (lb,ub) => Membuf.set_disk_range ctx.membuf k (Some (lb,ub)) >>=
-        fun () => validate_series_worker ctx k t (lb,ub)
-    };
-};
-
-let rec validate_series ctx k t => {
-  Membuf.get_disk_range ctx.membuf k >>= 
-    fun range => switch range {
-      | None => init_disk_range ctx k t;
-      | Some (lb,ub) => validate_series_worker ctx k t (lb,ub);
+      | None => false;
+      | Some (lb,ub) => Membuf.is_descending ctx.membuf k lb;
       };
 };
 
@@ -142,7 +136,7 @@ let write ctx::ctx timestamp::ts=None id::k json::v => {
       } else {
         Lwt.return_unit;
       };
-    } >>= fun () => validate_series ctx k t;
+    };
 };
 
 
@@ -257,7 +251,7 @@ let read_memory_then_disk ctx k n mode => {
 
 let read_last_worker ctx::ctx id::k n::n => {
   if (Membuf.exists ctx.membuf k) {
-    switch ((Membuf.get_ascending_series ctx.membuf k) && (Membuf.is_descending_queue ctx.membuf k)) {
+    switch (is_ascending ctx k) {
     | true => read_memory_then_disk ctx k n `Last;
     | false => flush_memory_read_from_disk ctx k n `Last;
     };
@@ -288,7 +282,7 @@ let read_latests ctx::ctx id_list::id_list => {
 
 let read_first_worker ctx::ctx id::k n::n => {
   if (Membuf.exists ctx.membuf k) {    
-    switch ((Membuf.get_descending_series ctx.membuf k) && (Membuf.is_ascending_queue ctx.membuf k)) { 
+    switch (is_descending ctx k) { 
     | true => read_memory_then_disk ctx k n `First;
     | false => flush_memory_read_from_disk ctx k n `First;
     };

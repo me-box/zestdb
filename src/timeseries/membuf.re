@@ -72,24 +72,24 @@ let to_list ctx id => {
   Membufq.to_list q |> Lwt.return;  
 };
 
-let is_ascending_queue ctx id => {
+let is_ascending ctx id ub => {
   let q = Membufhash.get ctx.ht id;
-  Membufq.is_ascending_queue q;  
+  Membufq.is_ascending q ub;  
 };
 
-let is_descending_queue ctx id => {
+let is_descending ctx id lb => {
   let q = Membufhash.get ctx.ht id;
-  Membufq.is_descending_queue q;  
+  Membufq.is_descending q lb;  
 };
 
 let set_disk_range ctx id range => {
   let q = Membufhash.get ctx.ht id;
-  Membufq.set_disk_range q range |> Lwt.return;
+  Membufq.set_disk_range q range;
 };
 
 let get_disk_range ctx id => {
   let q = Membufhash.get ctx.ht id;
-  Membufq.get_disk_range q |> Lwt.return;
+  Membufq.get_disk_range q;
 };
 
 let set_ascending_series ctx id v => {

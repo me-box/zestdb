@@ -34,24 +34,30 @@ let to_list ctx => {
 };
 
 
-let is_ascending_queue ctx => {
+let is_ascending ctx ub => {
   let rec is_sorted lis => {
     switch lis {
-    | [x, y, ...l] => x <= y && is_sorted [y, ...l]
+    | [(t1,j1), (t2,j2), ...l] => t1 >= t2 && is_sorted [(t2,j2), ...l]
     | _ => true;
     };
   };
-  is_sorted (to_list ctx);
+  switch (to_list ctx) {
+  | [] => true
+  | [(t,j), ...l] => is_sorted [(t,j), ...l] && t >= ub;
+  };
 };
 
-let is_descending_queue ctx => {
+let is_descending ctx lb => {
   let rec is_sorted lis => {
     switch lis {
-    | [x, y, ...l] => x >= y && is_sorted [y, ...l]
+    | [(t1,j1), (t2,j2), ...l] => t1 <= t2 && is_sorted [(t2,j2), ...l]
     | _ => true;
     };
   };
-  is_sorted (to_list ctx);
+  switch (to_list ctx) {
+  | [] => true
+  | [(t,j), ...l] => is_sorted [(t,j), ...l] && t <= lb;
+  };
 };
 
 let clear ctx => {
