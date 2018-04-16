@@ -92,22 +92,3 @@ let get_disk_range ctx id => {
   Membufq.get_disk_range q;
 };
 
-let set_ascending_series ctx id v => {
-  let q = Membufhash.get ctx.ht id;
-  Membufq.set_ascending_series q v |> Lwt.return;
-};
-
-let get_ascending_series ctx id => {
-  let q = Membufhash.get ctx.ht id;
-  Membufq.get_ascending_series q;
-};
-
-let set_descending_series ctx id v => {
-  let q = Membufhash.get ctx.ht id;
-  Membufq.set_descending_series q v |> Lwt.return;
-};
-
-let get_descending_series ctx id => {
-  let q = Membufhash.get ctx.ht id;
-  Membufq.get_descending_series q;
-};

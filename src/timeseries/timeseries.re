@@ -141,10 +141,8 @@ let write ctx::ctx timestamp::ts=None id::k json::v => {
 
 
 let flush_series ctx k shard => {
-  handle_shard ctx k shard >>= fun () =>
-    Membuf.set_ascending_series ctx.membuf k true >>=
-      fun () => Membuf.set_descending_series ctx.membuf k true >>=
-        fun () => Membuf.empty_series ctx.membuf k;
+  handle_shard ctx k shard >>=
+    fun () => Membuf.empty_series ctx.membuf k;
 };
 
 let flush ctx::ctx => {

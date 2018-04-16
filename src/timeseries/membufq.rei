@@ -11,7 +11,3 @@ let is_descending : t => int => bool;
 let clear : t => unit;
 let set_disk_range : t => option (int, int) => unit;
 let get_disk_range : t => option (int, int);
-let set_ascending_series : t => bool => unit;
-let get_ascending_series : t => bool;
-let set_descending_series : t => bool => unit;
-let get_descending_series : t => bool;

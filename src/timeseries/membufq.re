@@ -3,17 +3,13 @@ open Lwt.Infix;
 
 type t = {
   q: Queue.t (int, Ezjsonm.t),
-  mutable disk_range: option (int, int),
-  mutable ascending_series: bool,
-  mutable descending_series: bool
+  mutable disk_range: option (int, int)
 };
 
 let create () => {
   {
     q: Queue.create (),
-    disk_range: None,
-    ascending_series: true,
-    descending_series: true
+    disk_range: None
   };
 };
 
@@ -72,18 +68,3 @@ let get_disk_range ctx => {
   ctx.disk_range;
 };
 
-let set_ascending_series ctx v => {
-  ctx.ascending_series = v;
-};
-
-let get_ascending_series ctx => {
-  ctx.ascending_series;
-};
-
-let set_descending_series ctx v => {
-  ctx.descending_series = v;
-};
-
-let get_descending_series ctx => {
-  ctx.descending_series;
-};
