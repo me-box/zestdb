@@ -56,6 +56,10 @@ let read_since ctx::ctx id::k from::ts fn::fn => {
   Timeseries.read_since ctx::ctx id::k from::ts >>= apply fn;
 };
 
+let read_sinces ctx::ctx id_list::id_list from::ts fn::fn => {
+  Timeseries.read_sinces ctx::ctx id_list::id_list from::ts >>= apply fn;
+};
+
 let read_range ctx::ctx id::k from::t1 to::t2 fn::fn => {
   Timeseries.read_range ctx::ctx id::k from::t1 to::t2 >>= apply fn;
 };

@@ -266,10 +266,21 @@ let handle_get_read_ts_blob_first id n ctx => {
 let handle_get_read_ts_numeric_since id t func ctx => {
   open Response;
   open Numeric_timeseries;
-  let apply0 () => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
-  let apply1 f => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f]);
-  let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);   
-  apply func apply0 apply1 apply2;
+  switch (String.split_on_char ',' id) {
+    | [] => Empty;
+    | [id] => {
+        let apply0 () => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
+        let apply1 f => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f]);
+        let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);   
+        apply func apply0 apply1 apply2;
+      };
+    | [x, ...xs] => {
+        let apply0 () => Json (read_sinces ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t) fn::[]);
+        let apply1 f => Json (read_sinces ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t) fn::[f]);
+        let apply2 f1 f2 => Json (read_sinces ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t) fn::[f1, f2]);   
+        apply func apply0 apply1 apply2;
+      };
+    };
 };
 
 let handle_get_read_ts_blob_since id t ctx => {

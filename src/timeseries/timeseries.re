@@ -413,6 +413,14 @@ let read_since ctx::ctx id::k from::ts => {
 };
 
 
+let read_sinces ctx::ctx id_list::id_list from::ts => {
+  Lwt_list.fold_left_s (fun acc id => 
+    read_since_worker ctx::ctx id::id from::ts >>=
+      fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
+        fun result => return_data sort::`Last result;   
+};
+
+
 let filter_until ts lis => {
   List.filter (fun (t,_) => t <= ts) lis;
 };
