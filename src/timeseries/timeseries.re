@@ -428,7 +428,7 @@ let filter_until ts lis => {
 let read_range_worker ctx::ctx id::k from::t1 to::t2 => {
   read_since_memory ctx k t1 >>= fun mem =>
     read_since_disk ctx k t1 >>= fun disk =>
-      List.append mem disk |> filter_until t2 |> Lwt.return;
+      List.rev_append mem disk |> filter_until t2 |> Lwt.return;
 };
 
 let read_range ctx::ctx id::k from::t1 to::t2 => {
