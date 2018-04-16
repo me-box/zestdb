@@ -180,6 +180,7 @@ let take_from_memory n lis mode => {
 
 
 let read_memory ctx id n mode => {
+  Lwt_io.printf "read_memory\n" >>= fun () =>
   Membuf.to_list ctx.membuf id >>= fun mem_shard =>
     take_from_memory n mem_shard mode;
 };
@@ -210,6 +211,7 @@ let read_disk ctx k n mode =>   {
         };              
     };
   };
+  Lwt_io.printf "read_disk\n" >>= fun () =>    
   Index.get ctx.index k >>= fun data =>
     switch (mode, data) {
     | (`Last, Some lis) => lis;
