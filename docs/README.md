@@ -14,6 +14,7 @@ The zest protocol is documented [here](protocol).
 
 Client library implementations are currently available in [Go](https://github.com/Toshbrown/goZestClient) and [Node.js](https://github.com/Toshbrown/nodeZestClient).
 
+
 ### Basic usage examples
 
 You can run a server and test client using [Docker](https://www.docker.com/). Each command supports --help to get a list of parameters.
@@ -218,6 +219,11 @@ $ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts
 ```
 
 which could return the last 10 values from both sensor1 and sensor2 that begin with a specific serial number.
+
+
+#### Performance
+
+ZestDB has been designed to provide fast writes but can also support fast reads using the ```/ts/<id>/last``` API when the data in a time series is in ascending order or ```/ts/<id>/first``` API when the data in a time series is in descending order. This feature relies on reading values directly from memory and will begin functioning after an initial warm up period at startup.
 
 ### Interprocess communication (IPC)
 
