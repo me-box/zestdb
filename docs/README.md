@@ -12,7 +12,7 @@ Access control is supported through [macaroons](https://github.com/rescrv/libmac
 
 The zest protocol is documented [here](protocol).
 
-Implementations are currently available in [Go](https://github.com/Toshbrown/goZestClient) and [Node.js](https://github.com/Toshbrown/nodeZestClient).
+Client library implementations are currently available in [Go](https://github.com/Toshbrown/goZestClient) and [Node.js](https://github.com/Toshbrown/nodeZestClient).
 
 ### Basic usage examples
 
@@ -122,7 +122,7 @@ A value is uniquely identified by an id and key pair. For example, you might wri
 
 ### Time series API
 
-The time series API has support for writing generic JSON blobs or data in a specific format which allows extra functionality such as filtering and aggregation on the data. The generic blob API is called using the '/ts/blob' extension in the path. Otherwise it is assumed that the data consists of a value together with an optional tag. A value is integer or floating point number and a tag is an identifier with corresponding string value. For example:```{"room": "lounge", "value": 1}```. Tagging a value provides a way to group values together when accessing them. In the example provided you could retrieve all values that are in a room called 'lounge'. 
+The time series API has support for writing generic JSON blobs or data in a specific format which allows extra functionality such as joining, filtering and aggregation on the data. The generic blob API is called using the '/ts/blob' extension in the path. Otherwise it is assumed that the data consists of a value together with an optional tag. A value is integer or floating point number and a tag is an identifier with corresponding string value. For example:```{"room": "lounge", "value": 1}```. Tagging a value provides a way to group values together when accessing them. In the example provided you could retrieve all values that are in a room called 'lounge'. 
 
 Data returned from a query is a JSON dictionary containing a timestamp in epoch milliseconds and the actual data. For example:```{"timestamp":1513160985841,"data":{"foo":"bar","value":1}}```. Data can also be aggregated by applying functions across values. This results in a response of a single value. For example: ```{"result":1}```. 
 
@@ -191,12 +191,16 @@ Data returned from a query is a JSON dictionary containing a timestamp in epoch 
     
 #### Filtering
     
-Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match. This feature is not available for '/ts/blob' data.
+Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/<id>/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match. This feature is not available for '/ts/blob' data.
 
+
+#### Join
+
+A join is an extension of the API path to support combining multiple time series together in the format of ```/ts/<id1>,<id2>,../...```. This feature is not available for '/ts/blob' data.
 
 #### Aggregation
 
-Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/.../<sum|count|min|max|mean|median|sd>```. This feature is not available for '/ts/blob' data.
+Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/<id>/.../<sum|count|min|max|mean|median|sd>```. This feature is not available for '/ts/blob' data.
    
 
 #### Complex queries
@@ -207,7 +211,13 @@ By combining both filtering and aggregation it is possible to produce more compl
 $ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/sensor/last/100/filter/room/equals/lounge/max' --mode get
 ```
 
-might provide the maximum value of a sensor located in a specific room based on the last 100 entries.
+The above might provide the maximum value of a sensor located in a specific room based on the last 100 entries. This query suggests we have a design where we are writing data from multiple sensors to the same time series. An alternative way to achieve this would be to have each sensor write to its own stream. We can then carry out a join operation to aggregate the data. For example we might do something like the following:
+
+```bash
+$ client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/ts/sensor1,sensor2/last/10/filter/serial/contains/SN00' --mode get
+```
+
+which could return the last 10 values from both sensor1 and sensor2 that begin with a specific serial number.
 
 ### Interprocess communication (IPC)
 
