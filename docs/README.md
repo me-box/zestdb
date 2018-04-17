@@ -153,8 +153,8 @@ Data returned from a query is a JSON dictionary containing a timestamp in epoch 
     Notes: return the number of entries requested
     
 
-#### Read first entry
-    URL: /ts/<id>/first
+#### Read earliest entry
+    URL: /ts/<id>/earliest
     Method: GET
     Parameters: replace <id> with an identifier
     Notes: return the first entry
