@@ -223,7 +223,7 @@ which could return the last 10 values from both sensor1 and sensor2 that begin w
 
 #### Performance
 
-ZestDB has been designed to provide fast writes but can also support fast reads using the ```/ts/<id>/last``` API when the data in a time series is in ascending order or ```/ts/<id>/first``` API when the data in a time series is in descending order. This feature relies on reading values directly from memory and will begin functioning after an initial warm up period at startup.
+ZestDB has been designed to provide fast writes but can also support fast reads depending on the API call and whether or not data was cached in memory.
 
 ### Interprocess communication (IPC)
 
