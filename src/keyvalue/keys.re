@@ -2,7 +2,7 @@ open Lwt.Infix;
 
 module Store = Ezirmin.FS_lww_register (Tc.List(Tc.String));
 
-type t = Store.branch;
+type t = Lwt.t (Store.branch);
 
 let create ::file => {
   Store.init root::file bare::true () >>= Store.master;
@@ -27,6 +27,15 @@ let add v lis => {
   }
 };
 
+let remove v lis => {
+  open List;
+  if (exists (fun x => x == v) lis) {
+    None;
+  } else {
+    Some (filter (fun x => x != v) lis);
+  }
+};
+
 let get branch id => {
   open Ezjsonm;
   read branch id >>= fun data =>
@@ -46,5 +55,18 @@ let update branch id v => {
         }
       };
     | None => write branch id [v];
+    };
+};
+
+let delete branch id k => {
+  read branch id >>= fun data =>
+    switch data {
+    | Some curr_lis => {
+        switch (remove k curr_lis) {
+        | Some new_lis => write branch id new_lis; 
+        | None => Lwt.return_unit;
+        }
+      };
+    | None => Lwt.return_unit;
     };
 };

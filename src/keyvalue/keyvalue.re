@@ -6,7 +6,7 @@ module Json = {
 
   type t = {
     branch: Lwt.t (Store.branch),    
-    keys: Lwt.t Keys.t
+    keys: Keys.t
   };
 
   let json_empty = Ezjsonm.dict [];
@@ -37,6 +37,11 @@ module Json = {
     Keys.get ctx.keys id;
   };
 
+  let delete ctx::ctx id::id key::k => {
+    write ctx::ctx id::id key::k json::json_empty >>=
+      fun () => Keys.delete ctx.keys id k;
+  };
+
 };
 
 module Text = {
@@ -45,7 +50,7 @@ module Text = {
   
     type t = {
       branch: Lwt.t (Store.branch),    
-      keys: Lwt.t Keys.t
+      keys: Keys.t
     };
   
     let text_empty = "";
@@ -75,6 +80,11 @@ module Text = {
     let keys ctx::ctx id::id => {
       Keys.get ctx.keys id;
     };
+
+    let delete ctx::ctx id::id key::k => {
+      write ctx::ctx id::id key::k text::text_empty >>=
+        fun () => Keys.delete ctx.keys id k;
+    };
   
   };
 
@@ -84,7 +94,7 @@ module Text = {
     
       type t = {
         branch: Lwt.t (Store.branch),    
-        keys: Lwt.t Keys.t
+        keys: Keys.t
       };
     
       let binary_empty = "";
@@ -113,6 +123,11 @@ module Text = {
 
       let keys ctx::ctx id::id => {
         Keys.get ctx.keys id;
+      };
+
+      let delete ctx::ctx id::id key::k => {
+        write ctx::ctx id::id key::k binary::binary_empty >>=
+          fun () => Keys.delete ctx.keys id k;
       };
     
     };
