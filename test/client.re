@@ -120,6 +120,10 @@ let handle_ack_created options => {
   Response.OK |> Lwt.return;
 };
 
+let handle_ack_deleted options => {
+  Response.OK |> Lwt.return;
+};
+
 let handle_service_unavailable options => {
   Response.Unavailable |> Lwt.return;
 };
@@ -145,6 +149,7 @@ let handle_response msg => {
       switch code {
       | 69 => handle_ack_content options payload;
       | 65 => handle_ack_created options;
+      | 66 => handle_ack_deleted options;
       | 128 => handle_ack_bad_request options;
       | 129 => handle_ack_unauthorized options;
       | 143 => handle_unsupported_content_format options;
@@ -232,6 +237,13 @@ let create_observe_options ::format=(!content_format) ::age=(!max_age) uri::uri 
   create_options [|uri_path, uri_host, observe, content_format, max_age|];
 };
 
+let create_delete_options uri::uri format::format => {
+  let uri_path = create_option number::11 value::uri;
+  let uri_host = create_option number::3 value::(Unix.gethostname ());
+  let content_format = create_option number::12 value::format;  
+  create_options [|uri_path, uri_host, content_format|];
+};
+
 let post ::token=(!token) ::format=(!content_format) uri::uri payload::payload () => {
   let (options_value, options_length, options_count) = create_post_options uri::uri format::format;
   let (header_value, header_length) = create_header tkl::(String.length token) oc::options_count code::2;
@@ -263,6 +275,19 @@ let get ::token=(!token) ::format=(!content_format) uri::uri () => {
 let observe ::token=(!token) ::format=(!content_format) uri::uri () => {
   let (options_value, options_length, options_count) = create_observe_options age::!max_age uri::uri format::format;
   let (header_value, header_length) = create_header tkl::(String.length token) oc::options_count code::1;
+  let (token_value, token_length) = create_token tk::token;
+  let bits = [%bitstring 
+    {|header_value : header_length : bitstring;
+      token_value : token_length : string; 
+      options_value : options_length : bitstring
+    |}
+  ];
+  Bitstring.string_of_bitstring bits;
+};
+
+let delete ::token=(!token) ::format=(!content_format) uri::uri () => {
+  let (options_value, options_length, options_count) = create_delete_options uri::uri format::format;
+  let (header_value, header_length) = create_header tkl::(String.length token) oc::options_count code::4;
   let (token_value, token_length) = create_token tk::token;
   let bits = [%bitstring 
     {|header_value : header_length : bitstring;
@@ -363,6 +388,35 @@ let get_test ctx => {
     fun () => close_socket req_soc |> Lwt.return;
 };
 
+let delete_loop socket count => {
+  let rec loop n => {
+    send_request msg::(post uri::!uri_path payload::!payload ()) to::socket >>=
+      fun resp =>
+        switch resp {
+        | Response.OK => {
+            Lwt_io.printf "=> Created\n" >>=
+              fun () =>
+                if (n > 1) {
+                  Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
+                } else { 
+                  Lwt.return_unit; 
+                };
+          };
+        | Response.Error msg => Lwt_io.printf "=> %s\n" msg; 
+        | Response.Unavailable => Lwt_io.printf "=> server unavailable\n";
+        | _ => failwith "unhandled response";
+        };
+  };
+  loop count;
+};
+
+
+let delete_test ctx => {
+  let req_soc = connect_request_socket !req_endpoint ctx ZMQ.Socket.req;
+  delete_loop req_soc !loop_count >>=
+    fun () => close_socket req_soc |> Lwt.return;
+};
+
 let string_split_at s n =>
   (String.sub s 0 n, String.sub s n (String.length s - n));
 
@@ -420,6 +474,7 @@ let handle_mode mode => {
   | "post" => post_test;
   | "get" => get_test;
   | "observe" => observe_test;
+  | "delete" => delete_test;
   | _ => raise (Arg.Bad "Unsupported mode");
   };
   command := func;
@@ -460,7 +515,7 @@ let parse_cmdline () => {
     ("--format", Arg.Symbol ["text", "json", "binary"] handle_format, ": to set the message content type"),
     ("--loop", Arg.Set_int loop_count, ": to set the number of times to run post/get/observe test"),
     ("--freq", Arg.Set_float call_freq, ": to set the number of seconds to wait between each get/post operation"),
-    ("--mode", Arg.Symbol ["post", "get", "observe"] handle_mode, " : to set the mode of operation"),
+    ("--mode", Arg.Symbol ["post", "get", "observe", "delete"] handle_mode, " : to set the mode of operation"),
     ("--file", Arg.Set file, ": payload contents comes from a file"),
     ("--max-age", Arg.Set_int max_age, ": time in seconds to observe a path"),
     ("--observe-mode", Arg.Symbol ["data", "audit"] handle_observe_mode, ": to set the observe mode"),
