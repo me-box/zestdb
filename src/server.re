@@ -727,7 +727,25 @@ let handle_delete_write_kv_json uri_path ctx => {
   };
 };
 
+let handle_delete_write_kv_text uri_path ctx => {
+  open Keyvalue.Text;
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", mode, id, key] => Some (delete ctx::ctx.textkv_ctx id::id key::key);
+  | ["", mode, id] => Some (delete_all ctx::ctx.textkv_ctx id::id);
+  | _ => None;
+  };
+};
 
+let handle_delete_write_kv_binary uri_path ctx => {
+  open Keyvalue.Binary;
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", mode, id, key] => Some (delete ctx::ctx.binarykv_ctx id::id key::key);
+  | ["", mode, id] => Some (delete_all ctx::ctx.binarykv_ctx id::id);
+  | _ => None;
+  };
+};
 
 let handle_delete_write content_format uri_path ctx => {
   open Ack;
@@ -735,6 +753,8 @@ let handle_delete_write content_format uri_path ctx => {
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/kv/", 50) => handle_delete_write_kv_json uri_path ctx;
+  | ("/kv/", 0) => handle_delete_write_kv_text uri_path ctx;
+  | ("/kv/", 42) => handle_delete_write_kv_binary uri_path ctx;  
   | _ => None;
   };
   switch result {

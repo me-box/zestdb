@@ -90,6 +90,11 @@ module Text = {
       write ctx::ctx id::id key::k text::text_empty >>=
         fun () => Keys.delete ctx.keys id k;
     };
+
+    let delete_all ctx::ctx id::id => {
+      Keys.alist ctx.keys id >>= 
+        fun lis => Lwt_list.iter_s (fun k => delete ctx::ctx id::id key::k) lis;
+    };
   
   };
 
@@ -133,6 +138,11 @@ module Text = {
       let delete ctx::ctx id::id key::k => {
         write ctx::ctx id::id key::k binary::binary_empty >>=
           fun () => Keys.delete ctx.keys id k;
+      };
+
+      let delete_all ctx::ctx id::id => {
+        Keys.alist ctx.keys id >>= 
+          fun lis => Lwt_list.iter_s (fun k => delete ctx::ctx id::id key::k) lis;
       };
     
     };
