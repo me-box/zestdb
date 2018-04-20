@@ -336,7 +336,7 @@ let post_loop socket count => {
       fun resp =>
         switch resp {
         | Response.OK => {
-            Lwt_io.printf "=> Created\n" >>=
+            Lwt_io.printf "=> OK\n" >>=
               fun () =>
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
@@ -390,11 +390,11 @@ let get_test ctx => {
 
 let delete_loop socket count => {
   let rec loop n => {
-    send_request msg::(post uri::!uri_path payload::!payload ()) to::socket >>=
+    send_request msg::(delete uri::!uri_path ()) to::socket >>=
       fun resp =>
         switch resp {
         | Response.OK => {
-            Lwt_io.printf "=> Created\n" >>=
+            Lwt_io.printf "=> OK\n" >>=
               fun () =>
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);

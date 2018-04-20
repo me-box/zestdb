@@ -30,9 +30,9 @@ let add v lis => {
 let remove v lis => {
   open List;
   if (exists (fun x => x == v) lis) {
-    None;
-  } else {
     Some (filter (fun x => x != v) lis);
+  } else {
+    None;
   }
 };
 

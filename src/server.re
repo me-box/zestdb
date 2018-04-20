@@ -714,6 +714,55 @@ let handle_post code options token payload ctx => {
   };
 };
 
+
+let handle_delete_write_kv_json uri_path ctx => {
+  open Keyvalue.Json;
+  switch (get_id_key "kv" uri_path) {
+  | Some (id, key) => Some (delete ctx::ctx.jsonkv_ctx id::id key::key);
+  | None => None;
+  };
+};
+
+
+
+let handle_delete_write content_format uri_path ctx => {
+  open Ack;
+  open Ezjsonm;
+  let mode = get_mode uri_path;
+  let result = switch (mode, content_format) {
+  | ("/kv/", 50) => handle_delete_write_kv_json uri_path ctx;
+  | _ => None;
+  };
+  switch result {
+  | Some promise => promise >>= fun () => Lwt.return (Code 66);
+  | None => Lwt.return (Code 128);
+  };
+};
+
+
+let handle_delete_unobserved key code options token ctx => {
+  let (uri_path, content_format) = key;    
+  if (is_valid_token token uri_path "DELETE") {
+    handle_delete_write content_format uri_path ctx >>= ack;
+  } else {
+    ack (Code 129);
+  };
+};
+
+
+let handle_delete code options token ctx => {
+  handle_content_format options >>= 
+    fun content_format => {
+      let uri_path = Protocol.Zest.get_option_value options 11;
+      let key = (uri_path, content_format);
+      if (Observe.is_observed ctx.observe_ctx key) {
+        handle_delete_unobserved key code options token ctx;
+      } else {
+        handle_delete_unobserved key code options token ctx;
+      };
+  };
+};
+
 let handle_msg msg ctx => {
   open Logger;
   handle_expire ctx >>=
@@ -728,6 +777,7 @@ let handle_msg msg ctx => {
           switch code {
           | 1 => handle_get code options token ctx;
           | 2 => handle_post code options token payload ctx;
+          | 4 => handle_delete code options token ctx;
           | _ => failwith "invalid code";
           };
         };  
