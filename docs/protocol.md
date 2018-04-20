@@ -64,6 +64,17 @@ Some options must be present depending on the type of message.
 * uri_host
 * content_format
 
+*POST response*
+
+
+*DELETE request*
+
+* uri_path
+* uri_host
+* content_format
+
+
+*DELETE response*
 
 #### message payload (optional)
 
