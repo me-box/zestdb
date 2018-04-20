@@ -45,6 +45,15 @@ let get branch id => {
     } |> Lwt.return;
 };
 
+let alist branch id => {
+  open Ezjsonm;
+  read branch id >>= fun data =>
+    switch data {
+    | Some lis => lis;
+    | None => [];
+    } |> Lwt.return;
+};
+
 let update branch id v => {
   read branch id >>= fun data =>
     switch data {

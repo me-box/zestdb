@@ -719,9 +719,11 @@ let handle_post code options token payload ctx => {
 
 let handle_delete_write_kv_json uri_path ctx => {
   open Keyvalue.Json;
-  switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Some (delete ctx::ctx.jsonkv_ctx id::id key::key);
-  | None => None;
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", mode, id, key] => Some (delete ctx::ctx.jsonkv_ctx id::id key::key);
+  | ["", mode, id] => Some (delete_all ctx::ctx.jsonkv_ctx id::id);
+  | _ => None;
   };
 };
 

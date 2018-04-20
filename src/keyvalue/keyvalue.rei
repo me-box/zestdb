@@ -5,6 +5,7 @@ module Json: {
     let read : ctx::t => id::string => key::string => Lwt.t Ezjsonm.t;
     let keys : ctx::t => id::string => Lwt.t Ezjsonm.t;
     let delete : ctx::t => id::string => key::string => Lwt.t unit;
+    let delete_all : ctx::t => id::string => Lwt.t unit;
 };
 
 module Text: {
