@@ -2,7 +2,7 @@
 
 ZestDB is a light-weight IoT database. It currently provides the storage component within the [Databox Project](http://www.databoxproject.uk/). ZestDB is built using a [CoAP](https://tools.ietf.org/html/rfc7252) inspired protocol implemented over [ZeroMQ](http://zeromq.org/).
 
-The current implementation supports POST/GET of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional to POST/GET the server allows multiple clients to 'observe' a path to directly receive any data POSTed to specific paths. Communication can take place over TCP or over Interprocess communication (IPC).
+The current implementation supports POST/GET/DELETE of JSON, text and binary data with backend storage implemented on top of a git-based file system. In additional, the server allows clients to make an 'observe' request to receive any data POSTed to specific paths or receive audit information from API calls. Communication can take place over TCP or over Interprocess communication (IPC).
 
 Data stored can be described and queried using a built in [HyperCat](http://www.hypercat.io/).
 
@@ -112,14 +112,29 @@ A value is uniquely identified by an id and key pair. For example, you might wri
     URL: /kv/<id>/<key>
     Method: GET
     Parameters: replace <id> and <key> with a string
-    Notes: return data for given key    
+    Notes: return data for given id and key    
 
 
 #### List keys
     URL: /kv/<id>/keys
     Method: GET
     Parameters: replace <id> with a string
-    Notes: return keys for given key id 
+    Notes: return keys for given key id
+    
+
+#### Delete entry
+    URL: /kv/<id>/<key>
+    Method: DELETE
+    Parameters: replace <id> and <key> with a string
+    Notes: delete data for given id and key
+    
+    
+#### Delete all entries
+    URL: /kv/<id>
+    Method: DELETE
+    Parameters: replace <id> with a string
+    Notes: delete all data for given id
+     
 
 ### Time series API
 
