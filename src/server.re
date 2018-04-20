@@ -56,6 +56,7 @@ let create_audit_payload status code options payload => {
   let meth = switch code {
   | 1 => "GET"
   | 2 => "POST"
+  | 4 => "DELETE"
   | _ => "UNDEFINED"
   };
   switch status {
@@ -87,6 +88,7 @@ let create_data_payload status options payload => {
   | Ack.Code 128 => None;
   | Ack.Code 129 => None;
   | Ack.Code 143 => None;
+  | Ack.Code 66 => None;
   | Ack.Payload _ => None;
   | Ack.Code _ => Some (create_data_payload_worker options payload);
   };
@@ -739,6 +741,18 @@ let handle_delete_write content_format uri_path ctx => {
   };
 };
 
+let handle_delete_observed key code options token ctx => {
+  let (uri_path, content_format) = key;    
+  if (is_valid_token token uri_path "DELETE") {
+    handle_delete_write content_format uri_path ctx >>=
+      fun resp => route resp key code options "" ctx >>= 
+        fun () => ack resp;
+  } else {
+    route (Ack.Code 129) key code options "" ctx >>= 
+      fun () => ack (Code 129);
+  };
+};
+
 
 let handle_delete_unobserved key code options token ctx => {
   let (uri_path, content_format) = key;    
@@ -756,7 +770,7 @@ let handle_delete code options token ctx => {
       let uri_path = Protocol.Zest.get_option_value options 11;
       let key = (uri_path, content_format);
       if (Observe.is_observed ctx.observe_ctx key) {
-        handle_delete_unobserved key code options token ctx;
+        handle_delete_observed key code options token ctx;
       } else {
         handle_delete_unobserved key code options token ctx;
       };
