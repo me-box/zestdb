@@ -17,3 +17,4 @@ let read_earliest : ctx::t => id::string => Lwt.t Ezjsonm.t;
 let read_earliests : ctx::t => id_list::list string => Lwt.t Ezjsonm.t;
 let length : ctx::t => id::string => Lwt.t Ezjsonm.t;
 let lengths : ctx::t => id_list::list string => Lwt.t Ezjsonm.t;
+let delete : ctx::t => id_list::list string => json::Lwt.t Ezjsonm.t => Lwt.t unit;

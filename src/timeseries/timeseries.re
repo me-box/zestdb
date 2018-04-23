@@ -442,3 +442,8 @@ let read_ranges ctx::ctx id_list::id_list from::t1 to::t2 => {
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
         fun result => return_data sort::`Last result;   
 };
+
+
+let delete ctx::ctx id_list::id_list json::json => {
+  Lwt.return_unit;
+};

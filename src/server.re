@@ -747,14 +747,42 @@ let handle_delete_write_kv_binary uri_path ctx => {
   };
 };
 
+
+let get_id_list uri_path => {
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", "ts", "blob", ids, ..._] => String.split_on_char ',' ids;
+  | ["", "ts", ids, ..._] => String.split_on_char ',' ids;
+  | _ => [];
+  };
+};
+
+let handle_delete_ts_numeric uri_path ctx => {
+  open Numeric_timeseries;
+  switch (handle_get_read_ts uri_path ctx) {
+  | Json json => Some (delete ctx::ctx.numts_ctx id_list::(get_id_list uri_path) json::json);
+  | _ => None;
+  };
+};
+
+let handle_delete_ts_blob uri_path ctx => {
+  open Blob_timeseries;
+  switch (handle_get_read_ts uri_path ctx) {
+  | Json json => Some (delete ctx::ctx.blobts_ctx id_list::(get_id_list uri_path) json::json);
+  | _ => None;
+  };
+};
+
 let handle_delete_write content_format uri_path ctx => {
   open Ack;
   open Ezjsonm;
-  let mode = get_mode uri_path;
-  let result = switch (mode, content_format) {
-  | ("/kv/", 50) => handle_delete_write_kv_json uri_path ctx;
-  | ("/kv/", 0) => handle_delete_write_kv_text uri_path ctx;
-  | ("/kv/", 42) => handle_delete_write_kv_binary uri_path ctx;  
+  let path_list = String.split_on_char '/' uri_path;
+  let result = switch (path_list, content_format) {
+  | (["", "kv", ..._], 50) => handle_delete_write_kv_json uri_path ctx;
+  | (["", "kv", ..._], 0) => handle_delete_write_kv_text uri_path ctx;
+  | (["", "kv", ..._], 42) => handle_delete_write_kv_binary uri_path ctx;
+  | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob uri_path ctx;
+  | (["", "ts", ..._], 50) => handle_delete_ts_numeric uri_path ctx;
   | _ => None;
   };
   switch result {
