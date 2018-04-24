@@ -757,6 +757,20 @@ let get_id_list uri_path => {
   };
 };
 
+let has_aggregation lis => {
+  switch (List.rev lis) {
+  | [] => false;
+  | [x, ..._] when x == "sum" => true;
+  | [x, ..._] when x == "count" => true;
+  | [x, ..._] when x == "min" => true;
+  | [x, ..._] when x == "max" => true;
+  | [x, ..._] when x == "mean" => true;
+  | [x, ..._] when x == "median" => true;
+  | [x, ..._] when x == "sd" => true;
+  | _ => false;
+  };
+};
+
 let handle_delete_ts_numeric uri_path ctx => {
   open Numeric_timeseries;
   switch (handle_get_read_ts uri_path ctx) {
@@ -777,17 +791,21 @@ let handle_delete_write content_format uri_path ctx => {
   open Ack;
   open Ezjsonm;
   let path_list = String.split_on_char '/' uri_path;
-  let result = switch (path_list, content_format) {
-  | (["", "kv", ..._], 50) => handle_delete_write_kv_json uri_path ctx;
-  | (["", "kv", ..._], 0) => handle_delete_write_kv_text uri_path ctx;
-  | (["", "kv", ..._], 42) => handle_delete_write_kv_binary uri_path ctx;
-  | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob uri_path ctx;
-  | (["", "ts", ..._], 50) => handle_delete_ts_numeric uri_path ctx;
-  | _ => None;
-  };
-  switch result {
-  | Some promise => promise >>= fun () => Lwt.return (Code 66);
-  | None => Lwt.return (Code 128);
+  if (has_aggregation path_list) {
+    Lwt.return (Code 134);
+  } else {
+    let result = switch (path_list, content_format) {
+      | (["", "kv", ..._], 50) => handle_delete_write_kv_json uri_path ctx;
+      | (["", "kv", ..._], 0) => handle_delete_write_kv_text uri_path ctx;
+      | (["", "kv", ..._], 42) => handle_delete_write_kv_binary uri_path ctx;
+      | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob uri_path ctx;
+      | (["", "ts", ..._], 50) => handle_delete_ts_numeric uri_path ctx;
+      | _ => None;
+      };
+      switch result {
+      | Some promise => promise >>= fun () => Lwt.return (Code 66);
+      | None => Lwt.return (Code 128);
+      };
   };
 };
 

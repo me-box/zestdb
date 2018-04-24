@@ -140,6 +140,10 @@ let handle_ack_unauthorized options => {
   Response.Error "Unauthorized" |> Lwt.return;
 };
 
+let handle_not_acceptable options => {
+  Response.Error "Not Acceptable" |> Lwt.return;
+};
+
 let handle_response msg => {
   Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
     fun () => {
@@ -154,6 +158,7 @@ let handle_response msg => {
       | 129 => handle_ack_unauthorized options;
       | 143 => handle_unsupported_content_format options;
       | 163 => handle_service_unavailable options;
+      | 134 => handle_not_acceptable options;
       | _ => failwith ("invalid code:" ^ string_of_int code);
       };
     };  
