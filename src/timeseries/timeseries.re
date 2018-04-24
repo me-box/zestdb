@@ -446,7 +446,7 @@ let read_ranges ctx::ctx id_list::id_list from::t1 to::t2 => {
 
 let get_timestamps json => {
   open Ezjsonm;
-  List.map (fun x => get_int x) (get_list (fun x => find x ["timestamp"]) json);
+  List.rev_map (fun x => get_int x) (get_list (fun x => find x ["timestamp"]) json);
 };
 
 let delete ctx::ctx id_list::id_list json::json => {
