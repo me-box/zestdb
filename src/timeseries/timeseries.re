@@ -32,6 +32,14 @@ let make_key id (t1, t2) => {
   [id, string_of_int t1, string_of_int t2];
 };
 
+let list_of_keys ctx id => {
+  Index.get ctx.index id >>= 
+    fun lis => switch lis {
+    | None => []
+    | Some lis' => List.map (fun (t1, t2) => make_key id (t1, t2)) lis';
+    } |> Lwt.return;
+};
+
 let shard_data ctx id => {
   let rec loop n shard => {
     if (n > 0) {
@@ -449,10 +457,17 @@ let get_timestamps json => {
   List.rev_map (fun x => get_int x) (get_list (fun x => find x ["timestamp"]) json);
 };
 
+
+let delete_worker key timestamps => {
+  Lwt.return_unit;  
+};
+
 let delete ctx::ctx id_list::id_list json::json => {
   json >>= fun json' => {
     let timestamps = get_timestamps (Ezjsonm.value json');
-    Lwt_list.iter_s (fun x => Lwt_io.printf "delete timestamp: %d\n" x) timestamps >>=
-      fun () => Lwt_list.iter_s (fun x => Lwt_io.printf "from id: %s\n" x) id_list;
+    let keys = Lwt_list.map_s (fun k => list_of_keys ctx k) id_list;
+    keys >>= fun keys' => {
+      Lwt_list.iter_s (fun k => delete_worker k timestamps) keys';
+    };
   };
 };
