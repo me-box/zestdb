@@ -458,8 +458,14 @@ let get_timestamps json => {
 };
 
 
-let delete_worker key timestamps => {
-  Lwt.return_unit;  
+let filter_shard_worker ctx key timestamps => {
+  Shard.get ctx.shard key >>= 
+    fun lis => List.filter (fun (t,_) => not (List.mem t timestamps)) lis |>
+      fun lis' => Shard.add ctx.shard key lis';
+};
+
+let delete_worker ctx key_list timestamps => {
+  Lwt_list.iter_s (fun k => filter_shard_worker ctx k timestamps) key_list;
 };
 
 let delete ctx::ctx id_list::id_list json::json => {
@@ -467,7 +473,7 @@ let delete ctx::ctx id_list::id_list json::json => {
     let timestamps = get_timestamps (Ezjsonm.value json');
     let keys = Lwt_list.map_s (fun k => list_of_keys ctx k) id_list;
     keys >>= fun keys' => {
-      Lwt_list.iter_s (fun k => delete_worker k timestamps) keys';
+      Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
     };
   };
 };
