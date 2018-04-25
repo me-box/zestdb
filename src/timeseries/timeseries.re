@@ -474,13 +474,16 @@ let delete_worker ctx key_list timestamps => {
   Lwt_list.iter_s (fun k => filter_shard_worker ctx k timestamps) key_list;
 };
 
+let flush_memory_worker ctx id => {
+  Membuf.exists ctx.membuf id ? flush_memory ctx id : Lwt.return_unit;
+};
+
 let delete ctx::ctx id_list::id_list json::json => {
-  Lwt_list.iter_s (fun id => flush_memory ctx id) id_list >>= 
+  Lwt_list.iter_s (fun id => flush_memory_worker ctx id) id_list >>= 
     fun () => json >>= fun json' => {
       let timestamps = get_timestamps (Ezjsonm.value json');
       let keys = Lwt_list.map_s (fun k => list_of_keys ctx k) id_list;
-        keys >>= fun keys' => {
+      keys >>= fun keys' => 
         Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
-      };
     };
 };
