@@ -238,11 +238,17 @@ let return_data sort::mode lis => {
   sort_result mode lis |> to_json |> Lwt.return;
 };
 
+
+let flush_memory ctx k => {
+  read_memory_all ctx k >>=
+    fun shard => flush_series ctx k shard;
+};
+
+
 let flush_memory_read_from_disk ctx k n mode => {
-  Lwt_io.printf "flush_memory_read_from_disk\n" >>= fun () =>  
-    read_memory_all ctx k >>=
-      fun shard => flush_series ctx k shard >>=
-        fun () => read_disk ctx k n mode;
+  Lwt_io.printf "flush_memory_read_from_disk\n" >>= 
+    fun () => flush_memory ctx k >>=
+      fun () => read_disk ctx k n mode;
 };
 
 let read_memory_then_disk ctx k n mode => {
@@ -469,11 +475,12 @@ let delete_worker ctx key_list timestamps => {
 };
 
 let delete ctx::ctx id_list::id_list json::json => {
-  json >>= fun json' => {
-    let timestamps = get_timestamps (Ezjsonm.value json');
-    let keys = Lwt_list.map_s (fun k => list_of_keys ctx k) id_list;
-    keys >>= fun keys' => {
-      Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
+  Lwt_list.iter_s (fun id => flush_memory ctx id) id_list >>= 
+    fun () => json >>= fun json' => {
+      let timestamps = get_timestamps (Ezjsonm.value json');
+      let keys = Lwt_list.map_s (fun k => list_of_keys ctx k) id_list;
+        keys >>= fun keys' => {
+        Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
+      };
     };
-  };
 };
