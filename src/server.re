@@ -757,19 +757,27 @@ let get_id_list uri_path => {
   };
 };
 
-let has_aggregation lis => {
-  switch (List.rev lis) {
+let has_unsupported_delete_api lis => {
+  switch lis {
   | [] => false;
-  | [x, ..._] when x == "sum" => true;
-  | [x, ..._] when x == "count" => true;
-  | [x, ..._] when x == "min" => true;
-  | [x, ..._] when x == "max" => true;
-  | [x, ..._] when x == "mean" => true;
-  | [x, ..._] when x == "median" => true;
-  | [x, ..._] when x == "sd" => true;
-  | _ => false;
+  | ["","ts","blob",_,"first", ..._] => true;
+  | ["","ts","blob",_,"last", ..._] => true;
+  | ["","ts",_,"first", ..._] => true;
+  | ["","ts",_,"last", ..._] => true;
+  | _ =>  switch (List.rev lis) {
+          | [x, ..._] when x == "sum" => true;
+          | [x, ..._] when x == "count" => true;
+          | [x, ..._] when x == "min" => true;
+          | [x, ..._] when x == "max" => true;
+          | [x, ..._] when x == "mean" => true;
+          | [x, ..._] when x == "median" => true;
+          | [x, ..._] when x == "sd" => true;
+          | [x, ..._] when x == "length" => true;
+          | _ => false;
+          };
   };
 };
+
 
 let handle_delete_ts_numeric uri_path ctx => {
   open Numeric_timeseries;
@@ -791,7 +799,7 @@ let handle_delete_write content_format uri_path ctx => {
   open Ack;
   open Ezjsonm;
   let path_list = String.split_on_char '/' uri_path;
-  if (has_aggregation path_list) {
+  if (has_unsupported_delete_api path_list) {
     Lwt.return (Code 134);
   } else {
     let result = switch (path_list, content_format) {
