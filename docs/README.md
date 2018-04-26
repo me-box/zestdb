@@ -38,66 +38,6 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 ```
 
 
-### Hypercat
-
-The hypercat provides a standard way to describe what data might exist within the database.
-
-To add an entry to the in-built HyperCat:
-
-```bash
-$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --file --payload item1.json
-```
-
-To query the in-built HyperCat:
-
-```bash
-$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode get
-```
-
-
-### Observation
-
-One benefit of the Zest protocol being built on top of ZeroMQ means that it is easy to support features such as observing data written or read from the server in real-time. There are two types of observation modes: data and audit which provide data in a simple space-separated meta-format. Observing data is used to get a copy of what is POSTed to a specific path, whereas an audit request can be used to provide meta-data on a POST or GET containing information such as the hostnames involved and the type of query etc.
-
-A typical use case for observation might consist of multiple deployed servers that you need to monitor from a single client. The client could make individual observation requests to each server and collate the data received in real-time to display on a dashboard.
-
-#### running client to observe data POSTed to a resource path
-
-```bash
-$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe
-```
-
-The above will produce data written in a format such as:
-
-```
-#timestamp #uri-path #content-format #data
-1521554211213 /kv/foo/bar json {"room": "lounge", "value": 1} 
-```
-
-#### running client to observe audit information at a resource path
-
-```bash
-$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe --observe-mode audit
-```
-
-The above will produce data written in a format with response codes based on the CoAP protocol:
-
-```
-#timestamp #server-name #client-name #method #uri-path #response-code
-1521553488680 Johns-MacBook-Pro.local Johns-MacBook-Pro.local POST /kv/foo/bar 65
-```
-
-As well as observing exact paths it is possible to use wildcard paths to receive information on a range of paths.
-
-#### running client to observe audit information using a wildcard path
-
-```bash
-$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/*' --mode observe --observe-mode audit
-```
-
-The example above is similar to the previous example but this time we will also receive audit information on any path that starts with '/kv/foo/'.
-
-
 ### Key/Value API
 
 A value is uniquely identified by an id and key pair. For example, you might write a value to id='lounge' with key='lightbulb'.
@@ -187,16 +127,30 @@ Data returned from a query is a JSON dictionary containing a timestamp in epoch 
     URL: /ts/<id>/since/<from>
     Method: GET
     Parameters: replace <id> with an identifier, replace <from> with epoch milliseconds
-    Notes: return the number of entries from time provided
+    Notes: return entries from time provided
     
 #### Read all entries in a time range (inclusive)
     
     URL: /ts/<id>/range/<from>/<to>
     Method: GET
     Parameters: replace <id> with an identifier, replace <from> and <to> with epoch milliseconds
-    Notes: return the number of entries in time range provided
+    Notes: return entries in time range provided
     
 
+#### Delete all entries since a time (inclusive)
+    
+    URL: /ts/<id>/since/<from>
+    Method: DELETE
+    Parameters: replace <id> with an identifier, replace <from> with epoch milliseconds
+    Notes: deletes entries from time provided
+    
+#### Delete all entries in a time range (inclusive)
+    
+    URL: /ts/<id>/range/<from>/<to>
+    Method: DELETE
+    Parameters: replace <id> with an identifier, replace <from> and <to> with epoch milliseconds
+    Notes: deletes entries in time range provided
+    
 #### Length of time series
 
     URL: /ts/<id>/length
@@ -204,19 +158,19 @@ Data returned from a query is a JSON dictionary containing a timestamp in epoch 
     Parameters: replace <id> with an identifier
     Notes: return the number of entries in the time series
 
+#### Join
+
+A join is an extension of the API path to support combining multiple time series together in the format of ```/ts/<id1>,<id2>,../...``` and can be used for both GET and DELETE operations. This feature is not available for '/ts/blob' data.
+
     
 #### Filtering
     
-Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/<id>/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match. This feature is not available for '/ts/blob' data.
+Filtering is an extension of the API path applied to tags to restrict the values returned in the format of ```/ts/<id>/.../filter/<tag_name>/<equals|contains>/<tag_value>``` where 'equals' is an exact match and 'contains' is a substring match. It can be used for both GET and DELETE operations. This feature is not available for '/ts/blob' data.
 
-
-#### Join
-
-A join is an extension of the API path to support combining multiple time series together in the format of ```/ts/<id1>,<id2>,../...```. This feature is not available for '/ts/blob' data.
 
 #### Aggregation
 
-Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/<id>/.../<sum|count|min|max|mean|median|sd>```. This feature is not available for '/ts/blob' data.
+Aggregation is an extension of the API path to carry out functions on an array of values in the format of ```/ts/<id>/.../<sum|count|min|max|mean|median|sd>``` It can be used on a GET operation. This feature is not available for '/ts/blob' data.
    
 
 #### Complex queries
@@ -239,6 +193,68 @@ which could return the last 10 values from both sensor1 and sensor2 that begin w
 #### Performance
 
 ZestDB has been designed to provide fast writes but can also support fast reads depending on the API call and whether or not data was cached in memory.
+
+### Hypercat
+
+The hypercat provides a standard way to describe what data might exist within the database.
+
+To add an entry to the in-built HyperCat:
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode post --file --payload item1.json
+```
+
+To query the in-built HyperCat:
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/cat' --mode get
+```
+
+
+### Observation
+
+One benefit of the Zest protocol being built on top of ZeroMQ means that it is easy to support features such as observing data written or read from the server in real-time. There are two types of observation modes: data and audit which provide data in a simple space-separated meta-format. Observing data is used to get a copy of what is POSTed to a specific path, whereas an audit request can be used to provide meta-data on a POST or GET containing information such as the hostnames involved and the type of query etc.
+
+A typical use case for observation might consist of multiple deployed servers that you need to monitor from a single client. The client could make individual observation requests to each server and collate the data received in real-time to display on a dashboard.
+
+#### running client to observe data POSTed to a resource path
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe
+```
+
+The above will produce data written in a format such as:
+
+```
+#timestamp #uri-path #content-format #data
+1521554211213 /kv/foo/bar json {"room": "lounge", "value": 1} 
+```
+
+#### running client to observe audit information at a resource path
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode observe --observe-mode audit
+```
+
+The above will produce data written in a format with response codes based on the CoAP protocol:
+
+```
+#timestamp #server-name #client-name #method #uri-path #response-code
+1521553488680 Johns-MacBook-Pro.local Johns-MacBook-Pro.local POST /kv/foo/bar 65
+```
+
+As well as observing exact paths it is possible to use wildcard paths to receive information on a range of paths.
+
+#### running client to observe audit information using a wildcard path
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/*' --mode observe --observe-mode audit
+```
+
+The example above is similar to the previous example but this time we will also receive audit information on any path that starts with '/kv/foo/'.
+
+
+
 
 ### Interprocess communication (IPC)
 
