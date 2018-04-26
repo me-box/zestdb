@@ -949,13 +949,7 @@ let unhandled_error e ctx => {
   let msg = Printexc.to_string e;
   let stack = Printexc.get_backtrace ();
   Logger.error_f "unhandled_error" (Printf.sprintf "%s%s" msg stack) >>= 
-    fun () => ack (Ack.Code 128) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
-};
-
-let handle_zmq_error ctx e m => {
-  /* try and send service unavailable */
-  Logger.error_f "handle_zmq_error" m >>=
-    fun () => ack (Ack.Code 163) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
+    fun () => ack (Ack.Code 160) >>= fun resp => Protocol.Zest.send ctx.zmq_ctx resp;
 };
 
 exception Interrupt of string;
@@ -971,7 +965,8 @@ let rec run_server ctx => {
   let _ = try {Lwt_main.run {server ctx}} 
     { 
       | Interrupt m => terminate_server ctx;
-      | ZMQ.ZMQ_exception e m => handle_zmq_error ctx e m;
+      | ZMQ.ZMQ_exception e m => ack (Ack.Code 163) >>= Protocol.Zest.send ctx.zmq_ctx;
+      | Stack_overflow => ack (Ack.Code 141) >>= Protocol.Zest.send ctx.zmq_ctx;
       | e => unhandled_error e ctx;
     };
   run_server ctx;

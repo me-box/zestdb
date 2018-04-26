@@ -144,6 +144,14 @@ let handle_not_acceptable options => {
   Response.Error "Not Acceptable" |> Lwt.return;
 };
 
+let handle_request_entity_too_large options => {
+  Response.Error "Request Entity Too Large" |> Lwt.return;
+};
+
+let handle_internal_server_error options => {
+  Response.Error "Internal Server Error" |> Lwt.return;
+};
+
 let handle_response msg => {
   Lwt_log_core.debug_f "Received:\n%s" (to_hex msg) >>=
     fun () => {
@@ -159,6 +167,8 @@ let handle_response msg => {
       | 143 => handle_unsupported_content_format options;
       | 163 => handle_service_unavailable options;
       | 134 => handle_not_acceptable options;
+      | 141 => handle_request_entity_too_large options;
+      | 160 => handle_internal_server_error options;
       | _ => failwith ("invalid code:" ^ string_of_int code);
       };
     };  
