@@ -32,14 +32,6 @@ let make_key id (t1, t2) => {
   [id, string_of_int t1, string_of_int t2];
 };
 
-let list_of_keys ctx id => {
-  Index.get ctx.index id >>= 
-    fun lis => switch lis {
-    | None => []
-    | Some lis' => List.map (fun (t1, t2) => make_key id (t1, t2)) lis';
-    } |> Lwt.return;
-};
-
 let shard_data ctx id => {
   let rec loop n shard => {
     if (n > 0) {
@@ -478,12 +470,36 @@ let flush_memory_worker ctx id => {
   Membuf.exists ctx.membuf id ? flush_memory ctx id : Lwt.return_unit;
 };
 
-let delete ctx::ctx id_list::id_list json::json => {
-  Lwt_list.iter_s (fun id => flush_memory_worker ctx id) id_list >>= 
-    fun () => json >>= fun json' => {
-      let timestamps = get_timestamps (Ezjsonm.value json');
-      let keys = Lwt_list.map_s (fun k => list_of_keys ctx k) id_list;
-      keys >>= fun keys' => 
-        Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
+
+let make_shard_keys_worker id lb lis => {
+  let rec loop acc lis => {
+    switch lis {
+    | [] => acc;
+    | [(t1,t2), ...rest] when lb > t2 => loop acc rest;
+    | [(t1,t2), ...rest] => loop (List.cons (make_key id (t1,t2)) acc) rest; 
     };
+  };
+  loop [] lis;
+};
+
+let make_shard_keys ctx id lb => {
+  Index.get ctx.index id >>= 
+    fun lis => switch lis {
+    | None => []
+    | Some lis' => make_shard_keys_worker id lb lis';
+    } |> Lwt.return;
+};
+
+
+let delete ctx::ctx id_list::id_list json::json => {
+  json >>= fun json' => {
+    let timestamps = get_timestamps (Ezjsonm.value json');
+    switch timestamps {
+    | [] => Lwt.return_unit;
+    | [lb, ..._] => 
+        Lwt_list.iter_s (fun id => flush_memory_worker ctx id) id_list >>= 
+          fun () => Lwt_list.map_s (fun k => make_shard_keys ctx k lb) id_list >>=  
+            fun keys' => Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
+    };
+  };
 };
