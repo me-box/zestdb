@@ -165,8 +165,8 @@ let take n lis => {
 let sort_result mode lis => {
   open List;
   switch mode {
-  | `Last => sort (fun (x,y) (x',y') => x < x' ? 1 : -1) lis;
-  | `First => sort (fun (x,y) (x',y') => x > x' ? 1 : -1) lis;
+  | `Last => fast_sort (fun (x,y) (x',y') => x < x' ? 1 : -1) lis;
+  | `First => fast_sort (fun (x,y) (x',y') => x > x' ? 1 : -1) lis;
   | `None => lis;
   };
 };
@@ -222,8 +222,9 @@ let read_disk ctx k n mode =>   {
 
 let to_json lis => {
   open Ezjsonm;
-    List.map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) lis |> 
-      fun lis' => `A lis';
+  open List;
+  rev_map (fun (t,json) => dict [("timestamp", int t), ("data", value json)]) lis |> 
+    rev |> fun lis' => `A lis';
 };
 
 let return_data sort::mode lis => {

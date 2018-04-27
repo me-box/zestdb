@@ -17,7 +17,7 @@ module Oml = {
 
 let from_json json => {
   open Ezjsonm; 
-  List.map 
+  List.rev_map 
     (fun x => find x ["data"] |> fun y => get_float (find y ["value"])) 
     (get_list (fun x => x) (value json));  
 };
