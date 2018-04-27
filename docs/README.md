@@ -311,7 +311,7 @@ $ server.exe --secret-key-file example-server-key --token-key-file example-token
 
 In the above example, we have turned debugging on which is useful option if you want to write your own client. A client can also be run in this mode.
 
-### More advanced usage
+### Additional features
 
 You can write a binary such as a image to the database:
 
@@ -336,3 +336,13 @@ To carry out some performance tests we can use the 'loop' flag with POST and GET
 ```bash
 $ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo' --mode post --format text --payload 'hello world' --loop 10 --freq 0.001
 ```
+
+### Raspberry Pi 3 (aarch64)
+
+A docker build exists for [HypriotOS](https://blog.hypriot.com/)
+
+```bash
+$ docker pull jptmoore/zestdb:aarch64
+```
+
+The client and server binaries are in ```/home/databox```
