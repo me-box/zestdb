@@ -351,12 +351,10 @@ let post_loop socket count => {
       fun resp =>
         switch resp {
         | Response.OK => {
-            Lwt_io.printf "=> OK\n" >>=
-              fun () =>
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
-                } else { 
-                  Lwt.return_unit; 
+                } else {
+                  Lwt_io.printf "=> OK\n";
                 };
           };
         | Response.Error msg => Lwt_io.printf "=> %s\n" msg; 
@@ -380,12 +378,10 @@ let get_loop socket count => {
       fun resp =>
         switch resp {
         | Response.Payload msg => {
-            Lwt_io.printf "%s\n" msg >>=
-              fun () =>
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
-                } else { 
-                  Lwt.return_unit; 
+                } else {
+                  Lwt_io.printf "%s\n" msg;
                 };
           };
         | Response.Error msg => Lwt_io.printf "=> %s\n" msg;
@@ -409,12 +405,10 @@ let delete_loop socket count => {
       fun resp =>
         switch resp {
         | Response.OK => {
-            Lwt_io.printf "=> OK\n" >>=
-              fun () =>
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
-                } else { 
-                  Lwt.return_unit; 
+                } else {
+                  Lwt_io.printf "=> OK\n";
                 };
           };
         | Response.Error msg => Lwt_io.printf "=> %s\n" msg; 
