@@ -26,6 +26,7 @@ module Response = {
 };
 
 type t = {
+  mutable prov_ctx: option Prov.t,
   hc_ctx: Hc.t,
   observe_ctx: Observe.t,
   numts_ctx: Numeric_timeseries.t,
@@ -864,6 +865,7 @@ let handle_msg msg ctx => {
           let (token, r2) = Protocol.Zest.handle_token r1 tkl;
           let (options,r3) = handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
+          ctx.prov_ctx = Some (Prov.create code::code options::options token::token);
           switch code {
           | 1 => handle_get code options token ctx;
           | 2 => handle_post code options token payload ctx;
@@ -973,6 +975,7 @@ let rec run_server ctx => {
 };
 
 let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx hc_ctx => {
+  prov_ctx: None,
   hc_ctx: hc_ctx,
   observe_ctx: observe_ctx,
   numts_ctx: numts_ctx,
