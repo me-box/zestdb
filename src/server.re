@@ -744,8 +744,10 @@ let handle_post payload ctx => {
 };
 
 
-let handle_delete_write_kv_json uri_path ctx => {
+let handle_delete_write_kv_json ctx => {
   open Keyvalue.Json;
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", mode, id, key] => Some (delete ctx::ctx.jsonkv_ctx id::id key::key);
@@ -754,8 +756,10 @@ let handle_delete_write_kv_json uri_path ctx => {
   };
 };
 
-let handle_delete_write_kv_text uri_path ctx => {
+let handle_delete_write_kv_text ctx => {
   open Keyvalue.Text;
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", mode, id, key] => Some (delete ctx::ctx.textkv_ctx id::id key::key);
@@ -764,8 +768,10 @@ let handle_delete_write_kv_text uri_path ctx => {
   };
 };
 
-let handle_delete_write_kv_binary uri_path ctx => {
+let handle_delete_write_kv_binary ctx => {
   open Keyvalue.Binary;
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", mode, id, key] => Some (delete ctx::ctx.binarykv_ctx id::id key::key);
@@ -806,35 +812,42 @@ let has_unsupported_delete_api lis => {
 };
 
 
-let handle_delete_ts_numeric uri_path ctx => {
+let handle_delete_ts_numeric ctx => {
   open Numeric_timeseries;
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   switch (handle_get_read_ts uri_path ctx) {
   | Json json => Some (delete ctx::ctx.numts_ctx id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
 };
 
-let handle_delete_ts_blob uri_path ctx => {
+let handle_delete_ts_blob ctx => {
   open Blob_timeseries;
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   switch (handle_get_read_ts uri_path ctx) {
   | Json json => Some (delete ctx::ctx.blobts_ctx id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
 };
 
-let handle_delete_write content_format uri_path ctx => {
+let handle_delete_write ctx => {
   open Ack;
   open Ezjsonm;
+  let prov_ctx = get_prov_ctx ctx;
+  let content_format = Prov.content_format prov_ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   let path_list = String.split_on_char '/' uri_path;
   if (has_unsupported_delete_api path_list) {
     Lwt.return (Code 134);
   } else {
     let result = switch (path_list, content_format) {
-      | (["", "kv", ..._], 50) => handle_delete_write_kv_json uri_path ctx;
-      | (["", "kv", ..._], 0) => handle_delete_write_kv_text uri_path ctx;
-      | (["", "kv", ..._], 42) => handle_delete_write_kv_binary uri_path ctx;
-      | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob uri_path ctx;
-      | (["", "ts", ..._], 50) => handle_delete_ts_numeric uri_path ctx;
+      | (["", "kv", ..._], 50) => handle_delete_write_kv_json ctx;
+      | (["", "kv", ..._], 0) => handle_delete_write_kv_text ctx;
+      | (["", "kv", ..._], 42) => handle_delete_write_kv_binary ctx;
+      | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob ctx;
+      | (["", "ts", ..._], 50) => handle_delete_ts_numeric ctx;
       | _ => None;
       };
       switch result {
@@ -844,10 +857,12 @@ let handle_delete_write content_format uri_path ctx => {
   };
 };
 
-let handle_delete_observed key code options token ctx => {
-  let (uri_path, content_format) = key;    
+let handle_delete_observed ctx => {
+  let prov_ctx = get_prov_ctx ctx;
+  let token = Prov.token prov_ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   if (is_valid_token token uri_path "DELETE") {
-    handle_delete_write content_format uri_path ctx >>=
+    handle_delete_write ctx >>=
       fun resp => route resp "" ctx >>= 
         fun () => ack resp;
   } else {
@@ -857,26 +872,25 @@ let handle_delete_observed key code options token ctx => {
 };
 
 
-let handle_delete_unobserved key code options token ctx => {
-  let (uri_path, content_format) = key;    
+let handle_delete_unobserved ctx => {
+  let prov_ctx = get_prov_ctx ctx;
+  let token = Prov.token prov_ctx;
+  let uri_path = Prov.uri_path prov_ctx;
   if (is_valid_token token uri_path "DELETE") {
-    handle_delete_write content_format uri_path ctx >>= ack;
+    handle_delete_write ctx >>= ack;
   } else {
     ack (Code 129);
   };
 };
 
 
-let handle_delete code options token ctx => {
-  handle_content_format options >>= 
-    fun content_format => {
-      let uri_path = Protocol.Zest.get_option_value options 11;
-      let key = (uri_path, content_format);
-      if (Observe.is_observed ctx.observe_ctx key) {
-        handle_delete_observed key code options token ctx;
-      } else {
-        handle_delete_unobserved key code options token ctx;
-      };
+let handle_delete ctx => {
+  let prov_ctx = get_prov_ctx ctx;
+  let key = Prov.ident prov_ctx;
+  if (Observe.is_observed ctx.observe_ctx key) {
+    handle_delete_observed ctx;
+  } else {
+    handle_delete_unobserved ctx;
   };
 };
 
@@ -895,7 +909,7 @@ let handle_msg msg ctx => {
           switch code {
           | 1 => handle_get code options token ctx;
           | 2 => handle_post payload ctx;
-          | 4 => handle_delete code options token ctx;
+          | 4 => handle_delete ctx;
           | _ => failwith "invalid code";
           };
         };  
