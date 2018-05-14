@@ -131,7 +131,7 @@ let create_ack_observe public_key uuid::payload => {
 };
 
 
-let observed options => {
+let get_observed options => {
   let rec loop lis => {
     switch lis {
     | [] => None;

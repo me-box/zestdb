@@ -6,3 +6,5 @@ let uri_path : t => string;
 let uri_host : t => string;
 let content_format : t => int;
 let token : t => string;
+let observed : array (int, string) => string;
+let max_age : array (int, string) => Int32.t;

@@ -8,7 +8,6 @@ type t = {
   token: string
 };
 
-
 let create code::code options::options token::token => {
   open Protocol.Zest;
   {
@@ -42,4 +41,12 @@ let content_format t => {
 
 let token t => {
   t.token;
+};
+
+let observed options => {
+  Protocol.Zest.get_observed options;
+};
+
+let max_age options => {
+  Protocol.Zest.get_max_age options;
 };

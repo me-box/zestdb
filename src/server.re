@@ -656,8 +656,11 @@ let handle_max_age options => {
 };
 
 
-let handle_get_observed key code options token ctx => {
-  let (uri_path, content_format) = key;      
+let handle_get_observed ctx => {
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
+  let token = Prov.token prov_ctx;
+  let content_format = Prov.content_format prov_ctx;      
   if (is_valid_token token uri_path "GET") {
     handle_get_read content_format uri_path ctx >>=
       fun resp => route resp "" ctx >>= 
@@ -668,8 +671,11 @@ let handle_get_observed key code options token ctx => {
   }; 
 };
 
-let handle_get_unobserved key token ctx => {
-  let (uri_path, content_format) = key;      
+let handle_get_unobserved ctx => {
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
+  let token = Prov.token prov_ctx;
+  let content_format = Prov.content_format prov_ctx;
   if (is_valid_token token uri_path "GET") {
     handle_get_read content_format uri_path ctx >>= ack;
    } else {
@@ -678,33 +684,33 @@ let handle_get_unobserved key token ctx => {
 };
 
 
-let handle_get_observation_request key code token options observe_mode ctx => {
-  let (uri_path, content_format) = key;
+let handle_get_observation_request observe_mode ctx options => {
+  let prov_ctx = get_prov_ctx ctx;
+  let uri_path = Prov.uri_path prov_ctx;
+  let token = Prov.token prov_ctx;
+  let content_format = Prov.content_format prov_ctx;
+  let max_age = Prov.max_age options;
   if (is_valid_token token uri_path "GET") {
-    handle_max_age options >>= fun max_age => {
-      let uuid = create_uuid ();
-      Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
-        fun () => route (Ack.Observe !router_public_key uuid) "" ctx >>=
-          fun () => ack (Ack.Observe !router_public_key uuid);
-    };
+    let uuid = create_uuid ();
+    Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
+      fun () => route (Ack.Observe !router_public_key uuid) "" ctx >>=
+        fun () => ack (Ack.Observe !router_public_key uuid);
   } else {
     route (Ack.Code 129) "" ctx >>= 
       fun () => ack (Ack.Code 129);
   };
 };
 
-let handle_get code options token ctx => {
-  handle_content_format options >>= fun content_format => {
-    let uri_path = Protocol.Zest.get_option_value options 11;
-    let key = (uri_path, content_format);        
-    let observe_mode = Protocol.Zest.observed options;
-    if ((observe_mode == "data") || (observe_mode == "audit")) {
-      handle_get_observation_request key code token options observe_mode ctx
-    } else if (Observe.is_observed ctx.observe_ctx key) {
-      handle_get_observed key code options token ctx;
-    } else {
-      handle_get_unobserved key token ctx;
-    };
+let handle_get ctx options => {
+  let prov_ctx = get_prov_ctx ctx;
+  let key = Prov.ident prov_ctx;
+  let observed = Prov.observed options;
+  if ((observed == "data") || (observed == "audit")) {
+    handle_get_observation_request observed ctx options;
+  } else if (Observe.is_observed ctx.observe_ctx key) {
+    handle_get_observed ctx;
+  } else {
+    handle_get_unobserved ctx;
   };
 };
 
@@ -733,7 +739,7 @@ let handle_post_observed payload ctx => {
   };
 };
 
-let handle_post payload ctx => {
+let handle_post ctx payload => {
   let prov_ctx = get_prov_ctx ctx;
   let key = Prov.ident prov_ctx;
   if (Observe.is_observed ctx.observe_ctx key) {
@@ -907,8 +913,8 @@ let handle_msg msg ctx => {
           let payload = Bitstring.string_of_bitstring r3;
           ctx.prov_ctx = Some (Prov.create code::code options::options token::token);
           switch code {
-          | 1 => handle_get code options token ctx;
-          | 2 => handle_post payload ctx;
+          | 1 => handle_get ctx options;
+          | 2 => handle_post ctx payload;
           | 4 => handle_delete ctx;
           | _ => failwith "invalid code";
           };
