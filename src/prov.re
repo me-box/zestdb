@@ -23,3 +23,23 @@ let create code::code options::options token::token => {
 let ident t => {
   (t.uri_path, t.content_format);
 };
+
+let code t => {
+  t.code;
+};
+
+let uri_path t => {
+  t.uri_path;
+};
+
+let uri_host t => {
+  t.uri_host;
+};
+
+let content_format t => {
+  t.content_format;
+};
+
+let token t => {
+  t.token;
+};
