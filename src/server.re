@@ -643,18 +643,6 @@ let handle_options oc bits => {
   (options, handle oc bits);
 };
 
-let handle_content_format options => {
-  let content_format = Protocol.Zest.get_content_format options;
-  Logger.debug_f "handle_content_format" (Printf.sprintf "%d" content_format) >>= 
-    fun () => Lwt.return content_format;
-};
-
-let handle_max_age options => {
-  let max_age = Protocol.Zest.get_max_age options;
-  Logger.debug_f "handle_max_age" (Printf.sprintf "max_age => %lu" max_age) >>=
-    fun () => Lwt.return max_age;
-};
-
 
 let handle_get_observed ctx => {
   let prov_ctx = get_prov_ctx ctx;
