@@ -63,12 +63,7 @@ let create_audit_payload_worker ctx code resp_code => {
 
 let create_audit_payload ctx status payload => {
   let prov_ctx = get_prov_ctx ctx;
-  let meth = switch (Prov.code prov_ctx) {
-  | 1 => "GET"
-  | 2 => "POST"
-  | 4 => "DELETE"
-  | _ => "UNDEFINED"
-  };
+  let meth = Prov.code_as_string prov_ctx;
   switch status {
   | Ack.Code 163 => Some payload;
   | Ack.Code n => Some (create_audit_payload_worker ctx meth n);
@@ -81,12 +76,7 @@ let create_audit_payload ctx status payload => {
 let create_data_payload_worker ctx payload => {
   let prov_ctx = get_prov_ctx ctx;
   let uri_path = Prov.uri_path prov_ctx;
-  let content_format = switch (Prov.content_format prov_ctx) {
-    | 0 => "text"; 
-    | 50 => "json";
-    | 42 => "binary";
-    | _ => "unknown";
-  };    
+  let content_format = Prov.content_format_as_string prov_ctx;    
   let timestamp = get_time (); 
   let entry = Printf.sprintf "%d %s %s %s" timestamp uri_path content_format payload;
   Protocol.Zest.create_ack_payload 69 entry;
@@ -492,11 +482,13 @@ let to_json payload => {
 
 let handle_post_write_ts_numeric ::timestamp=None key payload ctx => {
   open Numeric_timeseries;
+  let prov_ctx = get_prov_ctx ctx;
+  let m = Prov.log_entry prov_ctx;
   let json = to_json payload;
   switch json {
   | Some value => {
       if (is_valid value) {
-        Some (write ctx::ctx.numts_ctx timestamp::timestamp id::key json::value);
+        Some (write ctx::ctx.numts_ctx timestamp::timestamp info::m id::key json::value);
       } else None;
     };
   | None => None;
@@ -505,9 +497,11 @@ let handle_post_write_ts_numeric ::timestamp=None key payload ctx => {
 
 let handle_post_write_ts_blob ::timestamp=None key payload ctx => {
   open Blob_timeseries;
+  let prov_ctx = get_prov_ctx ctx;
+  let m = Prov.log_entry prov_ctx;
   let json = to_json payload;
   switch json {
-  | Some value => Some (write ctx::ctx.blobts_ctx timestamp::timestamp id::key json::value);
+  | Some value => Some (write ctx::ctx.blobts_ctx timestamp::timestamp info::m id::key json::value);
   | None => None;
   };  
 };
@@ -571,7 +565,7 @@ let handle_write_database payload ctx => {
   let content_format = Prov.content_format prov_ctx;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/ts/", 50) => handle_post_write_ts payload ctx; 
+  | ("/ts/", 50) => handle_post_write_ts payload ctx;
   | ("/kv/", 50) => handle_post_write_kv_json payload ctx;
   | ("/kv/", 0) => handle_post_write_kv_text payload ctx;
   | ("/kv/", 42) => handle_post_write_kv_binary payload ctx;  
@@ -974,8 +968,8 @@ let cleanup_router ctx => {
 
 let terminate_server ctx => {
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
-    Blob_timeseries.flush ctx::ctx.blobts_ctx >>= fun () =>
-      Numeric_timeseries.flush ctx::ctx.numts_ctx >>= fun () =>
+    Blob_timeseries.flush ctx::ctx.blobts_ctx info::"terminated" >>= fun () =>
+      Numeric_timeseries.flush ctx::ctx.numts_ctx info::"terminated" >>= fun () =>
         cleanup_router ctx >>= fun () =>
           Protocol.Zest.close ctx.zmq_ctx |> 
             fun () => exit 0;

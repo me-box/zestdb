@@ -68,15 +68,15 @@ let log_index str lis => {
 };
 
 
-let remove_leftover_shards ctx k keep_index remove_list => {
+let remove_leftover_shards ctx k keep_index remove_list msg => {
   open List; 
   let index_list = filter (fun i => i != keep_index) remove_list;
   let key_list = map (fun i => make_key k i) index_list;
-  Shard.remove ctx.shard key_list;
+  Shard.remove ctx.shard key_list msg;
 };
 
 
-let handle_shard_overlap_worker ctx k shard shard_lis overlap_list => {
+let handle_shard_overlap_worker ctx k shard shard_lis overlap_list info => {
   open List;    
   let new_shard = flatten (cons shard shard_lis);
   Lwt_log_core.debug_f "shard len:%d" (List.length new_shard) >>= fun () =>
@@ -86,24 +86,24 @@ let handle_shard_overlap_worker ctx k shard shard_lis overlap_list => {
       Lwt_log_core.debug_f "Adding shard with key:%s" (string_of_key key) >>= fun () =>
         Index.update ctx.index k new_range overlap_list >>= fun bounds =>
           Membuf.set_disk_range ctx.membuf k bounds |> fun () =>
-            Shard.add ctx.shard key new_shard >>= fun () =>
-              remove_leftover_shards ctx k new_range overlap_list;
+            Shard.add ctx.shard key new_shard info >>= fun () =>
+              remove_leftover_shards ctx k new_range overlap_list info;
     };
     | None => Lwt.return_unit;
   };
 };
 
-let handle_shard_overlap ctx k shard range => {
+let handle_shard_overlap ctx k shard range info => {
   Index.overlap ctx.index k range >>= fun overlap_list => {
     log_index "=== overlapping" overlap_list >>= fun () =>
       Lwt_list.map_s (fun r => Shard.get ctx.shard (make_key k r)) overlap_list >>=
-        fun shard_list => handle_shard_overlap_worker ctx k shard shard_list overlap_list;
+        fun shard_list => handle_shard_overlap_worker ctx k shard shard_list overlap_list info;
   };
 };
 
-let handle_shard ctx k shard => {
+let handle_shard ctx k shard info => {
   switch (shard_range shard) {
-  | Some range => handle_shard_overlap ctx k shard range; 
+  | Some range => handle_shard_overlap ctx k shard range info; 
   | None => Lwt.return_unit;
   };
 };
@@ -125,13 +125,13 @@ let is_descending ctx k => {
       };
 };
 
-let write ctx::ctx timestamp::ts=None id::k json::v => {
+let write ctx::ctx info::info timestamp::ts=None id::k json::v => {
   let (t, j) = make_elt ts v;
   Membuf.write ctx.membuf k (t,j) >>= fun () =>
     Membuf.length ctx.membuf k >>= fun current_buffer_size => {
       if (current_buffer_size == ctx.max_buffer_size) {
         shard_data ctx k >>= fun shard => {
-          handle_shard ctx k shard;
+          handle_shard ctx k shard info;
         };
       } else {
         Lwt.return_unit;
@@ -140,15 +140,15 @@ let write ctx::ctx timestamp::ts=None id::k json::v => {
 };
 
 
-let flush_series ctx k shard => {
-  handle_shard ctx k shard >>=
+let flush_series ctx k shard info => {
+  handle_shard ctx k shard info >>=
     fun () => Membuf.empty_series ctx.membuf k;
 };
 
-let flush ctx::ctx => {
+let flush ctx::ctx info::info => {
   Membuf.serialise ctx.membuf >>= fun lis =>
     (Lwt_list.iter_s (fun (key, shard) => 
-      flush_series ctx key shard) lis);
+      flush_series ctx key shard info) lis);
 };
 
 let take n lis => {
@@ -234,7 +234,7 @@ let return_data sort::mode lis => {
 
 let flush_memory ctx k => {
   read_memory_all ctx k >>=
-    fun shard => flush_series ctx k shard;
+    fun shard => flush_series ctx k shard "memory flushed";
 };
 
 
@@ -460,7 +460,7 @@ let get_timestamps json => {
 let filter_shard_worker ctx key timestamps => {
   Shard.get ctx.shard key >>= 
     fun lis => List.filter (fun (t,_) => not (List.mem t timestamps)) lis |>
-      fun lis' => Shard.add ctx.shard key lis';
+      fun lis' => Shard.add ctx.shard key lis' "deleted";
 };
 
 let delete_worker ctx key_list timestamps => {

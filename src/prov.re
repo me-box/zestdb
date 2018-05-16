@@ -19,6 +19,28 @@ let create code::code options::options token::token => {
   };
 };
 
+let code_as_string t => {
+  switch t.code {
+    | 1 => "GET"
+    | 2 => "POST"
+    | 4 => "DELETE"
+    | _ => "UNDEFINED"
+    };
+};
+
+let content_format_as_string t => {
+  switch t.content_format {
+    | 0 => "text"; 
+    | 50 => "json";
+    | 42 => "binary";
+    | _ => "unknown";
+  };
+};
+
+let log_entry t => {
+  Printf.sprintf "%s, %s, %s, %s" t.uri_host (code_as_string t) (content_format_as_string t) t.uri_path;
+};
+
 let ident t => {
   (t.uri_path, t.content_format);
 };
