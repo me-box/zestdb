@@ -53,22 +53,31 @@ let create_audit_payload_worker prov code resp_code => {
 };
 
 let create_audit_payload prov status payload => {
-  let meth = Prov.code_as_string prov;
-  switch status {
-  | Ack.Code 163 => Some payload;
-  | Ack.Code n => Some (create_audit_payload_worker prov meth n);
-  | Ack.Payload _ => Some (create_audit_payload_worker prov "GET" 69); 
-  | Ack.Observe _ => Some (create_audit_payload_worker prov "GET(OBSERVE)" 69); 
-  };
+  switch prov {
+  | Some prov' =>
+    let meth = Prov.code_as_string prov';
+      switch status {
+      | Ack.Code 163 => Some payload;
+      | Ack.Code n => Some (create_audit_payload_worker prov' meth n);
+      | Ack.Payload _ => Some (create_audit_payload_worker prov' "GET" 69); 
+      | Ack.Observe _ => Some (create_audit_payload_worker prov' "GET(OBSERVE)" 69); 
+      };
+  | None => Some payload;
+  }
 };
 
 
 let create_data_payload_worker prov payload => {
-  let uri_path = Prov.uri_path prov;
-  let content_format = Prov.content_format_as_string prov;    
-  let timestamp = get_time (); 
-  let entry = Printf.sprintf "%d %s %s %s" timestamp uri_path content_format payload;
-  Protocol.Zest.create_ack_payload 69 entry;
+  switch prov {
+  | Some prov' => {
+      let uri_path = Prov.uri_path prov';
+      let content_format = Prov.content_format_as_string prov';    
+      let timestamp = get_time (); 
+      let entry = Printf.sprintf "%d %s %s %s" timestamp uri_path content_format payload;
+      Protocol.Zest.create_ack_payload 69 entry;
+    };
+  | None => Protocol.Zest.create_ack 163;
+  };
 };
 
 let create_data_payload prov status payload => {
@@ -85,14 +94,10 @@ let create_data_payload prov status payload => {
 };
 
 let create_router_payload prov mode status payload => {
-  switch prov {
-  | Some prov' =>
-      switch mode {
-      | "data" => create_data_payload prov' status payload;
-      | "audit" => create_audit_payload prov' status payload;
-      | _ => Some (Protocol.Zest.create_ack 128);
-      };
-  | None => failwith "prov unset";
+  switch mode {
+  | "data" => create_data_payload prov status payload;
+  | "audit" => create_audit_payload prov status payload;
+  | _ => Some (Protocol.Zest.create_ack 128);
   };
 };
 
@@ -648,14 +653,12 @@ let handle_get_unobserved ctx prov => {
 };
 
 
-let handle_get_observation_request observe_mode ctx prov => {
+let handle_get_observation_request ctx prov => {
   let uri_path = Prov.uri_path prov;
   let token = Prov.token prov;
-  let content_format = Prov.content_format prov;
-  let max_age = Prov.max_age prov;
   if (is_valid_token token uri_path "GET") {
     let uuid = create_uuid ();
-    Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
+    Observe.add ctx.observe_ctx uuid prov >>=
       fun () => route (Ack.Observe !router_public_key uuid) "" ctx prov >>=
         fun () => ack (Ack.Observe !router_public_key uuid);
   } else {
@@ -668,7 +671,7 @@ let handle_get ctx prov => {
   let key = Prov.ident prov;
   let observed = Prov.observed prov;
   if ((observed == "data") || (observed == "audit")) {
-    handle_get_observation_request observed ctx prov;
+    handle_get_observation_request ctx prov;
   } else if (Observe.is_observed ctx.observe_ctx key) {
     handle_get_observed ctx prov;
   } else {

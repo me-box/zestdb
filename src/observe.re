@@ -61,11 +61,14 @@ let get ctx key => {
   loop [] ctx.notify_list;
 };
 
-let add ctx uri_path content_format ident max_age mode => {
+let add ctx ident prov => {
   open Int32;
   open Logger;
   open Printf;
-  let key = (uri_path, content_format);
+  let key = Prov.ident prov;
+  let max_age = Prov.max_age prov;
+  let mode = Prov.observed prov;
+  let uri_path = Prov.uri_path prov;
   let expiry = (equal max_age (of_int 0)) ? max_age : add (time_now ()) max_age;
   let value = (ident, expiry, mode);
   if (List.mem_assoc key ctx.notify_list) {
