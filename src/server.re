@@ -26,7 +26,6 @@ module Response = {
 };
 
 type t = {
-  mutable prov_ctx: option Prov.t,
   hc_ctx: Hc.t,
   observe_ctx: Observe.t,
   numts_ctx: Numeric_timeseries.t,
@@ -38,51 +37,41 @@ type t = {
   version: int
 };
 
-let get_prov_ctx ctx => {
-  switch ctx.prov_ctx {
-  | Some ctx => ctx;
-  | None => failwith "Prov ctx unset";
-  };
-};
-
 let get_time () => {
   let t_sec = Unix.gettimeofday ();
   let t_ms = t_sec *. 1000.0;
   int_of_float t_ms;
 };
 
-let create_audit_payload_worker ctx code resp_code => {
+let create_audit_payload_worker prov code resp_code => {
   open Protocol.Zest;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_host = Prov.uri_host prov_ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_host = Prov.uri_host prov;
+  let uri_path = Prov.uri_path prov;
   let timestamp = get_time (); 
   let server = !identity;
   create_ack_payload 69 (Printf.sprintf "%d %s %s %s %s %d" timestamp server uri_host code uri_path resp_code);
 };
 
-let create_audit_payload ctx status payload => {
-  let prov_ctx = get_prov_ctx ctx;
-  let meth = Prov.code_as_string prov_ctx;
+let create_audit_payload prov status payload => {
+  let meth = Prov.code_as_string prov;
   switch status {
   | Ack.Code 163 => Some payload;
-  | Ack.Code n => Some (create_audit_payload_worker ctx meth n);
-  | Ack.Payload _ => Some (create_audit_payload_worker ctx "GET" 69); 
-  | Ack.Observe _ => Some (create_audit_payload_worker ctx "GET(OBSERVE)" 69); 
+  | Ack.Code n => Some (create_audit_payload_worker prov meth n);
+  | Ack.Payload _ => Some (create_audit_payload_worker prov "GET" 69); 
+  | Ack.Observe _ => Some (create_audit_payload_worker prov "GET(OBSERVE)" 69); 
   };
 };
 
 
-let create_data_payload_worker ctx payload => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let content_format = Prov.content_format_as_string prov_ctx;    
+let create_data_payload_worker prov payload => {
+  let uri_path = Prov.uri_path prov;
+  let content_format = Prov.content_format_as_string prov;    
   let timestamp = get_time (); 
   let entry = Printf.sprintf "%d %s %s %s" timestamp uri_path content_format payload;
   Protocol.Zest.create_ack_payload 69 entry;
 };
 
-let create_data_payload ctx status payload => {
+let create_data_payload prov status payload => {
   switch status {
   | Ack.Code 163 => Some payload;
   | Ack.Observe _ => None;
@@ -91,25 +80,29 @@ let create_data_payload ctx status payload => {
   | Ack.Code 143 => None;
   | Ack.Code 66 => None;
   | Ack.Payload _ => None;
-  | Ack.Code _ => Some (create_data_payload_worker ctx payload);
+  | Ack.Code _ => Some (create_data_payload_worker prov payload);
   };
 };
 
-let create_router_payload ctx mode status payload => {
-  switch mode {
-  | "data" => create_data_payload ctx status payload;
-  | "audit" => create_audit_payload ctx status payload;
-  | _ => Some (Protocol.Zest.create_ack 128);
+let create_router_payload prov mode status payload => {
+  switch prov {
+  | Some prov' =>
+      switch mode {
+      | "data" => create_data_payload prov' status payload;
+      | "audit" => create_audit_payload prov' status payload;
+      | _ => Some (Protocol.Zest.create_ack 128);
+      };
+  | None => failwith "prov unset";
   };
 };
 
-let route_message alist ctx status payload => {
+let route_message alist ctx status payload prov => {
   open Logger;
   let rec loop l => {
     switch l {
       | [] => Lwt.return_unit;
       | [(ident,expiry,mode), ...rest] => {
-          switch (create_router_payload ctx mode status payload) {
+          switch (create_router_payload prov mode status payload) {
           | Some payload' => {
               Protocol.Zest.route ctx.zmq_ctx ident payload' >>= fun () =>
                 debug_f "routing" (Printf.sprintf "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s" (to_hex payload') ident expiry mode) >>= 
@@ -123,15 +116,14 @@ let route_message alist ctx status payload => {
   loop alist;
 };
 
-let route status payload ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let key = Prov.ident prov_ctx;
-  route_message (Observe.get ctx.observe_ctx key) ctx status payload; 
+let route status payload ctx prov => {
+  let key = Prov.ident prov;
+  route_message (Observe.get ctx.observe_ctx key) ctx status payload (Some prov); 
 };
 
 let handle_expire ctx => {
   Observe.expire ctx.observe_ctx >>=
-    fun uuids => route_message uuids ctx (Ack.Code 163) (Protocol.Zest.create_ack 163);
+    fun uuids => route_message uuids ctx (Ack.Code 163) (Protocol.Zest.create_ack 163) None;
 };
 
 
@@ -480,10 +472,9 @@ let to_json payload => {
 
 
 
-let handle_post_write_ts_numeric ::timestamp=None key payload ctx => {
+let handle_post_write_ts_numeric ::timestamp=None key payload ctx prov => {
   open Numeric_timeseries;
-  let prov_ctx = get_prov_ctx ctx;
-  let m = Prov.log_entry prov_ctx;
+  let m = Prov.log_entry prov;
   let json = to_json payload;
   switch json {
   | Some value => {
@@ -495,10 +486,9 @@ let handle_post_write_ts_numeric ::timestamp=None key payload ctx => {
   };  
 };
 
-let handle_post_write_ts_blob ::timestamp=None key payload ctx => {
+let handle_post_write_ts_blob ::timestamp=None key payload ctx prov => {
   open Blob_timeseries;
-  let prov_ctx = get_prov_ctx ctx;
-  let m = Prov.log_entry prov_ctx;
+  let m = Prov.log_entry prov;
   let json = to_json payload;
   switch json {
   | Some value => Some (write ctx::ctx.blobts_ctx timestamp::timestamp info::m id::key json::value);
@@ -506,28 +496,26 @@ let handle_post_write_ts_blob ::timestamp=None key payload ctx => {
   };  
 };
 
-let handle_post_write_ts payload ctx => {
+let handle_post_write_ts payload ctx prov => {
   open List;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", "ts", "blob", key] =>
-    handle_post_write_ts_blob key payload ctx;
+    handle_post_write_ts_blob key payload ctx prov;
   | ["", "ts", "blob", key, "at", ts] => 
-    handle_post_write_ts_blob timestamp::(Some (int_of_string ts)) key payload ctx;
+    handle_post_write_ts_blob timestamp::(Some (int_of_string ts)) key payload ctx prov;
   | ["", "ts", key] => 
-    handle_post_write_ts_numeric key payload ctx;
+    handle_post_write_ts_numeric key payload ctx prov;
   | ["", "ts", key, "at", ts] => 
-    handle_post_write_ts_numeric timestamp::(Some (int_of_string ts)) key payload ctx;
+    handle_post_write_ts_numeric timestamp::(Some (int_of_string ts)) key payload ctx prov;
   | _ => None;
   };
 };
 
-let handle_post_write_kv_json payload ctx => {
+let handle_post_write_kv_json payload ctx prov => {
   open Keyvalue.Json;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   switch (get_id_key "kv" uri_path) {
   | Some (id, key) => switch (to_json payload) {
     | Some json => Some (write ctx::ctx.jsonkv_ctx id::id key::key json::json);
@@ -537,38 +525,35 @@ let handle_post_write_kv_json payload ctx => {
   };
 };
 
-let handle_post_write_kv_text payload ctx => {
+let handle_post_write_kv_text payload ctx prov => {
   open Keyvalue.Text;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   switch (get_id_key "kv" uri_path) {
   | Some (id, key) => Some (write ctx::ctx.textkv_ctx id::id key::key text::payload);
   | None => None;
   };
 };
 
-let handle_post_write_kv_binary payload ctx => {
+let handle_post_write_kv_binary payload ctx prov => {
   open Keyvalue.Binary;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   switch (get_id_key "kv" uri_path) {
   | Some (id, key) => Some (write ctx::ctx.binarykv_ctx id::id key::key binary::payload);
   | None => None;
   };
 };
 
-let handle_write_database payload ctx => {
+let handle_write_database payload ctx prov => {
   open Ack;
   open Ezjsonm;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let content_format = Prov.content_format prov_ctx;
+  let uri_path = Prov.uri_path prov;
+  let content_format = Prov.content_format prov;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/ts/", 50) => handle_post_write_ts payload ctx;
-  | ("/kv/", 50) => handle_post_write_kv_json payload ctx;
-  | ("/kv/", 0) => handle_post_write_kv_text payload ctx;
-  | ("/kv/", 42) => handle_post_write_kv_binary payload ctx;  
+  | ("/ts/", 50) => handle_post_write_ts payload ctx prov;
+  | ("/kv/", 50) => handle_post_write_kv_json payload ctx prov;
+  | ("/kv/", 0) => handle_post_write_kv_text payload ctx prov;
+  | ("/kv/", 42) => handle_post_write_kv_binary payload ctx prov;  
   | _ => None;
   };
   switch result {
@@ -594,12 +579,11 @@ let handle_write_hypercat ctx payload => {
   };
 };
 
-let handle_post_write payload ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+let handle_post_write payload ctx prov => {
+  let uri_path = Prov.uri_path prov;
   switch uri_path {
   | "/cat" => handle_write_hypercat ctx payload;
-  | _ => handle_write_database payload ctx; 
+  | _ => handle_write_database payload ctx prov; 
   };
 };
 
@@ -638,26 +622,24 @@ let handle_options oc bits => {
 };
 
 
-let handle_get_observed ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let token = Prov.token prov_ctx;
-  let content_format = Prov.content_format prov_ctx;      
+let handle_get_observed ctx prov => {
+  let uri_path = Prov.uri_path prov;
+  let token = Prov.token prov;
+  let content_format = Prov.content_format prov;      
   if (is_valid_token token uri_path "GET") {
     handle_get_read content_format uri_path ctx >>=
-      fun resp => route resp "" ctx >>= 
+      fun resp => route resp "" ctx prov >>= 
         fun () => ack resp;
   } else {
-    route (Ack.Code 129) "" ctx >>= 
+    route (Ack.Code 129) "" ctx prov >>= 
       fun () => ack (Ack.Code 129);
   }; 
 };
 
-let handle_get_unobserved ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let token = Prov.token prov_ctx;
-  let content_format = Prov.content_format prov_ctx;
+let handle_get_unobserved ctx prov => {
+  let uri_path = Prov.uri_path prov;
+  let token = Prov.token prov;
+  let content_format = Prov.content_format prov;
   if (is_valid_token token uri_path "GET") {
     handle_get_read content_format uri_path ctx >>= ack;
    } else {
@@ -666,76 +648,70 @@ let handle_get_unobserved ctx => {
 };
 
 
-let handle_get_observation_request observe_mode ctx options => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let token = Prov.token prov_ctx;
-  let content_format = Prov.content_format prov_ctx;
-  let max_age = Prov.max_age options;
+let handle_get_observation_request observe_mode ctx prov => {
+  let uri_path = Prov.uri_path prov;
+  let token = Prov.token prov;
+  let content_format = Prov.content_format prov;
+  let max_age = Prov.max_age prov;
   if (is_valid_token token uri_path "GET") {
     let uuid = create_uuid ();
     Observe.add ctx.observe_ctx uri_path content_format uuid max_age observe_mode >>=
-      fun () => route (Ack.Observe !router_public_key uuid) "" ctx >>=
+      fun () => route (Ack.Observe !router_public_key uuid) "" ctx prov >>=
         fun () => ack (Ack.Observe !router_public_key uuid);
   } else {
-    route (Ack.Code 129) "" ctx >>= 
+    route (Ack.Code 129) "" ctx prov >>= 
       fun () => ack (Ack.Code 129);
   };
 };
 
-let handle_get ctx options => {
-  let prov_ctx = get_prov_ctx ctx;
-  let key = Prov.ident prov_ctx;
-  let observed = Prov.observed options;
+let handle_get ctx prov => {
+  let key = Prov.ident prov;
+  let observed = Prov.observed prov;
   if ((observed == "data") || (observed == "audit")) {
-    handle_get_observation_request observed ctx options;
+    handle_get_observation_request observed ctx prov;
   } else if (Observe.is_observed ctx.observe_ctx key) {
-    handle_get_observed ctx;
+    handle_get_observed ctx prov;
   } else {
-    handle_get_unobserved ctx;
+    handle_get_unobserved ctx prov;
   };
 };
 
-let handle_post_unobserved payload ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let token = Prov.token prov_ctx;
+let handle_post_unobserved payload ctx prov => {
+  let uri_path = Prov.uri_path prov;
+  let token = Prov.token prov;
   if (is_valid_token token uri_path "POST") {
-    handle_post_write payload ctx >>= ack;
+    handle_post_write payload ctx prov >>= ack;
   } else {
     ack (Code 129);
   };
 };
 
-let handle_post_observed payload ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
-  let token = Prov.token prov_ctx;
+let handle_post_observed payload ctx prov => {
+  let uri_path = Prov.uri_path prov;
+  let token = Prov.token prov;
   if (is_valid_token token uri_path "POST") {
-    handle_post_write payload ctx >>=
-      fun resp => route resp payload ctx >>= 
+    handle_post_write payload ctx prov >>=
+      fun resp => route resp payload ctx prov >>= 
         fun () => ack resp;
    } else {
-    route (Ack.Code 129) payload ctx >>= 
+    route (Ack.Code 129) payload ctx prov >>= 
       fun () => ack (Code 129);
   };
 };
 
-let handle_post ctx payload => {
-  let prov_ctx = get_prov_ctx ctx;
-  let key = Prov.ident prov_ctx;
+let handle_post ctx payload prov => {
+  let key = Prov.ident prov;
   if (Observe.is_observed ctx.observe_ctx key) {
-    handle_post_observed payload ctx;
+    handle_post_observed payload ctx prov;
   } else {
-    handle_post_unobserved payload ctx;
+    handle_post_unobserved payload ctx prov;
   };
 };
 
 
-let handle_delete_write_kv_json ctx => {
+let handle_delete_write_kv_json ctx prov => {
   open Keyvalue.Json;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", mode, id, key] => Some (delete ctx::ctx.jsonkv_ctx id::id key::key);
@@ -744,10 +720,9 @@ let handle_delete_write_kv_json ctx => {
   };
 };
 
-let handle_delete_write_kv_text ctx => {
+let handle_delete_write_kv_text ctx prov => {
   open Keyvalue.Text;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", mode, id, key] => Some (delete ctx::ctx.textkv_ctx id::id key::key);
@@ -756,10 +731,9 @@ let handle_delete_write_kv_text ctx => {
   };
 };
 
-let handle_delete_write_kv_binary ctx => {
+let handle_delete_write_kv_binary ctx prov => {
   open Keyvalue.Binary;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", mode, id, key] => Some (delete ctx::ctx.binarykv_ctx id::id key::key);
@@ -800,42 +774,39 @@ let has_unsupported_delete_api lis => {
 };
 
 
-let handle_delete_ts_numeric ctx => {
+let handle_delete_ts_numeric ctx prov => {
   open Numeric_timeseries;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   switch (handle_get_read_ts uri_path ctx) {
   | Json json => Some (delete ctx::ctx.numts_ctx id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
 };
 
-let handle_delete_ts_blob ctx => {
+let handle_delete_ts_blob ctx prov => {
   open Blob_timeseries;
-  let prov_ctx = get_prov_ctx ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let uri_path = Prov.uri_path prov;
   switch (handle_get_read_ts uri_path ctx) {
   | Json json => Some (delete ctx::ctx.blobts_ctx id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
 };
 
-let handle_delete_write ctx => {
+let handle_delete_write ctx prov => {
   open Ack;
   open Ezjsonm;
-  let prov_ctx = get_prov_ctx ctx;
-  let content_format = Prov.content_format prov_ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+  let content_format = Prov.content_format prov;
+  let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
   if (has_unsupported_delete_api path_list) {
     Lwt.return (Code 134);
   } else {
     let result = switch (path_list, content_format) {
-      | (["", "kv", ..._], 50) => handle_delete_write_kv_json ctx;
-      | (["", "kv", ..._], 0) => handle_delete_write_kv_text ctx;
-      | (["", "kv", ..._], 42) => handle_delete_write_kv_binary ctx;
-      | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob ctx;
-      | (["", "ts", ..._], 50) => handle_delete_ts_numeric ctx;
+      | (["", "kv", ..._], 50) => handle_delete_write_kv_json ctx prov;
+      | (["", "kv", ..._], 0) => handle_delete_write_kv_text ctx prov;
+      | (["", "kv", ..._], 42) => handle_delete_write_kv_binary ctx prov;
+      | (["", "ts", "blob", ..._], 50) => handle_delete_ts_blob ctx prov;
+      | (["", "ts", ..._], 50) => handle_delete_ts_numeric ctx prov;
       | _ => None;
       };
       switch result {
@@ -845,40 +816,37 @@ let handle_delete_write ctx => {
   };
 };
 
-let handle_delete_observed ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let token = Prov.token prov_ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+let handle_delete_observed ctx prov => {
+  let token = Prov.token prov;
+  let uri_path = Prov.uri_path prov;
   if (is_valid_token token uri_path "DELETE") {
-    handle_delete_write ctx >>=
-      fun resp => route resp "" ctx >>= 
+    handle_delete_write ctx prov >>=
+      fun resp => route resp "" ctx prov >>= 
         fun () => ack resp;
   } else {
-    route (Ack.Code 129) "" ctx >>= 
+    route (Ack.Code 129) "" ctx prov >>= 
       fun () => ack (Code 129);
   };
 };
 
 
-let handle_delete_unobserved ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let token = Prov.token prov_ctx;
-  let uri_path = Prov.uri_path prov_ctx;
+let handle_delete_unobserved ctx prov => {
+  let token = Prov.token prov;
+  let uri_path = Prov.uri_path prov;
   if (is_valid_token token uri_path "DELETE") {
-    handle_delete_write ctx >>= ack;
+    handle_delete_write ctx prov >>= ack;
   } else {
     ack (Code 129);
   };
 };
 
 
-let handle_delete ctx => {
-  let prov_ctx = get_prov_ctx ctx;
-  let key = Prov.ident prov_ctx;
+let handle_delete ctx prov => {
+  let key = Prov.ident prov;
   if (Observe.is_observed ctx.observe_ctx key) {
-    handle_delete_observed ctx;
+    handle_delete_observed ctx prov;
   } else {
-    handle_delete_unobserved ctx;
+    handle_delete_unobserved ctx prov;
   };
 };
 
@@ -893,11 +861,11 @@ let handle_msg msg ctx => {
           let (token, r2) = Protocol.Zest.handle_token r1 tkl;
           let (options,r3) = handle_options oc r2;
           let payload = Bitstring.string_of_bitstring r3;
-          ctx.prov_ctx = Some (Prov.create code::code options::options token::token);
+          let prov = Prov.create code::code options::options token::token;
           switch code {
-          | 1 => handle_get ctx options;
-          | 2 => handle_post ctx payload;
-          | 4 => handle_delete ctx;
+          | 1 => handle_get ctx prov;
+          | 2 => handle_post ctx payload prov;
+          | 4 => handle_delete ctx prov;
           | _ => failwith "invalid code";
           };
         };  
@@ -962,7 +930,7 @@ let set_token_key file => {
 
 let cleanup_router ctx => {
   Observe.get_all ctx.observe_ctx |>
-    fun uuids => route_message uuids ctx (Ack.Code 163) (Protocol.Zest.create_ack 163) >>=
+    fun uuids => route_message uuids ctx (Ack.Code 163) (Protocol.Zest.create_ack 163) None >>=
       fun () => Lwt_unix.sleep 1.0;
 };
 
@@ -1003,7 +971,6 @@ let rec run_server ctx => {
 };
 
 let init zmq_ctx numts_ctx blobts_ctx jsonkv_ctx textkv_ctx binarykv_ctx observe_ctx hc_ctx => {
-  prov_ctx: None,
   hc_ctx: hc_ctx,
   observe_ctx: observe_ctx,
   numts_ctx: numts_ctx,

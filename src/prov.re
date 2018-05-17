@@ -5,7 +5,8 @@ type t = {
   uri_path: string,
   uri_host: string,
   content_format: int,
-  token: string
+  token: string,
+  options: array (int, string)
 };
 
 let create code::code options::options token::token => {
@@ -15,7 +16,8 @@ let create code::code options::options token::token => {
     uri_path: get_uri_path options,
     uri_host: get_uri_host options,
     content_format: get_content_format options,
-    token: token
+    token: token,
+    options: options
   };
 };
 
@@ -65,10 +67,10 @@ let token t => {
   t.token;
 };
 
-let observed options => {
-  Protocol.Zest.get_observed options;
+let observed t => {
+  Protocol.Zest.get_observed t.options;
 };
 
-let max_age options => {
-  Protocol.Zest.get_max_age options;
+let max_age t => {
+  Protocol.Zest.get_max_age t.options;
 };
