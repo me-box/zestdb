@@ -294,7 +294,7 @@ let handle_get_read_kv_binary uri_path ctx => {
 let handle_read_database ctx prov => {
   open Ack;
   open Response;
-  let uri_path = Prov.uri_host prov; 
+  let uri_path = Prov.uri_path prov; 
   let content_format = Prov.content_format prov;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
