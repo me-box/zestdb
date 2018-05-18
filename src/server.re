@@ -175,66 +175,69 @@ let apply path apply0 apply1 apply2 => {
 };
 
 
-let handle_get_read_ts uri_path ctx => {
+let handle_get_read_ts ctx prov => {
   open List;
-  open Response;  
+  open Response;
+  let uri_path = Prov.uri_path prov;  
   let path_list = String.split_on_char '/' uri_path;
+  let m = Prov.log_entry prov; 
+  let info = Printf.sprintf "event = READ, trigger = %s" m;
   let id_list = (get_id_list uri_path);
   switch path_list {
-  | ["", "ts", "blob", id, "length"] => Json (Blob_timeseries.length ctx::ctx.blobts_ctx id_list::id_list);
-  | ["", "ts", id, "length"] => Json (Numeric_timeseries.length ctx::ctx.numts_ctx id_list::id_list);
-  | ["", "ts", "blob", id, "latest"] => Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx id_list::id_list);
+  | ["", "ts", "blob", id, "length"] => Json (Blob_timeseries.length ctx::ctx.blobts_ctx info::info id_list::id_list);
+  | ["", "ts", id, "length"] => Json (Numeric_timeseries.length ctx::ctx.numts_ctx info::info id_list::id_list);
+  | ["", "ts", "blob", id, "latest"] => Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx info::info id_list::id_list);
   | ["", "ts", id, "latest", ...func] => 
     {
       open Numeric_timeseries;
-      let apply0 () => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id_list::id_list fn::[]);
-      let apply1 f => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id_list::id_list fn::[f]);
-      let apply2 f1 f2 => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id_list::id_list fn::[f1, f2]);
+      let apply0 () => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx info::info id_list::id_list fn::[]);
+      let apply1 f => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx info::info id_list::id_list fn::[f]);
+      let apply2 f1 f2 => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx info::info id_list::id_list fn::[f1, f2]);
       apply func apply0 apply1 apply2; 
   };  
-  | ["", "ts", "blob", id, "earliest"] => Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id_list::id_list);
+  | ["", "ts", "blob", id, "earliest"] => Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx info::info id_list::id_list);
   | ["", "ts", id, "earliest", ...func] => 
     {
       open Numeric_timeseries;
-      let apply0 () => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id_list::id_list fn::[]);
-      let apply1 f => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id_list::id_list fn::[f]);
-      let apply2 f1 f2 => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id_list::id_list fn::[f1, f2]);
+      let apply0 () => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx info::info id_list::id_list fn::[]);
+      let apply1 f => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx info::info id_list::id_list fn::[f]);
+      let apply2 f1 f2 => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx info::info id_list::id_list fn::[f1, f2]);
       apply func apply0 apply1 apply2;
   };
-  | ["", "ts", "blob", id, "last", n] => Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx id_list::id_list n::(int_of_string n));
+  | ["", "ts", "blob", id, "last", n] => Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx info::info id_list::id_list n::(int_of_string n));
   | ["", "ts", id, "last", n, ...func] => 
     {
       open Numeric_timeseries;
-      let apply0 () => Json (read_last ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[]);
-      let apply1 f => Json (read_last ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f]);
-      let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f1, f2]);
+      let apply0 () => Json (read_last ctx::ctx.numts_ctx info::info id_list::id_list n::(int_of_string n) fn::[]);
+      let apply1 f => Json (read_last ctx::ctx.numts_ctx info::info id_list::id_list n::(int_of_string n) fn::[f]);
+      let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx info::info id_list::id_list n::(int_of_string n) fn::[f1, f2]);
       apply func apply0 apply1 apply2;  
   };
-  | ["", "ts", "blob", id, "first", n] => Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx id_list::id_list n::(int_of_string n));
+  | ["", "ts", "blob", id, "first", n] => Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx info::info id_list::id_list n::(int_of_string n));
   | ["", "ts", id, "first", n, ...func] => 
     {
       open Numeric_timeseries;
-      let apply0 () => Json (read_first ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[]);
-      let apply1 f => Json (read_first ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f]);
-      let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f1, f2]);
+      let apply0 () => Json (read_first ctx::ctx.numts_ctx info::info id_list::id_list n::(int_of_string n) fn::[]);
+      let apply1 f => Json (read_first ctx::ctx.numts_ctx info::info id_list::id_list n::(int_of_string n) fn::[f]);
+      let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx info::info id_list::id_list n::(int_of_string n) fn::[f1, f2]);
       apply func apply0 apply1 apply2;  
   };
-  | ["", "ts", "blob", id, "since", t] => Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx id_list::id_list from::(int_of_string t));
+  | ["", "ts", "blob", id, "since", t] => Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx info::info id_list::id_list from::(int_of_string t));
   | ["", "ts", id, "since", t, ...func] => 
     {
       open Numeric_timeseries;
-      let apply0 () => Json (read_since ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t) fn::[]);
-      let apply1 f => Json (read_since ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t) fn::[f]);
-      let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t) fn::[f1, f2]);   
+      let apply0 () => Json (read_since ctx::ctx.numts_ctx info::info id_list::id_list from::(int_of_string t) fn::[]);
+      let apply1 f => Json (read_since ctx::ctx.numts_ctx info::info id_list::id_list from::(int_of_string t) fn::[f]);
+      let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx info::info id_list::id_list from::(int_of_string t) fn::[f1, f2]);   
       apply func apply0 apply1 apply2;
     };
-  | ["", "ts", "blob", id, "range", t1, t2] => Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2));
+  | ["", "ts", "blob", id, "range", t1, t2] => Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx info::info id_list::id_list from::(int_of_string t1) to::(int_of_string t2));
   | ["", "ts", id, "range", t1, t2, ...func] => 
     {
       open Numeric_timeseries;
-      let apply0 () => Json (read_range ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[]);
-      let apply1 f => Json (read_range ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
-      let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
+      let apply0 () => Json (read_range ctx::ctx.numts_ctx info::info id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+      let apply1 f => Json (read_range ctx::ctx.numts_ctx info::info id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+      let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx info::info id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
       apply func apply0 apply1 apply2;
     };
   | _ => Empty;
@@ -288,12 +291,14 @@ let handle_get_read_kv_binary uri_path ctx => {
   };
 };
 
-let handle_read_database content_format uri_path ctx => {
+let handle_read_database ctx prov => {
   open Ack;
   open Response;
+  let uri_path = Prov.uri_host prov; 
+  let content_format = Prov.content_format prov;
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
-  | ("/ts/", 50) => handle_get_read_ts uri_path ctx;
+  | ("/ts/", 50) => handle_get_read_ts ctx prov;
   | ("/kv/", 50) => handle_get_read_kv_json uri_path ctx;
   | ("/kv/", 0) => handle_get_read_kv_text uri_path ctx;
   | ("/kv/", 42) => handle_get_read_kv_binary uri_path ctx;
@@ -318,10 +323,11 @@ let handle_read_hypercat ctx => {
       fun s => (Payload 50 s) |> Lwt.return;
 };
 
-let handle_get_read content_format uri_path ctx => {
+let handle_get_read ctx prov => {
+  let uri_path = Prov.uri_path prov;
   switch uri_path {
   | "/cat" => handle_read_hypercat ctx;
-  | _ => handle_read_database content_format uri_path ctx; 
+  | _ => handle_read_database ctx prov; 
   };
 };
 
@@ -491,9 +497,8 @@ let handle_options oc bits => {
 let handle_get_observed ctx prov => {
   let uri_path = Prov.uri_path prov;
   let token = Prov.token prov;
-  let content_format = Prov.content_format prov;      
   if (is_valid_token token uri_path "GET") {
-    handle_get_read content_format uri_path ctx >>=
+    handle_get_read ctx prov >>=
       fun resp => route resp "" ctx prov >>= 
         fun () => ack resp;
   } else {
@@ -505,9 +510,8 @@ let handle_get_observed ctx prov => {
 let handle_get_unobserved ctx prov => {
   let uri_path = Prov.uri_path prov;
   let token = Prov.token prov;
-  let content_format = Prov.content_format prov;
   if (is_valid_token token uri_path "GET") {
-    handle_get_read content_format uri_path ctx >>= ack;
+    handle_get_read ctx prov >>= ack;
    } else {
     ack (Ack.Code 129)
   };  
@@ -634,7 +638,7 @@ let handle_delete_ts_numeric ctx prov => {
   let uri_path = Prov.uri_path prov;
   let m = Prov.log_entry prov;
   let info = Printf.sprintf "event = DELETE, trigger = %s" m;
-  switch (handle_get_read_ts uri_path ctx) {
+  switch (handle_get_read_ts ctx prov) {
   | Json json => Some (delete ctx::ctx.numts_ctx info::info id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
@@ -645,7 +649,7 @@ let handle_delete_ts_blob ctx prov => {
   let uri_path = Prov.uri_path prov;
   let m = Prov.log_entry prov;
   let info = Printf.sprintf "event = DELETE, trigger = %s" m;
-  switch (handle_get_read_ts uri_path ctx) {
+  switch (handle_get_read_ts ctx prov) {
   | Json json => Some (delete ctx::ctx.blobts_ctx info::info id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };

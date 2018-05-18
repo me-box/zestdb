@@ -21,30 +21,30 @@ let apply fn data => {
 };
 
 
-let read_last ctx::branch id_list::id_list n::n fn::fn => {
-  Timeseries.read_last ctx::branch id_list::id_list n::n >>= apply fn;
+let read_last ctx::branch info::info id_list::id_list n::n fn::fn => {
+  Timeseries.read_last ctx::branch info::info id_list::id_list n::n >>= apply fn;
 };
 
-let read_latest ctx::branch id_list::id_list fn::fn => {
-  Timeseries.read_latest ctx::branch id_list::id_list >>= apply fn;
-};
-
-
-let read_first ctx::branch id_list::id_list n::n fn::fn => {
-  Timeseries.read_first ctx::branch id_list::id_list n::n >>= apply fn;
+let read_latest ctx::branch info::info id_list::id_list fn::fn => {
+  Timeseries.read_latest ctx::branch info::info id_list::id_list >>= apply fn;
 };
 
 
-let read_earliest ctx::branch id_list::id_list fn::fn => {
-  Timeseries.read_earliest ctx::branch id_list::id_list >>= apply fn;
+let read_first ctx::branch info::info id_list::id_list n::n fn::fn => {
+  Timeseries.read_first ctx::branch info::info id_list::id_list n::n >>= apply fn;
 };
 
 
-let read_since ctx::ctx id_list::id_list from::ts fn::fn => {
-  Timeseries.read_since ctx::ctx id_list::id_list from::ts >>= apply fn;
+let read_earliest ctx::branch info::info id_list::id_list fn::fn => {
+  Timeseries.read_earliest ctx::branch info::info id_list::id_list >>= apply fn;
 };
 
 
-let read_range ctx::ctx id_list::id_list from::t1 to::t2 fn::fn => {
-  Timeseries.read_range ctx::ctx id_list::id_list from::t1 to::t2 >>= apply fn;
+let read_since ctx::ctx info::info id_list::id_list from::ts fn::fn => {
+  Timeseries.read_since ctx::ctx info::info id_list::id_list from::ts >>= apply fn;
+};
+
+
+let read_range ctx::ctx info::info id_list::id_list from::t1 to::t2 fn::fn => {
+  Timeseries.read_range ctx::ctx info::info id_list::id_list from::t1 to::t2 >>= apply fn;
 };
