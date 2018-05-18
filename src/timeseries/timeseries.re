@@ -457,14 +457,14 @@ let get_timestamps json => {
 };
 
 
-let filter_shard_worker ctx key timestamps => {
+let filter_shard_worker ctx key timestamps info => {
   Shard.get ctx.shard key >>= 
     fun lis => List.filter (fun (t,_) => not (List.mem t timestamps)) lis |>
-      fun lis' => Shard.add ctx.shard key lis' "deleted";
+      fun lis' => Shard.add ctx.shard key lis' info;
 };
 
-let delete_worker ctx key_list timestamps => {
-  Lwt_list.iter_s (fun k => filter_shard_worker ctx k timestamps) key_list;
+let delete_worker ctx key_list timestamps info => {
+  Lwt_list.iter_s (fun k => filter_shard_worker ctx k timestamps info) key_list;
 };
 
 let flush_memory_worker ctx id => {
@@ -492,7 +492,7 @@ let make_shard_keys ctx id lb => {
 };
 
 
-let delete ctx::ctx id_list::id_list json::json => {
+let delete ctx::ctx info::info id_list::id_list json::json => {
   json >>= fun json' => {
     let timestamps = get_timestamps (Ezjsonm.value json');
     switch timestamps {
@@ -500,7 +500,7 @@ let delete ctx::ctx id_list::id_list json::json => {
     | [lb, ..._] => 
         Lwt_list.iter_s (fun id => flush_memory_worker ctx id) id_list >>= 
           fun () => Lwt_list.map_s (fun k => make_shard_keys ctx k lb) id_list >>=  
-            fun keys' => Lwt_list.iter_s (fun k => delete_worker ctx k timestamps) keys';
+            fun keys' => Lwt_list.iter_s (fun k => delete_worker ctx k timestamps info) keys';
     };
   };
 };

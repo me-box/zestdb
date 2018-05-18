@@ -480,11 +480,12 @@ let to_json payload => {
 let handle_post_write_ts_numeric ::timestamp=None key payload ctx prov => {
   open Numeric_timeseries;
   let m = Prov.log_entry prov;
+  let info = Printf.sprintf "event = POST, trigger = %s" m;
   let json = to_json payload;
   switch json {
   | Some value => {
       if (is_valid value) {
-        Some (write ctx::ctx.numts_ctx timestamp::timestamp info::m id::key json::value);
+        Some (write ctx::ctx.numts_ctx info::info timestamp::timestamp id::key json::value);
       } else None;
     };
   | None => None;
@@ -494,9 +495,10 @@ let handle_post_write_ts_numeric ::timestamp=None key payload ctx prov => {
 let handle_post_write_ts_blob ::timestamp=None key payload ctx prov => {
   open Blob_timeseries;
   let m = Prov.log_entry prov;
+  let info = Printf.sprintf "event = POST, trigger = %s" m;
   let json = to_json payload;
   switch json {
-  | Some value => Some (write ctx::ctx.blobts_ctx timestamp::timestamp info::m id::key json::value);
+  | Some value => Some (write ctx::ctx.blobts_ctx info::info timestamp::timestamp id::key json::value);
   | None => None;
   };  
 };
@@ -780,8 +782,10 @@ let has_unsupported_delete_api lis => {
 let handle_delete_ts_numeric ctx prov => {
   open Numeric_timeseries;
   let uri_path = Prov.uri_path prov;
+  let m = Prov.log_entry prov;
+  let info = Printf.sprintf "event = DELETE, trigger = %s" m;
   switch (handle_get_read_ts uri_path ctx) {
-  | Json json => Some (delete ctx::ctx.numts_ctx id_list::(get_id_list uri_path) json::json);
+  | Json json => Some (delete ctx::ctx.numts_ctx info::info id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
 };
@@ -789,8 +793,10 @@ let handle_delete_ts_numeric ctx prov => {
 let handle_delete_ts_blob ctx prov => {
   open Blob_timeseries;
   let uri_path = Prov.uri_path prov;
+  let m = Prov.log_entry prov;
+  let info = Printf.sprintf "event = DELETE, trigger = %s" m;
   switch (handle_get_read_ts uri_path ctx) {
-  | Json json => Some (delete ctx::ctx.blobts_ctx id_list::(get_id_list uri_path) json::json);
+  | Json json => Some (delete ctx::ctx.blobts_ctx info::info id_list::(get_id_list uri_path) json::json);
   | _ => None;
   };
 };
@@ -937,10 +943,11 @@ let cleanup_router ctx => {
       fun () => Lwt_unix.sleep 1.0;
 };
 
-let terminate_server ctx => {
+let terminate_server ctx m => {
+  let info = Printf.sprintf "event = TERMINATE, trigger = %s" m;
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
-    Blob_timeseries.flush ctx::ctx.blobts_ctx info::"terminated" >>= fun () =>
-      Numeric_timeseries.flush ctx::ctx.numts_ctx info::"terminated" >>= fun () =>
+    Blob_timeseries.flush ctx::ctx.blobts_ctx info::info >>= fun () =>
+      Numeric_timeseries.flush ctx::ctx.numts_ctx info::info >>= fun () =>
         cleanup_router ctx >>= fun () =>
           Protocol.Zest.close ctx.zmq_ctx |> 
             fun () => exit 0;
@@ -965,7 +972,7 @@ let register_signal_handlers () => {
 let rec run_server ctx => {
   let _ = try {Lwt_main.run {server ctx}} 
     { 
-      | Interrupt m => terminate_server ctx;
+      | Interrupt m => terminate_server ctx m;
       | ZMQ.ZMQ_exception e m => ack (Ack.Code 163) >>= Protocol.Zest.send ctx.zmq_ctx;
       | Stack_overflow => ack (Ack.Code 141) >>= Protocol.Zest.send ctx.zmq_ctx;
       | e => unhandled_error e ctx;
