@@ -232,15 +232,15 @@ let return_data sort::mode lis => {
 };
 
 
-let flush_memory ctx k => {
+let flush_memory ctx k info => {
   read_memory_all ctx k >>=
-    fun shard => flush_series ctx k shard "memory flushed";
+    fun shard => flush_series ctx k shard info;
 };
 
 
-let flush_memory_read_from_disk ctx k n mode => {
+let flush_memory_read_from_disk ctx k n mode info => {
   Lwt_io.printf "flush_memory_read_from_disk\n" >>= 
-    fun () => flush_memory ctx k >>=
+    fun () => flush_memory ctx k info >>=
       fun () => read_disk ctx k n mode;
 };
 
@@ -256,11 +256,11 @@ let read_memory_then_disk ctx k n mode => {
   };
 };
 
-let read_last_worker ctx::ctx id::k n::n => {
+let read_last_worker ctx::ctx id::k n::n info::info => {
   if (Membuf.exists ctx.membuf k) {
     switch (is_ascending ctx k) {
     | true => read_memory_then_disk ctx k n `Last;
-    | false => flush_memory_read_from_disk ctx k n `Last;
+    | false => flush_memory_read_from_disk ctx k n `Last info;
     };
     } else {
       read_disk ctx k n `Last;
@@ -269,7 +269,7 @@ let read_last_worker ctx::ctx id::k n::n => {
 
 let read_last ctx::ctx info::info id_list::id_list n::n => {
   Lwt_list.fold_left_s (fun acc id => 
-    read_last_worker ctx::ctx id::id n::n >>=
+    read_last_worker ctx::ctx id::id n::n info::info >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
         fun result => return_data sort::`Last result;   
 };
@@ -279,11 +279,11 @@ let read_latest ctx::ctx info::info id_list::id_list => {
   read_last ctx::ctx info::info id_list::id_list n::1
 };
 
-let read_first_worker ctx::ctx id::k n::n => {
+let read_first_worker ctx::ctx id::k n::n info::info => {
   if (Membuf.exists ctx.membuf k) {    
     switch (is_descending ctx k) { 
     | true => read_memory_then_disk ctx k n `First;
-    | false => flush_memory_read_from_disk ctx k n `First;
+    | false => flush_memory_read_from_disk ctx k n `First info;
     };
     } else {
       read_disk ctx k n `First;
@@ -293,7 +293,7 @@ let read_first_worker ctx::ctx id::k n::n => {
 
 let read_first ctx::ctx info::info id_list::id_list n::n => {
   Lwt_list.fold_left_s (fun acc id => 
-    read_first_worker ctx::ctx id::id n::n >>=
+    read_first_worker ctx::ctx id::id n::n info::info >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
         fun result => return_data sort::`First result;   
 };
@@ -441,8 +441,8 @@ let delete_worker ctx key_list timestamps info => {
   Lwt_list.iter_s (fun k => filter_shard_worker ctx k timestamps info) key_list;
 };
 
-let flush_memory_worker ctx id => {
-  Membuf.exists ctx.membuf id ? flush_memory ctx id : Lwt.return_unit;
+let flush_memory_worker ctx id info => {
+  Membuf.exists ctx.membuf id ? flush_memory ctx id info : Lwt.return_unit;
 };
 
 
@@ -472,7 +472,7 @@ let delete ctx::ctx info::info id_list::id_list json::json => {
     switch timestamps {
     | [] => Lwt.return_unit;
     | [lb, ..._] => 
-        Lwt_list.iter_s (fun id => flush_memory_worker ctx id) id_list >>= 
+        Lwt_list.iter_s (fun id => flush_memory_worker ctx id info) id_list >>= 
           fun () => Lwt_list.map_s (fun k => make_shard_keys ctx k lb) id_list >>=  
             fun keys' => Lwt_list.iter_s (fun k => delete_worker ctx k timestamps info) keys';
     };
