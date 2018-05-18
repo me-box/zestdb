@@ -131,25 +131,15 @@ let handle_expire ctx => {
     fun uuids => route_message uuids ctx (Ack.Code 163) (Protocol.Zest.create_ack 163) None;
 };
 
-
-let handle_get_read_ts_blob_latest id ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx id::id);
-    | [x, ...xs] => Json (Blob_timeseries.read_latests ctx::ctx.blobts_ctx id_list::[x, ...xs]);
+let get_id_list uri_path => {
+  let path_list = String.split_on_char '/' uri_path;
+  switch path_list {
+  | ["", "ts", "blob", ids, ..._] => String.split_on_char ',' ids;
+  | ["", "ts", ids, ..._] => String.split_on_char ',' ids;
+  | _ => [];
   };
 };
 
-
-let handle_get_read_ts_blob_earliest id ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id::id);
-    | [x, ...xs] => Json (Blob_timeseries.read_earliests ctx::ctx.blobts_ctx id_list::[x, ...xs]);
-  };
-};
 
 let apply path apply0 apply1 apply2 => {
   open Response;
@@ -185,199 +175,68 @@ let apply path apply0 apply1 apply2 => {
 };
 
 
-let handle_get_read_ts_numeric_earliest id func ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => {   
-        let apply0 () => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[]);
-        let apply1 f => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[f]);
-        let apply2 f1 f2 => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id::id fn::[f1, f2]);
-        apply func apply0 apply1 apply2;
-      };
-    | [x, ...xs] => {
-        let apply0 () => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
-        let apply1 f => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f]);
-        let apply2 f1 f2 => Json (Numeric_timeseries.read_earliests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f1, f2]);
-        apply func apply0 apply1 apply2;
-      };
-    };  
-};
-
-let handle_get_read_ts_numeric_latest id func ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => {
-        let apply0 () => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[]);
-        let apply1 f => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[f]);
-        let apply2 f1 f2 => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id::id fn::[f1, f2]);
-        apply func apply0 apply1 apply2; 
-      };   
-    | [x, ...xs] => {
-        let apply0 () => Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[]);
-        let apply1 f => Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f]);
-        let apply2 f1 f2 => Json (Numeric_timeseries.read_latests ctx::ctx.numts_ctx id_list::[x, ...xs] fn::[f1, f2]);
-        apply func apply0 apply1 apply2; 
-      };  
-    };  
-};
-
-let handle_get_read_ts_numeric_last id n func ctx => {
-  open Response;
-  open Numeric_timeseries;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => {
-        let apply0 () => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
-        let apply1 f => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
-        let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
-        apply func apply0 apply1 apply2;  
-      };
-    | [x, ...xs] => {
-        let apply0 () => Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
-        let apply1 f => Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f]);
-        let apply2 f1 f2 => Json (read_lasts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f1, f2]);
-        apply func apply0 apply1 apply2;  
-      };
-    };
-};
-
-let handle_get_read_ts_blob_last id n ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx id::id n::(int_of_string n));
-    | [x, ...xs] => Json (Blob_timeseries.read_lasts ctx::ctx.blobts_ctx id_list::[x, ...xs] n::(int_of_string n));
-  };
-};
-
-let handle_get_read_ts_numeric_first id n func ctx => {
-  open Response;
-  open Numeric_timeseries;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => {
-        let apply0 () => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[]);
-        let apply1 f => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f]);
-        let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id::id n::(int_of_string n) fn::[f1, f2]);
-        apply func apply0 apply1 apply2;  
-      };
-    | [x, ...xs] => {
-        let apply0 () => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[]);
-        let apply1 f => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f]);
-        let apply2 f1 f2 => Json (read_firsts ctx::ctx.numts_ctx id_list::[x, ...xs] n::(int_of_string n) fn::[f1, f2]);
-        apply func apply0 apply1 apply2;  
-      };
-    };
-};
-
-let handle_get_read_ts_blob_first id n ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx id::id n::(int_of_string n));
-    | [x, ...xs] => Json (Blob_timeseries.read_firsts ctx::ctx.blobts_ctx id_list::[x, ...xs] n::(int_of_string n));
-  };
-};
-
-let handle_get_read_ts_numeric_since id t func ctx => {
-  open Response;
-  open Numeric_timeseries;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => {
-        let apply0 () => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[]);
-        let apply1 f => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f]);
-        let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id::id from::(int_of_string t) fn::[f1, f2]);   
-        apply func apply0 apply1 apply2;
-      };
-    | [x, ...xs] => {
-        let apply0 () => Json (read_sinces ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t) fn::[]);
-        let apply1 f => Json (read_sinces ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t) fn::[f]);
-        let apply2 f1 f2 => Json (read_sinces ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t) fn::[f1, f2]);   
-        apply func apply0 apply1 apply2;
-      };
-    };
-};
-
-let handle_get_read_ts_blob_since id t ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx id::id from::(int_of_string t));
-    | [x, ...xs] => Json (Blob_timeseries.read_sinces ctx::ctx.blobts_ctx id_list::[x, ...xs] from::(int_of_string t));
-  };
-};
-
-
-let handle_get_read_ts_numeric_range id t1 t2 func ctx => {
-  open Response;  
-  open Numeric_timeseries;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => {
-        let apply0 () => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[]);
-        let apply1 f => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
-        let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id::id from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
-        apply func apply0 apply1 apply2;
-      };
-    | [x, ...xs] => {
-        let apply0 () => Json (read_ranges ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2) fn::[]);
-        let apply1 f => Json (read_ranges ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
-        let apply2 f1 f2 => Json (read_ranges ctx::ctx.numts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
-        apply func apply0 apply1 apply2;
-      };
-    };
-};
-
-let handle_get_read_ts_blob_range id t1 t2 ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id::id from::(int_of_string t1) to::(int_of_string t2));
-    | [x, ...xs] => Json (Blob_timeseries.read_ranges ctx::ctx.blobts_ctx id_list::[x, ...xs] from::(int_of_string t1) to::(int_of_string t2));
-  };
-};
-
-
-let handle_get_read_ts_numeric_length id ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-  | [] => Empty;
-  | [id] => Json (Numeric_timeseries.length ctx::ctx.numts_ctx id::id);
-  | [x, ...xs] => Json (Numeric_timeseries.lengths ctx::ctx.numts_ctx id_list::[x, ...xs]);
-  };
-};
-
-let handle_get_read_ts_blob_length id ctx => {
-  open Response;
-  switch (String.split_on_char ',' id) {
-    | [] => Empty;
-    | [id] => Json (Blob_timeseries.length ctx::ctx.blobts_ctx id::id);
-    | [x, ...xs] => Json (Blob_timeseries.lengths ctx::ctx.blobts_ctx id_list::[x, ...xs]);
-  };
-};
-
 let handle_get_read_ts uri_path ctx => {
   open List;
   open Response;  
   let path_list = String.split_on_char '/' uri_path;
+  let id_list = (get_id_list uri_path);
   switch path_list {
-  | ["", "ts", "blob", id, "length"] => handle_get_read_ts_blob_length id ctx;
-  | ["", "ts", id, "length"] => handle_get_read_ts_numeric_length id ctx;
-  | ["", "ts", "blob", id, "latest"] => handle_get_read_ts_blob_latest id ctx;
-  | ["", "ts", id, "latest", ...func] => handle_get_read_ts_numeric_latest id func ctx;
-  | ["", "ts", "blob", id, "earliest"] => handle_get_read_ts_blob_earliest id ctx;
-  | ["", "ts", id, "earliest", ...func] => handle_get_read_ts_numeric_earliest id func ctx;
-  | ["", "ts", "blob", id, "last", n] => handle_get_read_ts_blob_last id n ctx;
-  | ["", "ts", id, "last", n, ...func] => handle_get_read_ts_numeric_last id n func ctx;
-  | ["", "ts", "blob", id, "first", n] => handle_get_read_ts_blob_first id n ctx;
-  | ["", "ts", id, "first", n, ...func] => handle_get_read_ts_numeric_first id n func ctx;
-  | ["", "ts", "blob", id, "since", t] => handle_get_read_ts_blob_since id t ctx;
-  | ["", "ts", id, "since", t, ...func] => handle_get_read_ts_numeric_since id t func ctx;
-  | ["", "ts", "blob", id, "range", t1, t2] => handle_get_read_ts_blob_range id t1 t2 ctx;
-  | ["", "ts", id, "range", t1, t2, ...func] => handle_get_read_ts_numeric_range id t1 t2 func ctx;
+  | ["", "ts", "blob", id, "length"] => Json (Blob_timeseries.length ctx::ctx.blobts_ctx id_list::id_list);
+  | ["", "ts", id, "length"] => Json (Numeric_timeseries.length ctx::ctx.numts_ctx id_list::id_list);
+  | ["", "ts", "blob", id, "latest"] => Json (Blob_timeseries.read_latest ctx::ctx.blobts_ctx id_list::id_list);
+  | ["", "ts", id, "latest", ...func] => 
+    {
+      open Numeric_timeseries;
+      let apply0 () => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id_list::id_list fn::[]);
+      let apply1 f => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id_list::id_list fn::[f]);
+      let apply2 f1 f2 => Json (Numeric_timeseries.read_latest ctx::ctx.numts_ctx id_list::id_list fn::[f1, f2]);
+      apply func apply0 apply1 apply2; 
+  };  
+  | ["", "ts", "blob", id, "earliest"] => Json (Blob_timeseries.read_earliest ctx::ctx.blobts_ctx id_list::id_list);
+  | ["", "ts", id, "earliest", ...func] => 
+    {
+      open Numeric_timeseries;
+      let apply0 () => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id_list::id_list fn::[]);
+      let apply1 f => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id_list::id_list fn::[f]);
+      let apply2 f1 f2 => Json (Numeric_timeseries.read_earliest ctx::ctx.numts_ctx id_list::id_list fn::[f1, f2]);
+      apply func apply0 apply1 apply2;
+  };
+  | ["", "ts", "blob", id, "last", n] => Json (Blob_timeseries.read_last ctx::ctx.blobts_ctx id_list::id_list n::(int_of_string n));
+  | ["", "ts", id, "last", n, ...func] => 
+    {
+      open Numeric_timeseries;
+      let apply0 () => Json (read_last ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[]);
+      let apply1 f => Json (read_last ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f]);
+      let apply2 f1 f2 => Json (read_last ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f1, f2]);
+      apply func apply0 apply1 apply2;  
+  };
+  | ["", "ts", "blob", id, "first", n] => Json (Blob_timeseries.read_first ctx::ctx.blobts_ctx id_list::id_list n::(int_of_string n));
+  | ["", "ts", id, "first", n, ...func] => 
+    {
+      open Numeric_timeseries;
+      let apply0 () => Json (read_first ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[]);
+      let apply1 f => Json (read_first ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f]);
+      let apply2 f1 f2 => Json (read_first ctx::ctx.numts_ctx id_list::id_list n::(int_of_string n) fn::[f1, f2]);
+      apply func apply0 apply1 apply2;  
+  };
+  | ["", "ts", "blob", id, "since", t] => Json (Blob_timeseries.read_since ctx::ctx.blobts_ctx id_list::id_list from::(int_of_string t));
+  | ["", "ts", id, "since", t, ...func] => 
+    {
+      open Numeric_timeseries;
+      let apply0 () => Json (read_since ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t) fn::[]);
+      let apply1 f => Json (read_since ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t) fn::[f]);
+      let apply2 f1 f2 => Json (read_since ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t) fn::[f1, f2]);   
+      apply func apply0 apply1 apply2;
+    };
+  | ["", "ts", "blob", id, "range", t1, t2] => Json (Blob_timeseries.read_range ctx::ctx.blobts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2));
+  | ["", "ts", id, "range", t1, t2, ...func] => 
+    {
+      open Numeric_timeseries;
+      let apply0 () => Json (read_range ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[]);
+      let apply1 f => Json (read_range ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[f]);
+      let apply2 f1 f2 => Json (read_range ctx::ctx.numts_ctx id_list::id_list from::(int_of_string t1) to::(int_of_string t2) fn::[f1, f2]);
+      apply func apply0 apply1 apply2;
+    };
   | _ => Empty;
   };
 };
@@ -747,15 +606,6 @@ let handle_delete_write_kv_binary ctx prov => {
   };
 };
 
-
-let get_id_list uri_path => {
-  let path_list = String.split_on_char '/' uri_path;
-  switch path_list {
-  | ["", "ts", "blob", ids, ..._] => String.split_on_char ',' ids;
-  | ["", "ts", ids, ..._] => String.split_on_char ',' ids;
-  | _ => [];
-  };
-};
 
 let has_unsupported_delete_api lis => {
   switch lis {

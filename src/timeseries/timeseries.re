@@ -267,24 +267,16 @@ let read_last_worker ctx::ctx id::k n::n => {
     };
 };
 
-let read_last ctx::ctx id::k n::n => {
-  read_last_worker ctx::ctx id::k n::n >>=
-    fun result => return_data sort::`Last result;
-};
-
-let read_lasts ctx::ctx id_list::id_list n::n => {
+let read_last ctx::ctx id_list::id_list n::n => {
   Lwt_list.fold_left_s (fun acc id => 
     read_last_worker ctx::ctx id::id n::n >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
         fun result => return_data sort::`Last result;   
 };
 
-let read_latest ctx::ctx id::k => {
-  read_last ctx k 1;
-};
 
-let read_latests ctx::ctx id_list::id_list => {
-  read_lasts ctx::ctx id_list::id_list n::1
+let read_latest ctx::ctx id_list::id_list => {
+  read_last ctx::ctx id_list::id_list n::1
 };
 
 let read_first_worker ctx::ctx id::k n::n => {
@@ -298,24 +290,18 @@ let read_first_worker ctx::ctx id::k n::n => {
   };
 };
 
-let read_first ctx::ctx id::k n::n => {
-  read_first_worker ctx::ctx id::k n::n >>=
-    fun result => return_data sort::`First result;
-};
 
-let read_firsts ctx::ctx id_list::id_list n::n => {
+let read_first ctx::ctx id_list::id_list n::n => {
   Lwt_list.fold_left_s (fun acc id => 
     read_first_worker ctx::ctx id::id n::n >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
         fun result => return_data sort::`First result;   
 };
 
-let read_earliest ctx::ctx id::k => {
-  read_first ctx k 1;
-};
 
-let read_earliests ctx::ctx id_list::id_list => {
-  read_firsts ctx::ctx id_list::id_list n::1
+
+let read_earliest ctx::ctx id_list::id_list => {
+  read_first ctx::ctx id_list::id_list n::1
 };
 
 let number_of_records_on_disk ctx k lis => {
@@ -346,12 +332,8 @@ let length_worker ctx::ctx id::k => {
         fun mem => Lwt.return (disk + mem);
 };
 
-let length ctx::ctx id::k => {
-  length_worker ctx::ctx id::k >>= 
-    fun result => length_of_json result;
-};
 
-let lengths ctx::ctx id_list::id_list => {
+let length ctx::ctx id_list::id_list => {
   open Ezjsonm;
   Lwt_list.fold_left_s (fun acc id => 
     length_worker ctx::ctx id::id >>=
@@ -414,13 +396,9 @@ let read_since_worker ctx::ctx id::k from::ts => {
       List.rev_append mem disk |> Lwt.return;
 };
 
-let read_since ctx::ctx id::k from::ts => {
-  read_since_worker ctx::ctx id::k from::ts >>=
-    fun result => return_data sort::`Last result;
-};
 
 
-let read_sinces ctx::ctx id_list::id_list from::ts => {
+let read_since ctx::ctx id_list::id_list from::ts => {
   Lwt_list.fold_left_s (fun acc id => 
     read_since_worker ctx::ctx id::id from::ts >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
@@ -438,12 +416,8 @@ let read_range_worker ctx::ctx id::k from::t1 to::t2 => {
       List.rev_append mem disk |> filter_until t2 |> Lwt.return;
 };
 
-let read_range ctx::ctx id::k from::t1 to::t2 => {
-  read_range_worker ctx::ctx id::k from::t1 to::t2 >>=
-    fun result => return_data sort::`Last result;
-};
 
-let read_ranges ctx::ctx id_list::id_list from::t1 to::t2 => {
+let read_range ctx::ctx id_list::id_list from::t1 to::t2 => {
   Lwt_list.fold_left_s (fun acc id => 
     read_range_worker ctx::ctx id::id from::t1 to::t2 >>=
       fun x => List.rev_append x acc |> Lwt.return) [] id_list >>=
