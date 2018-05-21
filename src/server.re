@@ -397,18 +397,20 @@ let handle_post_write_kv_json payload ctx prov => {
 
 let handle_post_write_kv_text payload ctx prov => {
   open Keyvalue.Text;
+  let info = Prov.info prov "WRITE";
   let uri_path = Prov.uri_path prov;
   switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Some (write ctx::ctx.textkv_ctx id::id key::key text::payload);
+  | Some (id, key) => Some (write ctx::ctx.textkv_ctx info::info id::id key::key text::payload);
   | None => None;
   };
 };
 
 let handle_post_write_kv_binary payload ctx prov => {
   open Keyvalue.Binary;
+  let info = Prov.info prov "WRITE";
   let uri_path = Prov.uri_path prov;
   switch (get_id_key "kv" uri_path) {
-  | Some (id, key) => Some (write ctx::ctx.binarykv_ctx id::id key::key binary::payload);
+  | Some (id, key) => Some (write ctx::ctx.binarykv_ctx info::info id::id key::key binary::payload);
   | None => None;
   };
 };
@@ -592,9 +594,10 @@ let handle_delete_write_kv_text ctx prov => {
   open Keyvalue.Text;
   let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
+  let info = Prov.info prov "DELETE";
   switch path_list {
-  | ["", mode, id, key] => Some (delete ctx::ctx.textkv_ctx id::id key::key);
-  | ["", mode, id] => Some (delete_all ctx::ctx.textkv_ctx id::id);
+  | ["", mode, id, key] => Some (delete ctx::ctx.textkv_ctx info::info id::id key::key);
+  | ["", mode, id] => Some (delete_all ctx::ctx.textkv_ctx info::info id::id);
   | _ => None;
   };
 };
@@ -603,9 +606,10 @@ let handle_delete_write_kv_binary ctx prov => {
   open Keyvalue.Binary;
   let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
+  let info = Prov.info prov "DELETE";
   switch path_list {
-  | ["", mode, id, key] => Some (delete ctx::ctx.binarykv_ctx id::id key::key);
-  | ["", mode, id] => Some (delete_all ctx::ctx.binarykv_ctx id::id);
+  | ["", mode, id, key] => Some (delete ctx::ctx.binarykv_ctx info::info id::id key::key);
+  | ["", mode, id] => Some (delete_all ctx::ctx.binarykv_ctx info::info id::id);
   | _ => None;
   };
 };

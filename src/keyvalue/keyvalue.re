@@ -67,9 +67,9 @@ module Text = {
       };
     };
   
-    let write ctx::ctx id::id key::k text::v => {
+    let write ctx::ctx info::info id::id key::k text::v => {
       ctx.branch >>= fun branch' =>
-        Store.write message::(id ^ "|" ^ k) branch' path::[id, k] v >>=
+        Store.write message::info branch' path::[id, k] v >>=
           fun () => Keys.update ctx.keys id k;
     };
   
@@ -86,14 +86,14 @@ module Text = {
       Keys.get ctx.keys id;
     };
 
-    let delete ctx::ctx id::id key::k => {
-      write ctx::ctx id::id key::k text::text_empty >>=
+    let delete ctx::ctx info::info id::id key::k => {
+      write ctx::ctx info::info id::id key::k text::text_empty >>=
         fun () => Keys.delete ctx.keys id k;
     };
 
-    let delete_all ctx::ctx id::id => {
+    let delete_all ctx::ctx info::info id::id => {
       Keys.alist ctx.keys id >>= 
-        fun lis => Lwt_list.iter_s (fun k => delete ctx::ctx id::id key::k) lis;
+        fun lis => Lwt_list.iter_s (fun k => delete ctx::ctx info::info id::id key::k) lis;
     };
   
   };
@@ -116,9 +116,9 @@ module Text = {
         };
       };
     
-      let write ctx::ctx id::id key::k binary::v => {
+      let write ctx::ctx info::info id::id key::k binary::v => {
         ctx.branch >>= fun branch' =>
-          Store.write message::(id ^ "|" ^ k) branch' path::[id, k] v >>=
+          Store.write message::info branch' path::[id, k] v >>=
             fun () => Keys.update ctx.keys id k;
       };
     
@@ -135,14 +135,14 @@ module Text = {
         Keys.get ctx.keys id;
       };
 
-      let delete ctx::ctx id::id key::k => {
-        write ctx::ctx id::id key::k binary::binary_empty >>=
+      let delete ctx::ctx info::info id::id key::k => {
+        write ctx::ctx info::info id::id key::k binary::binary_empty >>=
           fun () => Keys.delete ctx.keys id k;
       };
 
-      let delete_all ctx::ctx id::id => {
+      let delete_all ctx::ctx info::info id::id => {
         Keys.alist ctx.keys id >>= 
-          fun lis => Lwt_list.iter_s (fun k => delete ctx::ctx id::id key::k) lis;
+          fun lis => Lwt_list.iter_s (fun k => delete ctx::ctx info::info id::id key::k) lis;
       };
     
     };
