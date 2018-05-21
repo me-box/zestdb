@@ -84,7 +84,7 @@ let handle_shard_overlap_worker ctx k shard shard_lis overlap_list info => {
     | Some new_range => {
       let key = make_key k new_range;
       Lwt_log_core.debug_f "Adding shard with key:%s" (string_of_key key) >>= fun () =>
-        Index.update ctx.index k new_range overlap_list >>= fun bounds =>
+        Index.update ctx.index info k new_range overlap_list >>= fun bounds =>
           Membuf.set_disk_range ctx.membuf k bounds |> fun () =>
             Shard.add ctx.shard key new_shard info >>= fun () =>
               remove_leftover_shards ctx k new_range overlap_list info;

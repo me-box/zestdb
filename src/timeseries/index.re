@@ -8,9 +8,9 @@ let create ::file => {
   Store.init root::file bare::true () >>= Store.master;
 };
 
-let write branch k v => {
+let write branch info k v => {
   branch >>= fun branch' =>
-    Store.write message::k branch' path::[k] v;
+    Store.write message::info branch' path::[k] v;
 };
 
 let read branch k => {
@@ -69,16 +69,16 @@ let filter_list rem_lis lis => {
 };
 
 
-let update branch k tup remove_list => {
+let update branch info k tup remove_list => {
   open List;
   read branch k >>= fun data =>
     switch data {
     | Some curr_lis => {
         let filtered = filter_list remove_list curr_lis;
         let new_index = add_tuple tup filtered;
-        write branch k new_index >>= fun () => bounds new_index |> Lwt.return;
+        write branch info k new_index >>= fun () => bounds new_index |> Lwt.return;
       };
-    | None => write branch k [tup] >>= fun () => bounds [tup] |> Lwt.return;
+    | None => write branch info k [tup] >>= fun () => bounds [tup] |> Lwt.return;
     };
 };
 
