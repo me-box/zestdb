@@ -9,9 +9,9 @@ let create ::file => {
 };
 
 
-let write branch k v m => {
+let write branch info k v => {
   branch >>= fun branch' =>
-    Store.write message::m branch' path::k v;
+    Store.write message::info branch' path::k v;
 };
 
 
@@ -21,8 +21,8 @@ let read branch k => {
 };
 
 
-let add branch k v m => {
-  write branch k v m;
+let add branch info k v => {
+  write branch info k v;
 };
 
 let sort_shard lis => {
@@ -38,6 +38,6 @@ let get branch k => {
     } |> Lwt.return;
 };
 
-let remove branch key_list m => {
-  Lwt_list.iter_s (fun k => write branch k [] m) key_list;
+let remove branch info key_list => {
+  Lwt_list.iter_s (fun k => write branch info k []) key_list;
 };

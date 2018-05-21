@@ -68,11 +68,11 @@ let log_index str lis => {
 };
 
 
-let remove_leftover_shards ctx k keep_index remove_list msg => {
+let remove_leftover_shards ctx k keep_index remove_list info => {
   open List; 
   let index_list = filter (fun i => i != keep_index) remove_list;
   let key_list = map (fun i => make_key k i) index_list;
-  Shard.remove ctx.shard key_list msg;
+  Shard.remove ctx.shard info key_list;
 };
 
 
@@ -86,7 +86,7 @@ let handle_shard_overlap_worker ctx k shard shard_lis overlap_list info => {
       Lwt_log_core.debug_f "Adding shard with key:%s" (string_of_key key) >>= fun () =>
         Index.update ctx.index info k new_range overlap_list >>= fun bounds =>
           Membuf.set_disk_range ctx.membuf k bounds |> fun () =>
-            Shard.add ctx.shard key new_shard info >>= fun () =>
+            Shard.add ctx.shard info key new_shard >>= fun () =>
               remove_leftover_shards ctx k new_range overlap_list info;
     };
     | None => Lwt.return_unit;
@@ -434,7 +434,7 @@ let get_timestamps json => {
 let filter_shard_worker ctx key timestamps info => {
   Shard.get ctx.shard key >>= 
     fun lis => List.filter (fun (t,_) => not (List.mem t timestamps)) lis |>
-      fun lis' => Shard.add ctx.shard key lis' info;
+      fun lis' => Shard.add ctx.shard info key lis';
 };
 
 let delete_worker ctx key_list timestamps info => {
