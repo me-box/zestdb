@@ -180,8 +180,7 @@ let handle_get_read_ts ctx prov => {
   open Response;
   let uri_path = Prov.uri_path prov;  
   let path_list = String.split_on_char '/' uri_path;
-  let m = Prov.log_entry prov; 
-  let info = Printf.sprintf "event = READ, trigger = %s" m;
+  let info = Prov.info prov "READ";
   let id_list = (get_id_list uri_path);
   switch path_list {
   | ["", "ts", "blob", id, "length"] => Json (Blob_timeseries.length ctx::ctx.blobts_ctx info::info id_list::id_list);
@@ -344,8 +343,7 @@ let to_json payload => {
 
 let handle_post_write_ts_numeric ::timestamp=None key payload ctx prov => {
   open Numeric_timeseries;
-  let m = Prov.log_entry prov;
-  let info = Printf.sprintf "event = POST, trigger = %s" m;
+  let info = Prov.info prov "WRITE";
   let json = to_json payload;
   switch json {
   | Some value => {
@@ -359,8 +357,7 @@ let handle_post_write_ts_numeric ::timestamp=None key payload ctx prov => {
 
 let handle_post_write_ts_blob ::timestamp=None key payload ctx prov => {
   open Blob_timeseries;
-  let m = Prov.log_entry prov;
-  let info = Printf.sprintf "event = POST, trigger = %s" m;
+  let info = Prov.info prov "WRITE";
   let json = to_json payload;
   switch json {
   | Some value => Some (write ctx::ctx.blobts_ctx info::info timestamp::timestamp id::key json::value);
@@ -636,8 +633,7 @@ let has_unsupported_delete_api lis => {
 let handle_delete_ts_numeric ctx prov => {
   open Numeric_timeseries;
   let uri_path = Prov.uri_path prov;
-  let m = Prov.log_entry prov;
-  let info = Printf.sprintf "event = DELETE, trigger = %s" m;
+  let info = Prov.info prov "DELETE";
   switch (handle_get_read_ts ctx prov) {
   | Json json => Some (delete ctx::ctx.numts_ctx info::info id_list::(get_id_list uri_path) json::json);
   | _ => None;
@@ -647,8 +643,7 @@ let handle_delete_ts_numeric ctx prov => {
 let handle_delete_ts_blob ctx prov => {
   open Blob_timeseries;
   let uri_path = Prov.uri_path prov;
-  let m = Prov.log_entry prov;
-  let info = Printf.sprintf "event = DELETE, trigger = %s" m;
+  let info = Prov.info prov "DELETE";
   switch (handle_get_read_ts ctx prov) {
   | Json json => Some (delete ctx::ctx.blobts_ctx info::info id_list::(get_id_list uri_path) json::json);
   | _ => None;
@@ -798,7 +793,7 @@ let cleanup_router ctx => {
 };
 
 let terminate_server ctx m => {
-  let info = Printf.sprintf "event = TERMINATE, trigger = %s" m;
+  let info = Printf.sprintf "event = TERMINATE, trigger = (%s)" m;
   Lwt_io.printf "\nShutting down server...\n" >>= fun () =>
     Blob_timeseries.flush ctx::ctx.blobts_ctx info::info >>= fun () =>
       Numeric_timeseries.flush ctx::ctx.numts_ctx info::info >>= fun () =>

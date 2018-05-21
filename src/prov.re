@@ -39,8 +39,9 @@ let content_format_as_string t => {
   };
 };
 
-let log_entry t => {
-  Printf.sprintf "%s, %s, %s, %s" t.uri_host (code_as_string t) (content_format_as_string t) t.uri_path;
+let info t e => {
+  Printf.sprintf "event = %s, trigger = (host=%s, method=%s, format=%s, path=%s)" 
+    e t.uri_host (code_as_string t) (content_format_as_string t) t.uri_path;
 };
 
 let ident t => {

@@ -10,4 +10,4 @@ let content_format_as_string : t => string;
 let token : t => string;
 let observed : t => string;
 let max_age : t => Int32.t;
-let log_entry : t => string;
+let info : t => string => string;
