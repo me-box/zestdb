@@ -257,35 +257,38 @@ let get_mode uri_path => {
 };
 
 
-let handle_get_read_kv_json uri_path ctx => {
+let handle_get_read_kv_json uri_path ctx prov => {
   open Response;
   open Keyvalue.Json;
+  let info = Prov.info prov "READ";
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.jsonkv_ctx id::id);
-  | ["", "kv", id, key] => Json (read ctx::ctx.jsonkv_ctx id::id key::key);
+  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.jsonkv_ctx info::info id::id);
+  | ["", "kv", id, key] => Json (read ctx::ctx.jsonkv_ctx info::info id::id key::key);
   | _ => Empty;
   };
 };
 
-let handle_get_read_kv_text uri_path ctx => {
+let handle_get_read_kv_text uri_path ctx prov => {
   open Response;
   open Keyvalue.Text;
+  let info = Prov.info prov "READ";
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
-  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.textkv_ctx id::id);
-  | ["", "kv", id, key]  => Text (read ctx::ctx.textkv_ctx id::id key::key);
+  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.textkv_ctx info::info id::id);
+  | ["", "kv", id, key]  => Text (read ctx::ctx.textkv_ctx info::info id::id key::key);
   | _ => Empty;
   };
 };
 
-let handle_get_read_kv_binary uri_path ctx => {
+let handle_get_read_kv_binary uri_path ctx prov => {
   open Response;
   open Keyvalue.Binary;
+  let info = Prov.info prov "READ";
   let path_list = String.split_on_char '/' uri_path;  
   switch path_list {
-  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.binarykv_ctx id::id);
-  | ["", "kv", id, key] => Text (read ctx::ctx.binarykv_ctx id::id key::key);
+  | ["", "kv", id, "keys"] => Json (keys ctx::ctx.binarykv_ctx info::info id::id);
+  | ["", "kv", id, key] => Text (read ctx::ctx.binarykv_ctx info::info id::id key::key);
   | _ => Empty;
   };
 };
@@ -298,9 +301,9 @@ let handle_read_database ctx prov => {
   let mode = get_mode uri_path;
   let result = switch (mode, content_format) {
   | ("/ts/", 50) => handle_get_read_ts ctx prov;
-  | ("/kv/", 50) => handle_get_read_kv_json uri_path ctx;
-  | ("/kv/", 0) => handle_get_read_kv_text uri_path ctx;
-  | ("/kv/", 42) => handle_get_read_kv_binary uri_path ctx;
+  | ("/kv/", 50) => handle_get_read_kv_json uri_path ctx prov;
+  | ("/kv/", 0) => handle_get_read_kv_text uri_path ctx prov;
+  | ("/kv/", 42) => handle_get_read_kv_binary uri_path ctx prov;
   | _ => Empty;
   };
   switch result {
@@ -315,9 +318,10 @@ let handle_read_database ctx prov => {
 };
 
 
-let handle_read_hypercat ctx => {
+let handle_read_hypercat ctx prov => {
   open Ack;
-  Hc.get ctx::ctx.hc_ctx >>=
+  let info = Prov.info prov "READ";
+  Hc.get ctx::ctx.hc_ctx info::info >>=
     fun json => Ezjsonm.to_string json |>
       fun s => (Payload 50 s) |> Lwt.return;
 };
@@ -325,7 +329,7 @@ let handle_read_hypercat ctx => {
 let handle_get_read ctx prov => {
   let uri_path = Prov.uri_path prov;
   switch uri_path {
-  | "/cat" => handle_read_hypercat ctx;
+  | "/cat" => handle_read_hypercat ctx prov;
   | _ => handle_read_database ctx prov; 
   };
 };

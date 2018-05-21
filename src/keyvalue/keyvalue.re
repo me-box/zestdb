@@ -24,7 +24,7 @@ module Json = {
         fun () => Keys.update ctx.keys id k;
   };
 
-  let read ctx::ctx id::id key::k => {
+  let read ctx::ctx info::info id::id key::k => {
     ctx.branch >>= fun branch' =>
       Store.read branch' path::[id, k] >>=
         fun data => switch data {
@@ -33,7 +33,7 @@ module Json = {
         };  
   };
 
-  let keys ctx::ctx id::id => {
+  let keys ctx::ctx info::info id::id => {
     Keys.get ctx.keys id;
   };
 
@@ -73,7 +73,7 @@ module Text = {
           fun () => Keys.update ctx.keys id k;
     };
   
-    let read ctx::ctx id::id key::k => {
+    let read ctx::ctx info::info id::id key::k => {
       ctx.branch >>= fun branch' =>
         Store.read branch' path::[id, k] >>=
           fun data => switch data {
@@ -82,7 +82,7 @@ module Text = {
           };  
     };
 
-    let keys ctx::ctx id::id => {
+    let keys ctx::ctx info::info id::id => {
       Keys.get ctx.keys id;
     };
 
@@ -122,7 +122,7 @@ module Text = {
             fun () => Keys.update ctx.keys id k;
       };
     
-      let read ctx::ctx id::id key::k => {
+      let read ctx::ctx info::info id::id key::k => {
         ctx.branch >>= fun branch' =>
           Store.read branch' path::[id, k] >>=
             fun data => switch data {
@@ -131,7 +131,7 @@ module Text = {
             };  
       };
 
-      let keys ctx::ctx id::id => {
+      let keys ctx::ctx info::info id::id => {
         Keys.get ctx.keys id;
       };
 

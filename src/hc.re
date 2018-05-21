@@ -69,11 +69,11 @@ let make_item lis => {
   list (fun (k,v) => dict [("href", string k), ("item-metadata", (find (value v) ["item-metadata"]))]) lis;
 };
 
-let get ctx::ctx => {
+let get ctx::ctx info::info => {
   open Keyvalue.Json;
-  keys ctx::ctx.store id::"//cat" >>=
+  keys ctx::ctx.store info::info id::"//cat" >>=
     fun json => get_strings (value json) |>
-      fun keys => Lwt_list.map_s (fun k => read ctx::ctx.store id::"//cat" key::k) keys >>=
+      fun keys => Lwt_list.map_s (fun k => read ctx::ctx.store info::info id::"//cat" key::k) keys >>=
         fun values => make_item (List.combine keys values) |>
           fun new_items => Ezjsonm.update (value ctx.cat) ["items"] (Some (value new_items)) |>
             fun cat => `O (get_dict cat) |> Lwt.return;
