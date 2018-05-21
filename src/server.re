@@ -385,9 +385,10 @@ let handle_post_write_ts payload ctx prov => {
 let handle_post_write_kv_json payload ctx prov => {
   open Keyvalue.Json;
   let uri_path = Prov.uri_path prov;
+  let info = Prov.info prov "WRITE";
   switch (get_id_key "kv" uri_path) {
   | Some (id, key) => switch (to_json payload) {
-    | Some json => Some (write ctx::ctx.jsonkv_ctx id::id key::key json::json);
+    | Some json => Some (write ctx::ctx.jsonkv_ctx info::info id::id key::key json::json);
     | None => None;
     }
   | None => None;
@@ -433,12 +434,13 @@ let handle_write_database payload ctx prov => {
 
 
 
-let handle_write_hypercat ctx payload => {
+let handle_write_hypercat payload ctx prov => {
   open Ack;
+  let info = Prov.info prov "WRITE";
   let json = to_json payload;
   switch json {
   | Some json => {
-      Hc.update ctx::ctx.hc_ctx item::json >>=
+      Hc.update ctx::ctx.hc_ctx info::info item::json >>=
         fun result => switch result {
         | Ok => (Code 65)
         | Error n => (Code n)
@@ -451,7 +453,7 @@ let handle_write_hypercat ctx payload => {
 let handle_post_write payload ctx prov => {
   let uri_path = Prov.uri_path prov;
   switch uri_path {
-  | "/cat" => handle_write_hypercat ctx payload;
+  | "/cat" => handle_write_hypercat payload ctx prov;
   | _ => handle_write_database payload ctx prov; 
   };
 };
@@ -578,9 +580,10 @@ let handle_delete_write_kv_json ctx prov => {
   open Keyvalue.Json;
   let uri_path = Prov.uri_path prov;
   let path_list = String.split_on_char '/' uri_path;
+  let info = Prov.info prov "DELETE";
   switch path_list {
-  | ["", mode, id, key] => Some (delete ctx::ctx.jsonkv_ctx id::id key::key);
-  | ["", mode, id] => Some (delete_all ctx::ctx.jsonkv_ctx id::id);
+  | ["", mode, id, key] => Some (delete ctx::ctx.jsonkv_ctx info::info id::id key::key);
+  | ["", mode, id] => Some (delete_all ctx::ctx.jsonkv_ctx info::info id::id);
   | _ => None;
   };
 };

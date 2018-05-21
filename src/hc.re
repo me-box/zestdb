@@ -54,11 +54,11 @@ let is_valid_item item =>
   has_rel_term "isContentType" item;
  
  
-let update ctx::ctx item::item => {
+let update ctx::ctx info::info item::item => {
   if (is_valid_item item) {
     let k = get_href item;
     let v = get_metadata item;
-    Keyvalue.Json.write ctx::ctx.store id::"//cat" key::k json::v >>=
+    Keyvalue.Json.write ctx::ctx.store info::info id::"//cat" key::k json::v >>=
       fun () => Result.Ok |> Lwt.return;
   } else {
     Result.Error 128 |> Lwt.return;
