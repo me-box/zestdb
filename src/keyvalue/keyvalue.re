@@ -21,7 +21,7 @@ module Json = {
   let write ctx::ctx info::info id::id key::k json::v => {
     ctx.branch >>= fun branch' =>
       Store.write message::info branch' path::[id, k] v >>=
-        fun () => Keys.update ctx.keys id k;
+        fun () => Keys.update ctx.keys info id k;
   };
 
   let read ctx::ctx info::info id::id key::k => {
@@ -39,7 +39,7 @@ module Json = {
 
   let delete ctx::ctx info::info id::id key::k => {
     write ctx::ctx info::info id::id key::k json::json_empty >>=
-      fun () => Keys.delete ctx.keys id k;
+      fun () => Keys.delete ctx.keys info id k;
   };
 
   let delete_all ctx::ctx info::info id::id => {
@@ -70,7 +70,7 @@ module Text = {
     let write ctx::ctx info::info id::id key::k text::v => {
       ctx.branch >>= fun branch' =>
         Store.write message::info branch' path::[id, k] v >>=
-          fun () => Keys.update ctx.keys id k;
+          fun () => Keys.update ctx.keys info id k;
     };
   
     let read ctx::ctx info::info id::id key::k => {
@@ -88,7 +88,7 @@ module Text = {
 
     let delete ctx::ctx info::info id::id key::k => {
       write ctx::ctx info::info id::id key::k text::text_empty >>=
-        fun () => Keys.delete ctx.keys id k;
+        fun () => Keys.delete ctx.keys info id k;
     };
 
     let delete_all ctx::ctx info::info id::id => {
@@ -119,7 +119,7 @@ module Text = {
       let write ctx::ctx info::info id::id key::k binary::v => {
         ctx.branch >>= fun branch' =>
           Store.write message::info branch' path::[id, k] v >>=
-            fun () => Keys.update ctx.keys id k;
+            fun () => Keys.update ctx.keys info id k;
       };
     
       let read ctx::ctx info::info id::id key::k => {
@@ -137,7 +137,7 @@ module Text = {
 
       let delete ctx::ctx info::info id::id key::k => {
         write ctx::ctx info::info id::id key::k binary::binary_empty >>=
-          fun () => Keys.delete ctx.keys id k;
+          fun () => Keys.delete ctx.keys info id k;
       };
 
       let delete_all ctx::ctx info::info id::id => {
