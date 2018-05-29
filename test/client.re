@@ -357,6 +357,13 @@ let post_loop socket count => {
                   Lwt_io.printf "=> OK\n";
                 };
           };
+        | Response.Payload msg => {
+                if (n > 1) {
+                  Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
+                } else {
+                  Lwt_io.printf "%s\n" msg;
+                };
+          };          
         | Response.Error msg => Lwt_io.printf "=> %s\n" msg; 
         | Response.Unavailable => Lwt_io.printf "=> server unavailable\n";
         | _ => failwith "unhandled response";
