@@ -384,6 +384,13 @@ let get_loop socket count => {
     send_request msg::(get uri::!uri_path ()) to::socket >>=
       fun resp =>
         switch resp {
+          | Response.OK => {
+            if (n > 1) {
+              Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
+            } else {
+              Lwt_io.printf "=> OK\n";
+            };
+        };
         | Response.Payload msg => {
                 if (n > 1) {
                   Lwt_unix.sleep !call_freq >>= fun () => loop (n - 1);
