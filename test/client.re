@@ -15,6 +15,7 @@ let router_secret_key = ref "";
 let token = ref "";
 let uri_path = ref "";
 let content_format = ref (create_content_format 50);
+let identity = ref (Unix.gethostname ());
 let max_age = ref 60;
 let observe_mode = ref "";
 let payload = ref "";
@@ -221,14 +222,14 @@ let create_options options => {
 
 let create_post_options uri::uri format::format => {
   let uri_path = create_option number::11 value::uri;
-  let uri_host = create_option number::3 value::(Unix.gethostname ());
+  let uri_host = create_option number::3 value::!identity;
   let content_format = create_option number::12 value::format;
   create_options [|uri_path, uri_host, content_format|];
 };
 
 let create_get_options uri::uri format::format => {
   let uri_path = create_option number::11 value::uri;
-  let uri_host = create_option number::3 value::(Unix.gethostname ());
+  let uri_host = create_option number::3 value::!identity;
   let content_format = create_option number::12 value::format;  
   create_options [|uri_path, uri_host, content_format|];
 };
@@ -245,7 +246,7 @@ let create_max_age seconds => {
 
 let create_observe_options ::format=(!content_format) ::age=(!max_age) uri::uri => {
   let uri_path = create_option number::11 value::uri;
-  let uri_host = create_option number::3 value::(Unix.gethostname ());
+  let uri_host = create_option number::3 value::!identity;
   let content_format = create_option number::12 value::format;    
   let observe = create_option number::6 value::!observe_mode;
   let max_age = create_option number::14 value::(create_max_age (Int32.of_int age));
@@ -542,6 +543,7 @@ let parse_cmdline () => {
     ("--file", Arg.Set file, ": payload contents comes from a file"),
     ("--max-age", Arg.Set_int max_age, ": time in seconds to observe a path"),
     ("--observe-mode", Arg.Symbol ["data", "audit"] handle_observe_mode, ": to set the observe mode"),
+    ("--identity", Arg.Set_string identity, ": to set the client identity"),
     ("--enable-logging", Arg.Set log_mode, ": turn debug mode on"),
   ];
   Arg.parse speclist (fun err => raise (Arg.Bad ("Bad argument : " ^ err))) usage;
