@@ -37,6 +37,21 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
 ```
 
+### General API
+
+#### Hypercat
+    URL: /cat
+    Method: GET
+    Parameters: 
+    Notes: returns the hypercat
+    
+    
+#### Uptime
+    URL: /uptime
+    Method: GET
+    Parameters: 
+    Notes: returns the uptime of the server in milliseconds   
+
 
 ### Key/Value API
 
@@ -60,6 +75,13 @@ A value is uniquely identified by an id and key pair. For example, you might wri
     Method: GET
     Parameters: replace <id> with a string
     Notes: return keys for given key id
+    
+    
+#### Count keys
+    URL: /kv/<id>/count
+    Method: GET
+    Parameters: replace <id> with a string
+    Notes: return number of keys used by given id    
     
 
 #### Delete entry
