@@ -17,6 +17,14 @@ let content_format = ref "";
 /* create stores in local directory by default */
 let store_directory = ref "./";
 
+let get_time () => {
+  let t_sec = Unix.gettimeofday ();
+  let t_ms = t_sec *. 1000.0;
+  int_of_float t_ms;
+};
+
+let start_time = ref (get_time ());
+
 module Ack = {
   type t = Code int |  Payload int string | Observe string string;
 };
@@ -37,10 +45,11 @@ type t = {
   version: int
 };
 
-let get_time () => {
-  let t_sec = Unix.gettimeofday ();
-  let t_ms = t_sec *. 1000.0;
-  int_of_float t_ms;
+
+let uptime () => {
+  open Ezjsonm;
+  let t = (get_time ()) - !start_time;
+  dict [("uptime", int t)] |> Lwt.return;
 };
 
 let create_audit_payload_worker prov code resp_code => {
@@ -329,9 +338,17 @@ let handle_read_hypercat ctx prov => {
       fun s => (Payload 50 s) |> Lwt.return;
 };
 
+let handle_read_uptime ctx prov => {
+  open Ack;
+  uptime () >>= fun json => 
+    Ezjsonm.to_string json |>
+      fun s => (Payload 50 s) |> Lwt.return;
+};
+
 let handle_get_read ctx prov => {
   let uri_path = Prov.uri_path prov;
   switch uri_path {
+  | "/uptime" => handle_read_uptime ctx prov;
   | "/cat" => handle_read_hypercat ctx prov;
   | _ => handle_read_database ctx prov; 
   };
