@@ -37,6 +37,15 @@ module Json = {
     Keys.get ctx.keys id;
   };
 
+  let count_of_json result => {
+    open Ezjsonm;
+    dict [("count", int result)] |> Lwt.return;
+  };
+
+  let count ctx::ctx info::info id::id => {
+    Keys.count ctx.keys id >>= count_of_json;
+  };
+
   let delete ctx::ctx info::info id::id key::k => {
     write ctx::ctx info::info id::id key::k json::json_empty >>=
       fun () => Keys.delete ctx.keys info id k;
@@ -86,6 +95,15 @@ module Text = {
       Keys.get ctx.keys id;
     };
 
+    let count_of_json result => {
+      open Ezjsonm;
+      dict [("count", int result)] |> Lwt.return;
+    };
+
+    let count ctx::ctx info::info id::id => {
+      Keys.count ctx.keys id >>= count_of_json;
+    };
+
     let delete ctx::ctx info::info id::id key::k => {
       write ctx::ctx info::info id::id key::k text::text_empty >>=
         fun () => Keys.delete ctx.keys info id k;
@@ -133,6 +151,15 @@ module Text = {
 
       let keys ctx::ctx info::info id::id => {
         Keys.get ctx.keys id;
+      };
+
+      let count_of_json result => {
+        open Ezjsonm;
+        dict [("count", int result)] |> Lwt.return;
+      };
+
+      let count ctx::ctx info::info id::id => {
+        Keys.count ctx.keys id >>= count_of_json;
       };
 
       let delete ctx::ctx info::info id::id key::k => {

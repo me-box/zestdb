@@ -264,6 +264,7 @@ let handle_get_read_kv_json uri_path ctx prov => {
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", "kv", id, "keys"] => Json (keys ctx::ctx.jsonkv_ctx info::info id::id);
+  | ["", "kv", id, "count"] =>  Json (count ctx::ctx.jsonkv_ctx info::info id::id);
   | ["", "kv", id, key] => Json (read ctx::ctx.jsonkv_ctx info::info id::id key::key);
   | _ => Empty;
   };
@@ -276,6 +277,7 @@ let handle_get_read_kv_text uri_path ctx prov => {
   let path_list = String.split_on_char '/' uri_path;
   switch path_list {
   | ["", "kv", id, "keys"] => Json (keys ctx::ctx.textkv_ctx info::info id::id);
+  | ["", "kv", id, "count"] =>  Json (count ctx::ctx.textkv_ctx info::info id::id);
   | ["", "kv", id, key]  => Text (read ctx::ctx.textkv_ctx info::info id::id key::key);
   | _ => Empty;
   };
@@ -288,6 +290,7 @@ let handle_get_read_kv_binary uri_path ctx prov => {
   let path_list = String.split_on_char '/' uri_path;  
   switch path_list {
   | ["", "kv", id, "keys"] => Json (keys ctx::ctx.binarykv_ctx info::info id::id);
+  | ["", "kv", id, "count"] =>  Json (count ctx::ctx.binarykv_ctx info::info id::id);
   | ["", "kv", id, key] => Text (read ctx::ctx.binarykv_ctx info::info id::id key::key);
   | _ => Empty;
   };

@@ -54,6 +54,11 @@ let alist branch id => {
     } |> Lwt.return;
 };
 
+let count branch id => {
+  alist branch id >>=
+    fun lis => List.length lis |> Lwt.return;
+};
+
 let update branch info id v => {
   read branch id >>= fun data =>
     switch data {
