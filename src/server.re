@@ -68,7 +68,7 @@ let create_audit_payload prov status payload => {
       switch status {
       | Ack.Code 163 => Some payload;
       | Ack.Code n => Some (create_audit_payload_worker prov' meth n);
-      | Ack.Payload _ => Some (create_audit_payload_worker prov' "GET" 69); 
+      | Ack.Payload _ => Some (create_audit_payload_worker prov' meth 69); 
       | Ack.Observe _ => Some (create_audit_payload_worker prov' "GET(OBSERVE)" 69); 
       };
   | None => Some payload;
@@ -97,7 +97,8 @@ let create_data_payload prov status payload => {
   | Ack.Code 129 => None;
   | Ack.Code 143 => None;
   | Ack.Code 66 => None;
-  | Ack.Payload _ => None;
+  | Ack.Payload _ when payload == "" => None;
+  | Ack.Payload _ => Some (create_data_payload_worker prov payload);
   | Ack.Code _ => Some (create_data_payload_worker prov payload);
   };
 };
