@@ -1187,26 +1187,19 @@ let rec run_server = ctx => {
   run_server(ctx);
 };
 
-let init =
-    (
-      zmq_ctx,
-      numts_ctx,
-      blobts_ctx,
-      jsonkv_ctx,
-      textkv_ctx,
-      binarykv_ctx,
-      observe_ctx,
-      hc_ctx
-    ) => {
-  hc_ctx,
-  observe_ctx,
-  numts_ctx,
-  blobts_ctx,
-  jsonkv_ctx,
-  textkv_ctx,
-  binarykv_ctx,
-  zmq_ctx,
-  version: 1
+let init = () => {
+  let jsonkv_ctx = Keyvalue.Json.create(~path_to_db=store_directory^);
+  {
+    hc_ctx: Hc.create(~store=jsonkv_ctx),
+    observe_ctx: Observe.create(),
+    numts_ctx: Numeric_timeseries.create(~path_to_db=store_directory^, ~max_buffer_size=10000, ~shard_size=1000),
+    blobts_ctx: Blob_timeseries.create(~path_to_db=store_directory^, ~max_buffer_size=1000, ~shard_size=100),
+    jsonkv_ctx: jsonkv_ctx,
+    textkv_ctx: Keyvalue.Text.create(~path_to_db=store_directory^),
+    binarykv_ctx: Keyvalue.Binary.create(~path_to_db=store_directory^),
+    zmq_ctx: Protocol.Zest.create(~endpoints=(rep_endpoint^, rout_endpoint^), ~keys=(server_secret_key^, router_secret_key^)),
+    version: 1
+    };
 };
 
 let setup_server = () => {
@@ -1215,39 +1208,7 @@ let setup_server = () => {
   setup_router_keys();
   set_server_key(server_secret_key_file^);
   set_token_key(token_secret_key_file^);
-  let zmq_ctx =
-    Protocol.Zest.create(
-      ~endpoints=(rep_endpoint^, rout_endpoint^),
-      ~keys=(server_secret_key^, router_secret_key^)
-    );
-  let numts_ctx =
-    Numeric_timeseries.create(
-      ~path_to_db=store_directory^,
-      ~max_buffer_size=10000,
-      ~shard_size=1000
-    );
-  let jsonkv_ctx = Keyvalue.Json.create(~path_to_db=store_directory^);
-  let textkv_ctx = Keyvalue.Text.create(~path_to_db=store_directory^);
-  let binarykv_ctx = Keyvalue.Binary.create(~path_to_db=store_directory^);
-  let blobts_ctx =
-    Blob_timeseries.create(
-      ~path_to_db=store_directory^,
-      ~max_buffer_size=1000,
-      ~shard_size=100
-    );
-  let observe_ctx = Observe.create();
-  let hc_ctx = Hc.create(~store=jsonkv_ctx);
-  let ctx =
-    init(
-      zmq_ctx,
-      numts_ctx,
-      blobts_ctx,
-      jsonkv_ctx,
-      textkv_ctx,
-      binarykv_ctx,
-      observe_ctx,
-      hc_ctx
-    );
+  let ctx = init();
   let _ = register_signal_handlers();
   run_server(ctx) |> (() => terminate_server(ctx));
 };
