@@ -1009,55 +1009,35 @@ let handle_delete = (ctx, prov) => {
   };
 };
 
-let handle_msg = (msg, ctx) =>
-  Logger.(
-    handle_expire(ctx)
-    >>= (
-      () =>
-        Logger.debug_f(
-          "handle_msg",
-          Printf.sprintf("Received:\n%s", to_hex(msg))
-        )
-        >>= (
-          () => {
-            let r0 = Bitstring.bitstring_of_string(msg);
-            let (tkl, oc, code, r1) = Protocol.Zest.handle_header(r0);
-            let (token, r2) = Protocol.Zest.handle_token(r1, tkl);
-            let (options, r3) = handle_options(oc, r2);
-            let payload = Bitstring.string_of_bitstring(r3);
-            let prov = Prov.create(~code, ~options, ~token);
-            switch code {
-            | 1 => handle_get(ctx, prov)
-            | 2 => handle_post(ctx, payload, prov)
-            | 4 => handle_delete(ctx, prov)
-            | _ => failwith("invalid code")
-            };
-          }
-        )
-    )
-  );
+let handle_msg = (msg, ctx) => {
+  open Logger;
+  handle_expire(ctx) >>= 
+    () => debug_f("handle_msg", Printf.sprintf("Received:\n%s", to_hex(msg))) >>= 
+      () => {
+        let r0 = Bitstring.bitstring_of_string(msg);
+        let (tkl, oc, code, r1) = Protocol.Zest.handle_header(r0);
+        let (token, r2) = Protocol.Zest.handle_token(r1, tkl);
+        let (options, r3) = handle_options(oc, r2);
+        let payload = Bitstring.string_of_bitstring(r3);
+        let prov = Prov.create(~code, ~options, ~token);
+        switch code {
+        | 1 => handle_get(ctx, prov)
+        | 2 => handle_post(ctx, payload, prov)
+        | 4 => handle_delete(ctx, prov)
+        | _ => failwith("invalid code")
+        };
+      }  
+};
 
 let server = ctx => {
   open Logger;
   let rec loop = () =>
-    Protocol.Zest.recv(ctx.zmq_ctx)
-    >>= (
-      msg =>
-        handle_msg(msg, ctx)
-        >>= (
-          resp =>
-            Protocol.Zest.send(ctx.zmq_ctx, resp)
-            >>= (
-              () =>
-                Logger.debug_f(
-                  "server",
-                  Printf.sprintf("Sending:\n%s", to_hex(resp))
-                )
-                >>= (() => loop())
-            )
-        )
-    );
-  Logger.info_f("server", "active") >>= (() => loop());
+    Protocol.Zest.recv(ctx.zmq_ctx) >>= 
+      msg => handle_msg(msg, ctx) >>=
+        resp => Protocol.Zest.send(ctx.zmq_ctx, resp) >>=
+          () => Logger.debug_f("server", Printf.sprintf("Sending:\n%s", to_hex(resp))) >>= 
+            () => loop();
+  Logger.info_f("server", "active") >>= () => loop();
 };
 
 /* test key: uf4XGHI7[fLoe&aG1tU83[ptpezyQMVIHh)J=zB1 */
@@ -1101,79 +1081,53 @@ let setup_router_keys = () => {
   router_public_key := public_key;
 };
 
-let data_from_file = file =>
-  Fpath.v(file)
-  |> Bos.OS.File.read
-  |> (
-    result =>
-      switch result {
+let data_from_file = file => {
+  Fpath.v(file) |> 
+    Bos.OS.File.read |> 
+      result =>switch result {
       | Rresult.Error(_) => failwith("failed to access file")
       | Rresult.Ok(key) => key
       }
-  );
+};
 
 let set_server_key = file => server_secret_key := data_from_file(file);
 
-let set_token_key = file =>
+let set_token_key = file => {
   if (file != "") {
     token_secret_key := data_from_file(file);
-  };
+  }
+};
 
-let cleanup_router = ctx =>
-  Observe.get_all(ctx.observe_ctx)
-  |> (
-    uuids =>
-      route_message(
-        uuids,
-        ctx,
-        Ack.Code(163),
-        Protocol.Zest.create_ack(163),
-        None
-      )
-      >>= (() => Lwt_unix.sleep(1.0))
-  );
+let cleanup_router = ctx => {
+  Observe.get_all(ctx.observe_ctx) |> 
+    uuids => route_message(uuids, ctx, Ack.Code(163), Protocol.Zest.create_ack(163), None) >>= 
+      () => Lwt_unix.sleep(1.0);
+};
 
 let terminate_server = (ctx, m) => {
   let info = Printf.sprintf("event = TERMINATE, trigger = (%s)", m);
-  Lwt_io.printf("\nShutting down server...\n")
-  >>= (
-    () =>
-      Blob_timeseries.flush(~ctx=ctx.blobts_ctx, ~info)
-      >>= (
-        () =>
-          Numeric_timeseries.flush(~ctx=ctx.numts_ctx, ~info)
-          >>= (
-            () =>
-              cleanup_router(ctx)
-              >>= (() => Protocol.Zest.close(ctx.zmq_ctx) |> (() => exit(0)))
-          )
-      )
-  );
+  Lwt_io.printf("\nShutting down server...\n") >>= 
+    () => Blob_timeseries.flush(~ctx=ctx.blobts_ctx, ~info) >>= 
+      () => Numeric_timeseries.flush(~ctx=ctx.numts_ctx, ~info) >>= 
+        () => cleanup_router(ctx) >>= 
+          () => Protocol.Zest.close(ctx.zmq_ctx) |> 
+            () => exit(0);
 };
 
 let unhandled_error = (e, ctx) => {
   let msg = Printexc.to_string(e);
   let stack = Printexc.get_backtrace();
-  Logger.error_f("unhandled_error", Printf.sprintf("%s%s", msg, stack))
-  >>= (
-    () =>
-      ack(Ack.Code(160)) >>= (resp => Protocol.Zest.send(ctx.zmq_ctx, resp))
-  );
+  Logger.error_f("unhandled_error", Printf.sprintf("%s%s", msg, stack)) >>= 
+    () => ack(Ack.Code(160)) >>= resp => Protocol.Zest.send(ctx.zmq_ctx, resp);
 };
 
 exception Interrupt(string);
 
-let register_signal_handlers = () =>
-  Lwt_unix.(
-    on_signal(Sys.sigterm, (_) => raise(Interrupt("Caught SIGTERM")))
-    |> (
-      id =>
-        on_signal(Sys.sighup, (_) => raise(Interrupt("Caught SIGHUP")))
-        |> (
-          id => on_signal(Sys.sigint, (_) => raise(Interrupt("Caught SIGINT")))
-        )
-    )
-  );
+let register_signal_handlers = () => {
+  Lwt_unix.(on_signal(Sys.sigterm, (_) => raise(Interrupt("Caught SIGTERM"))) |> 
+    id => on_signal(Sys.sighup, (_) => raise(Interrupt("Caught SIGHUP"))) |> 
+      id => on_signal(Sys.sigint, (_) => raise(Interrupt("Caught SIGINT"))));
+};
 
 let rec run_server = ctx => {
   let _ =
