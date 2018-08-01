@@ -27,7 +27,7 @@ RUN sudo apk add --no-cache --virtual .build-deps alpine-sdk bash ncurses-dev m4
 && opam init --comp 4.04.2 \
 && opam update \
 && opam pin add -n sodium https://github.com/me-box/ocaml-sodium.git#with_auth_hmac256 \
-&& opam install -y reason.1.13.7 re.1.7.1 lwt tls sodium macaroons ezirmin bitstring ppx_bitstring uuidm lwt-zmq bos oml \
+&& opam install -y reason re.1.7.1 lwt tls sodium macaroons ezirmin bitstring ppx_bitstring uuidm lwt-zmq bos oml \
 && sudo chmod +x build.sh && sync \
 && ./build.sh \
 && rm -rf /home/databox/.opam \
