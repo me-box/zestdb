@@ -148,22 +148,9 @@ let route_message = (alist, ctx, status, payload, prov) => {
     | [] => Lwt.return_unit
     | [(ident, expiry, mode), ...rest] =>
       switch (create_router_payload(prov, mode, status, payload)) {
-      | Some(payload') =>
-        Protocol.Zest.route(ctx.zmq_ctx, ident, payload')
-        >>= (
-          () =>
-            debug_f(
-              "routing",
-              Printf.sprintf(
-                "Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s",
-                to_hex(payload'),
-                ident,
-                expiry,
-                mode
-              )
-            )
-            >>= (() => loop(rest))
-        )
+      | Some(payload') => Protocol.Zest.route(ctx.zmq_ctx, ident, payload') >>= 
+          () => debug_f("routing", Printf.sprintf("Routing:\n%s \nto ident:%s with expiry:%lu and mode:%s", to_hex(payload'), ident, expiry, mode)) >>= 
+            () => loop(rest)
       | None => loop(rest)
       }
     };
@@ -172,27 +159,13 @@ let route_message = (alist, ctx, status, payload, prov) => {
 
 let route = (status, payload, ctx, prov) => {
   let key = Prov.ident(prov);
-  route_message(
-    Observe.get(ctx.observe_ctx, key),
-    ctx,
-    status,
-    payload,
-    Some(prov)
-  );
+  route_message(Observe.get(ctx.observe_ctx, key), ctx, status, payload, Some(prov));
 };
 
-let handle_expire = ctx =>
-  Observe.expire(ctx.observe_ctx)
-  >>= (
-    uuids =>
-      route_message(
-        uuids,
-        ctx,
-        Ack.Code(163),
-        Protocol.Zest.create_ack(163),
-        None
-      )
-  );
+let handle_expire = ctx => {
+  Observe.expire(ctx.observe_ctx) >>=
+    uuids => route_message(uuids, ctx, Ack.Code(163), Protocol.Zest.create_ack(163), None)
+};
 
 let get_id_list = uri_path => {
   let path_list = String.split_on_char('/', uri_path);
@@ -562,15 +535,12 @@ let handle_read_database = (ctx, prov) => {
     | _ => Empty
     };
   switch result {
-  | Json(json) =>
-    json
-    >>= (
+  | Json(json) => json >>= 
       json' => Lwt.return(Payload(content_format, Ezjsonm.to_string(json')))
-    )
-  | Text(text) =>
-    text >>= (text' => Lwt.return(Payload(content_format, text')))
-  | Binary(binary) =>
-    binary >>= (binary' => Lwt.return(Payload(content_format, binary')))
+  | Text(text) => text >>= 
+      text' => Lwt.return(Payload(content_format, text'))
+  | Binary(binary) => binary >>= 
+      binary' => Lwt.return(Payload(content_format, binary'))
   | Empty => Lwt.return(Code(128))
   };
 };
@@ -578,17 +548,17 @@ let handle_read_database = (ctx, prov) => {
 let handle_read_hypercat = (ctx, prov) => {
   open Ack;
   let info = Prov.info(prov, "READ");
-  Hc.get(~ctx=ctx.hc_ctx, ~info)
-  >>= (json => Ezjsonm.to_string(json) |> (s => Payload(50, s) |> Lwt.return));
+  Hc.get(~ctx=ctx.hc_ctx, ~info) >>= 
+    json => Ezjsonm.to_string(json) |> 
+      s => Payload(50, s) |> Lwt.return;
 };
 
-let handle_read_uptime = (ctx, prov) =>
-  Ack.(
-    uptime()
-    >>= (
-      json => Ezjsonm.to_string(json) |> (s => Payload(50, s) |> Lwt.return)
-    )
-  );
+let handle_read_uptime = (ctx, prov) => {
+  open Ack;
+  uptime() >>=
+    json => Ezjsonm.to_string(json) |> 
+      s => Payload(50, s) |> Lwt.return
+};
 
 let handle_get_read = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
@@ -681,8 +651,7 @@ let handle_post_write_kv_text = (payload, ctx, prov) => {
   let info = Prov.info(prov, "WRITE");
   let uri_path = Prov.uri_path(prov);
   switch (get_id_key("kv", uri_path)) {
-  | Some((id, key)) =>
-    Some(write(~ctx=ctx.textkv_ctx, ~info, ~id, ~key, ~text=payload))
+  | Some((id, key)) => Some(write(~ctx=ctx.textkv_ctx, ~info, ~id, ~key, ~text=payload))
   | None => None
   };
 };
@@ -692,8 +661,7 @@ let handle_post_write_kv_binary = (payload, ctx, prov) => {
   let info = Prov.info(prov, "WRITE");
   let uri_path = Prov.uri_path(prov);
   switch (get_id_key("kv", uri_path)) {
-  | Some((id, key)) =>
-    Some(write(~ctx=ctx.binarykv_ctx, ~info, ~id, ~key, ~binary=payload))
+  | Some((id, key)) => Some(write(~ctx=ctx.binarykv_ctx, ~info, ~id, ~key, ~binary=payload))
   | None => None
   };
 };
@@ -713,7 +681,7 @@ let handle_write_database = (payload, ctx, prov) => {
     | _ => None
     };
   switch result {
-  | Some(promise) => promise >>= (() => Lwt.return(Code(65)))
+  | Some(promise) => promise >>= () => Lwt.return(Code(65))
   | None => Lwt.return(Code(128))
   };
 };
@@ -723,18 +691,11 @@ let handle_write_hypercat = (payload, ctx, prov) => {
   let info = Prov.info(prov, "WRITE");
   let json = to_json(payload);
   switch json {
-  | Some(json) =>
-    Hc.update(~ctx=ctx.hc_ctx, ~info, ~item=json)
-    >>= (
-      result =>
-        (
-          switch result {
-          | Ok => Code(65)
-          | Error(n) => Code(n)
-          }
-        )
-        |> Lwt.return
-    )
+  | Some(json) => Hc.update(~ctx=ctx.hc_ctx, ~info, ~item=json) >>=
+      result => switch result {
+                | Ok => Code(65)
+                | Error(n) => Code(n)
+                } |> Lwt.return
   | None => Lwt.return(Code(128))
   };
 };
@@ -747,17 +708,14 @@ let handle_post_write = (payload, ctx, prov) => {
   };
 };
 
-let ack = kind =>
-  Ack.(
-    (
-      switch kind {
-      | Code(n) => Protocol.Zest.create_ack(n)
-      | Payload(format, data) => Protocol.Zest.create_ack_payload(format, data)
-      | Observe(key, uuid) => Protocol.Zest.create_ack_observe(key, uuid)
-      }
-    )
-    |> Lwt.return
-  );
+let ack = kind => {
+  open Ack;
+  switch kind {
+  | Code(n) => Protocol.Zest.create_ack(n)
+  | Payload(format, data) => Protocol.Zest.create_ack_payload(format, data)
+  | Observe(key, uuid) => Protocol.Zest.create_ack_observe(key, uuid)
+  } |> Lwt.return
+};
 
 let create_uuid = () =>
   Uuidm.v4_gen(Random.State.make_self_init(), ()) |> Uuidm.to_string;
@@ -780,11 +738,7 @@ let handle_options = (oc, bits) => {
       bits;
     } else {
       let (number, value, r) = Protocol.Zest.handle_option(bits);
-      let _ =
-        Logger.debug_f(
-          "handle_options",
-          Printf.sprintf("%d:%s", number, value)
-        );
+      let _ = Logger.debug_f("handle_options", Printf.sprintf("%d:%s", number, value));
       options[oc - 1] = (number, value);
       handle(oc - 1, r);
     };
@@ -795,10 +749,12 @@ let handle_get_observed = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
   if (is_valid_token(token, uri_path, "GET")) {
-    handle_get_read(ctx, prov)
-    >>= (resp => route(resp, "", ctx, prov) >>= (() => ack(resp)));
+    handle_get_read(ctx, prov) >>= 
+      resp => route(resp, "", ctx, prov) 
+        >>= () => ack(resp);
   } else {
-    route(Ack.Code(129), "", ctx, prov) >>= (() => ack(Ack.Code(129)));
+    route(Ack.Code(129), "", ctx, prov) >>= 
+      () => ack(Ack.Code(129));
   };
 };
 
@@ -817,14 +773,12 @@ let handle_get_observation_request = (ctx, prov) => {
   let token = Prov.token(prov);
   if (is_valid_token(token, uri_path, "GET")) {
     let uuid = create_uuid();
-    Observe.add(ctx.observe_ctx, uuid, prov)
-    >>= (
-      () =>
-        route(Ack.Observe(router_public_key^, uuid), "", ctx, prov)
-        >>= (() => ack(Ack.Observe(router_public_key^, uuid)))
-    );
+    Observe.add(ctx.observe_ctx, uuid, prov) >>= 
+      () => route(Ack.Observe(router_public_key^, uuid), "", ctx, prov) >>= 
+        () => ack(Ack.Observe(router_public_key^, uuid))
   } else {
-    route(Ack.Code(129), "", ctx, prov) >>= (() => ack(Ack.Code(129)));
+    route(Ack.Code(129), "", ctx, prov) >>= 
+      () => ack(Ack.Code(129));
   };
 };
 
@@ -854,10 +808,12 @@ let handle_post_observed = (payload, ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
   if (is_valid_token(token, uri_path, "POST")) {
-    handle_post_write(payload, ctx, prov)
-    >>= (resp => route(resp, payload, ctx, prov) >>= (() => ack(resp)));
+    handle_post_write(payload, ctx, prov) >>= 
+      resp => route(resp, payload, ctx, prov) >>= 
+        () => ack(resp);
   } else {
-    route(Ack.Code(129), payload, ctx, prov) >>= (() => ack(Code(129)));
+    route(Ack.Code(129), payload, ctx, prov) >>= 
+      () => ack(Code(129));
   };
 };
 
@@ -934,9 +890,7 @@ let handle_delete_ts_numeric = (ctx, prov) => {
   let info = Prov.info(prov, "DELETE");
   switch (handle_get_read_ts(ctx, prov)) {
   | Json(json) =>
-    Some(
-      delete(~ctx=ctx.numts_ctx, ~info, ~id_list=get_id_list(uri_path), ~json)
-    )
+    Some(delete(~ctx=ctx.numts_ctx, ~info, ~id_list=get_id_list(uri_path), ~json))
   | _ => None
   };
 };
@@ -947,9 +901,7 @@ let handle_delete_ts_blob = (ctx, prov) => {
   let info = Prov.info(prov, "DELETE");
   switch (handle_get_read_ts(ctx, prov)) {
   | Json(json) =>
-    Some(
-      delete(~ctx=ctx.blobts_ctx, ~info, ~id_list=get_id_list(uri_path), ~json)
-    )
+    Some(delete(~ctx=ctx.blobts_ctx, ~info, ~id_list=get_id_list(uri_path), ~json))
   | _ => None
   };
 };
@@ -973,7 +925,7 @@ let handle_delete_write = (ctx, prov) => {
       | _ => None
       };
     switch result {
-    | Some(promise) => promise >>= (() => Lwt.return(Code(66)))
+    | Some(promise) => promise >>= () => Lwt.return(Code(66))
     | None => Lwt.return(Code(128))
     };
   };
@@ -983,10 +935,12 @@ let handle_delete_observed = (ctx, prov) => {
   let token = Prov.token(prov);
   let uri_path = Prov.uri_path(prov);
   if (is_valid_token(token, uri_path, "DELETE")) {
-    handle_delete_write(ctx, prov)
-    >>= (resp => route(resp, "", ctx, prov) >>= (() => ack(resp)));
+    handle_delete_write(ctx, prov) >>= 
+      resp => route(resp, "", ctx, prov) >>= 
+        () => ack(resp);
   } else {
-    route(Ack.Code(129), "", ctx, prov) >>= (() => ack(Code(129)));
+    route(Ack.Code(129), "", ctx, prov) >>= 
+      () => ack(Code(129));
   };
 };
 
