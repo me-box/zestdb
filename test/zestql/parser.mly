@@ -79,7 +79,7 @@ tag:
   WHERE; s1 = STRING; IS; s2 = STRING { (s1,s2) } ;
 
 max_age:
-  FOR; s = STRING { s };
+  FOR; n = INT; SECONDS { n } ;
 
 observe_mode:
   MODE; DATA; { "data" } | MODE; AUDIT { "audit" } ;

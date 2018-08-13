@@ -15,7 +15,7 @@ type func_t = option(string);
 type from_t = string;
 type tag_t = option((string,string));
 type since_t = int;
-type max_age_t = option(string);
+type max_age_t = option(int);
 type range_t = (int,int);
 type to_t = string;
 type num_t = float;
@@ -94,7 +94,7 @@ let process_observe_mode = (observe_mode) => {
 
 let process_max_age = (max_age) => {
   switch(max_age) {
-  | Some(max_age) => sprintf(" --max-age %s", max_age)
+  | Some(max_age) => sprintf(" --max-age %d", max_age)
   | None => ""
   }
 };
