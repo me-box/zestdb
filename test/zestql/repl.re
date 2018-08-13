@@ -1,11 +1,31 @@
 open Lwt.Infix;
-open Printf;
+open Lwt_io;
 open Lexer;
 open Lexing;
 
 
+let error_info = (lexbuf) => {
+  let pos = lexbuf.lex_curr_p;
+  Printf.sprintf("%s:%d:%d", pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol + 1);
+};
+
+let parse_with_error = (lexbuf) => {
+  try (Parser.lang(Lexer.read, lexbuf)) {
+  | SyntaxError(msg) => {
+      let info = error_info(lexbuf);
+      let _ = fprintf(stderr, "%s %s", info, msg);
+      None;
+    };
+  | Parser.Error => {
+      let info = error_info(lexbuf);
+      let _ = fprintf(stderr, "%s syntax error", info);
+      None;
+    };
+  };
+};
+
 let parse = (lexbuf) => {
-  switch (Parser.lang(Lexer.read, lexbuf)) {
+  switch (parse_with_error(lexbuf)) {
   | Some(value) => Zestql.process(value);
   | None => "";
   };
@@ -16,24 +36,20 @@ let parse_string = (s) => {
   parse(lexbuf) |> Lwt.return;
 };
 
-
-
 let rec repl = () => {
-  Lwt_io.printf("> ") >>= () =>
-    Lwt_io.(read_line(stdin)) >>=
+  printf("> ") >>= () =>
+    read_line(stdin) >>=
       line => switch(line) {
       | "quit" | "quit;" => exit(0);
       | _ => parse_string(line) >>= 
-              res => Lwt_io.(write_line(stdout, res)) >>= 
+              res => write_line(stdout, res) >>= 
                 () => repl();
       };
 };
 
 let rec run_repl = () => {
   try (Lwt_main.run(repl())) {
-  | SyntaxError(msg) => let _ = Lwt_io.printf("Syntax error\n");
-  | Parser.Error => let _ = Lwt_io.printf("Syntax error\n");
-  | _ => let _ = Lwt_io.printf("Ouch\n");
+  | _ => let _ = printf("Unkown error\n");
   };
   run_repl();
 };
