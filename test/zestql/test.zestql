@@ -1,0 +1,33 @@
+connect key "vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<";
+
+connect key "vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<" host "foo";
+
+post 42.0 to "sensor1";
+
+POST 42.1 TO "sensor1";
+
+post 43.0 TO "sensor1" where "serial" is "A001";
+
+post 43.1 TO "sensor1" 
+where "serial" is "A001";
+
+get min from "sensor1" SINCE 1m;
+
+get from "sensor1111" SINCE 24h;
+get from "sensor1111" SINCE 1d;
+
+get from "sensor1,sensor2" where "serial" is "A00" since 1s;
+
+get from "sensor2" last 10;
+
+get count from "sensor1,sensor2" where "serial" is "A00" since 10sec;
+
+get from "sensor200" range 1s to 0s;
+
+observe from "sensor1" for "10s";
+observe from "sensor1" mode audit;
+
+delete from "sensor42" range 0s to 1s;
+delete from "sensor1" where "serial" is "A00" range 5s to 10s;
+
+disconnect host "localhost";
