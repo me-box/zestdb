@@ -3,6 +3,7 @@
 (ocamllex (lexer))
 (menhir ((modules (parser))))
 
-(executable (
-  (name repl)
-  (libraries (unix))))
+
+(executable
+ ((name repl)
+  (libraries (lwt.unix))))
