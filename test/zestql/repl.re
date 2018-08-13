@@ -41,6 +41,7 @@ let rec repl = () => {
     read_line(stdin) >>=
       line => switch(line) {
       | "quit" | "quit;" => exit(0);
+      | "" => repl();
       | _ => parse_string(line) >>= 
               res => write_line(stdout, res) >>= 
                 () => repl();
@@ -49,9 +50,9 @@ let rec repl = () => {
 
 let rec run_repl = () => {
   try (Lwt_main.run(repl())) {
-  | _ => let _ = printf("Unkown error\n");
+  | _ => let _ = fprintf(stderr, "Unkown error\n");
   };
   run_repl();
 };
 
-run_repl();
+printf("zestql v0.1\n") >>= () => run_repl();
