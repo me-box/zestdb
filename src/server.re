@@ -574,8 +574,7 @@ let ack = kind => {
 
 let handle_read_notification = (ctx, prov) => {
   open Ack;
-  route(Notify(router_public_key^), "", ctx, prov) >>= 
-    () => Notify(router_public_key^) |> Lwt.return;
+  Notify(router_public_key^) |> Lwt.return;
 };
 
 let handle_get_read = (ctx, prov) => {
