@@ -719,7 +719,18 @@ let handle_write_hypercat = (payload, ctx, prov) => {
   };
 };
 
-let handle_write_notification = (payload, ctx, prov) => {
+let handle_write_notification_request = (payload, ctx, prov) => {
+  if (Observe.is_observed(ctx.observe_ctx, Prov.ident(prov))) {
+    let ident = Prov.uri_path(prov);
+    let payload' = create_data_payload_worker(Some(prov), payload);
+    Protocol.Zest.route(ctx.zmq_ctx, ident, payload') >>= 
+      () => Ack.Code(65) |> Lwt.return;
+  } else {
+    Ack.Code(163) |> Lwt.return;
+  };
+};
+
+let handle_write_notification_response = (payload, ctx, prov) => {
   let ident = Prov.uri_path(prov);
   let payload' = create_data_payload_worker(Some(prov), payload);
   Protocol.Zest.route(ctx.zmq_ctx, ident, payload') >>= 
@@ -732,8 +743,8 @@ let handle_post_write = (payload, ctx, prov) => {
   let path_list = String.split_on_char('/', uri_path);
   switch path_list {
   | ["", "cat"] => handle_write_hypercat(payload, ctx, prov)
-  | ["", "notification", "request", ..._] => handle_write_notification(payload, ctx, prov)
-  | ["", "notification", "response", ..._] => handle_write_notification(payload, ctx, prov)
+  | ["", "notification", "request", ..._] => handle_write_notification_request(payload, ctx, prov)
+  | ["", "notification", "response", ..._] => handle_write_notification_response(payload, ctx, prov)
   | _ => handle_write_database(payload, ctx, prov)
   };
 };

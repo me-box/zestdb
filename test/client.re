@@ -402,7 +402,7 @@ let post_loop = (socket, count) => {
             Lwt_io.printf("%s\n", msg);
           }
         | Response.Error(msg) => Lwt_io.printf("=> %s\n", msg)
-        | Response.Unavailable => Lwt_io.printf("=> server unavailable\n")
+        | Response.Unavailable => Lwt_io.printf("=> service unavailable\n")
         | _ => failwith("unhandled response")
         }
     );
