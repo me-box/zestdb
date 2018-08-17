@@ -55,6 +55,7 @@ module Response = {
 type t = {
   hc_ctx: Hc.t,
   observe_ctx: Observe.t,
+  notify_ctx: Notify.t,
   numts_ctx: Numeric_timeseries.t,
   blobts_ctx: Blob_timeseries.t,
   jsonkv_ctx: Keyvalue.Json.t,
@@ -574,6 +575,7 @@ let ack = kind => {
 
 let handle_read_notification = (ctx, prov) => {
   open Ack;
+  Notify.add(ctx.notify_ctx, Prov.uri_path(prov));
   Notify(router_public_key^) |> Lwt.return;
 };
 
@@ -583,7 +585,7 @@ let handle_get_read = (ctx, prov) => {
   switch path_list {
   | ["", "uptime"] => handle_read_uptime(ctx, prov)
   | ["", "cat"] => handle_read_hypercat(ctx, prov)
-  | ["", "notification", ..._] => handle_read_notification(ctx, prov)
+  | ["", "notification", "response", ..._] => handle_read_notification(ctx, prov)
   | _ => handle_read_database(ctx, prov)
   };
 };
@@ -1084,10 +1086,16 @@ let set_token_key = file => {
   }
 };
 
-let cleanup_router = ctx => {
+let cleanup_observation = ctx => {
   Observe.get_all(ctx.observe_ctx) |> 
     uuids => route_message(uuids, ctx, Ack.Code(163), Protocol.Zest.create_ack(163), None) >>= 
       () => Lwt_unix.sleep(1.0);
+};
+
+let cleanup_notification = ctx => {
+  let idents = Notify.get_all(ctx.notify_ctx);
+  let payload = Protocol.Zest.create_ack(163);
+  Lwt_list.iter_s(ident => Protocol.Zest.route(ctx.zmq_ctx, ident, payload), idents);
 };
 
 let terminate_server = (ctx, m) => {
@@ -1095,9 +1103,10 @@ let terminate_server = (ctx, m) => {
   Lwt_io.printf("\nShutting down server...\n") >>= 
     () => Blob_timeseries.flush(~ctx=ctx.blobts_ctx, ~info) >>= 
       () => Numeric_timeseries.flush(~ctx=ctx.numts_ctx, ~info) >>= 
-        () => cleanup_router(ctx) >>= 
-          () => Protocol.Zest.close(ctx.zmq_ctx) |> 
-            () => exit(0);
+        () => cleanup_observation(ctx) >>=
+          () => cleanup_notification(ctx) >>=
+            () => Protocol.Zest.close(ctx.zmq_ctx) |> 
+              () => exit(0);
 };
 
 let unhandled_error = (e, ctx) => {
@@ -1132,6 +1141,7 @@ let init = () => {
   {
     hc_ctx: Hc.create(~store=jsonkv_ctx),
     observe_ctx: Observe.create(),
+    notify_ctx: Notify.create(),
     numts_ctx: Numeric_timeseries.create(~path_to_db=store_directory^, ~max_buffer_size=10000, ~shard_size=1000),
     blobts_ctx: Blob_timeseries.create(~path_to_db=store_directory^, ~max_buffer_size=1000, ~shard_size=100),
     jsonkv_ctx: jsonkv_ctx,
