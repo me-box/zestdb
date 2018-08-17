@@ -276,6 +276,50 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 The example above is similar to the previous example but this time we will also receive audit information on any path that starts with '/kv/foo/'.
 
 
+### Notification
+
+Notifications support communication between two nodes interacting with a zest server through a '/notification/request' and '/notification/response' endpoint. A client node can issue a request to a server node which can obtain the necessary information from an observation to respond back asynchronously with the result. An example interaction might look like:
+
+#### running client to observe notification requests
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/notification/request/sensor/*' --mode observe --max-age 0
+```
+
+This observation result contains the information needed to be able to respond back to a request. For example:
+
+```
+#timestamp #uri-path #content-format #data
+1534527894820 /notification/request/sensor/on/id/1000 json {"active": true}
+```
+
+contains 'sensor/on/id/1000' which will be required when constructing a response. Note, if there are no observations setup and a client issues a notification request this will result in a service unavailable response.
+
+
+#### running client to get notifications of responses
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/notification/response/sensor/on/id/1000' --mode notify
+```
+
+will produce something like:
+
+```
+#timestamp #uri-path #content-format #data
+1534527855931 /notification/response/sensor/on/id/1000 json {"result": true}
+```
+
+#### running client to issue a request
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/notification/request/sensor/on/id/1000' --mode post --payload '{"active": true}'
+```
+
+#### running client to issue a response
+
+```bash
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/notification/response/sensor/on/id/1000' --mode post --payload '{"result": true}'
+```
 
 
 ### Interprocess communication (IPC)
