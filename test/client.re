@@ -542,9 +542,8 @@ let observe_test = ctx => {
 
 let notify_test = ctx => {
   let req_soc = connect_request_socket(req_endpoint^, ctx, ZMQ.Socket.req);
-  let notify_uri_path = "/notification";
-  Lwt_log_core.debug_f("Subscribing:%s", notify_uri_path)
-    >>= () => send_request(~msg=get(~uri=notify_uri_path, ()), ~to_=req_soc)
+  Lwt_log_core.debug_f("Subscribing:%s", uri_path^)
+    >>= () => send_request(~msg=get(~uri=uri_path^, ()), ~to_=req_soc)
       >>= resp =>
           switch resp {
           | Response.Notify(key) =>

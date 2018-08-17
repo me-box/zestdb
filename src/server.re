@@ -580,10 +580,11 @@ let handle_read_notification = (ctx, prov) => {
 
 let handle_get_read = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
-  switch uri_path {
-  | "/uptime" => handle_read_uptime(ctx, prov)
-  | "/cat" => handle_read_hypercat(ctx, prov)
-  | "/notification" => handle_read_notification(ctx, prov)
+  let path_list = String.split_on_char('/', uri_path);
+  switch path_list {
+  | ["", "uptime"] => handle_read_uptime(ctx, prov)
+  | ["", "cat"] => handle_read_hypercat(ctx, prov)
+  | ["", "notification", ..._] => handle_read_notification(ctx, prov)
   | _ => handle_read_database(ctx, prov)
   };
 };
