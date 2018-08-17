@@ -190,6 +190,23 @@ let create_ack_observe = (public_key, ~uuid as payload) => {
   Bitstring.string_of_bitstring(bits);
 };
 
+let create_ack_notification_options = (~key) => {
+  let public_key = create_option(~number=2048, ~value=key);
+  create_options([|public_key|]);
+};
+
+let create_ack_notification = (public_key) => {
+  let (options_value, options_length, options_count) =
+    create_ack_notification_options(~key=public_key);
+  let (header_value, header_length) = create_header(~tkl=0, ~oc=options_count, ~code=65);
+  let bits = [%bitstring
+    {|header_value : header_length : bitstring;
+      options_value : options_length : bitstring
+    |}
+  ];
+  Bitstring.string_of_bitstring(bits);
+};
+
 let create_ack = (code) => {
   let (header_value, header_length) = create_header(~tkl=0, ~oc=0, ~code=code);
   let bits = [%bitstring {|header_value : header_length : bitstring|}];

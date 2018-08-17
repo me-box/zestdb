@@ -51,6 +51,7 @@ module Response = {
     | Unavailable
     | Payload(string)
     | Observe(string, string)
+    | Notify(string)
     | Error(string);
 };
 
@@ -148,7 +149,15 @@ let handle_ack_content = (options, payload) => {
   };
 };
 
-let handle_ack_created = options => Response.OK |> Lwt.return;
+let handle_ack_created = options => {
+  if (has_public_key(options)) {
+    let key = get_option_value(options, 2048);
+    Response.Notify(key) |> Lwt.return
+  } else {
+    Response.OK |> Lwt.return;
+  };  
+};
+
 
 let handle_ack_deleted = options => Response.OK |> Lwt.return;
 
@@ -487,6 +496,7 @@ let observe_loop = (socket, count) => {
   loop();
 };
 
+
 let set_socket_subscription = (socket, path) => {
   let soc = Lwt_zmq.Socket.to_socket(socket);
   ZMQ.Socket.subscribe(soc, path);
@@ -530,6 +540,34 @@ let observe_test = ctx => {
   );
 };
 
+let notify_test = ctx => {
+  let req_soc = connect_request_socket(req_endpoint^, ctx, ZMQ.Socket.req);
+  let notify_uri_path = "/notification";
+  Lwt_log_core.debug_f("Subscribing:%s", notify_uri_path)
+    >>= () => send_request(~msg=get(~uri=notify_uri_path, ()), ~to_=req_soc)
+      >>= resp =>
+          switch resp {
+          | Response.Notify(key) =>
+              Lwt_log_core.debug_f("Receiving notifications via ident:%s", uri_path^)
+                >>= () => {
+                  close_socket(req_soc);
+                  let deal_soc = connect_dealer_socket(
+                    key,
+                    uri_path^,
+                    deal_endpoint^,
+                    ctx,
+                    ZMQ.Socket.dealer
+                  );
+                observe_loop(deal_soc, loop_count^)
+                >>= (() => close_socket(deal_soc) |> Lwt.return);
+              }
+          | Response.Error(msg) =>
+            close_socket(req_soc) |> (() => Lwt_io.printf("=> %s\n", msg))
+          | _ => failwith("unhandled response")
+          };
+};
+
+
 let handle_mode = mode => {
   let func =
     switch mode {
@@ -537,6 +575,7 @@ let handle_mode = mode => {
     | "get" => get_test
     | "observe" => observe_test
     | "delete" => delete_test
+    | "notify" => notify_test
     | _ => raise(Arg.Bad("Unsupported mode"))
     };
   command := func;
@@ -608,7 +647,7 @@ let parse_cmdline = () => {
     ),
     (
       "--mode",
-      Arg.Symbol(["post", "get", "observe", "delete"], handle_mode),
+      Arg.Symbol(["post", "get", "observe", "delete", "notify"], handle_mode),
       " : to set the mode of operation"
     ),
     ("--file", Arg.Set(file), ": payload contents comes from a file"),

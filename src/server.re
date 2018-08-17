@@ -40,7 +40,8 @@ module Ack = {
   type t =
     | Code(int)
     | Payload(int, string)
-    | Observe(string, string);
+    | Observe(string, string)
+    | Notify(string);
 };
 
 module Response = {
@@ -97,8 +98,8 @@ let create_audit_payload = (prov, status, payload) =>
     | Ack.Code(163) => Some(payload)
     | Ack.Code(n) => Some(create_audit_payload_worker(prov', meth, n))
     | Ack.Payload(_) => Some(create_audit_payload_worker(prov', meth, 69))
-    | Ack.Observe(_) =>
-      Some(create_audit_payload_worker(prov', "GET(OBSERVE)", 69))
+    | Ack.Observe(_) => Some(create_audit_payload_worker(prov', "GET(OBSERVE)", 69))
+    | Ack.Notify(_) => Some(create_audit_payload_worker(prov', "GET(NOTIFICATION)", 65))
     };
   | None => Some(payload)
   };
@@ -125,6 +126,7 @@ let create_data_payload = (prov, status, payload) =>
   switch status {
   | Ack.Code(163) => Some(payload)
   | Ack.Observe(_) => None
+  | Ack.Notify(_) => None
   | Ack.Code(128) => None
   | Ack.Code(129) => None
   | Ack.Code(143) => None
@@ -560,11 +562,28 @@ let handle_read_uptime = (ctx, prov) => {
       s => Payload(50, s) |> Lwt.return
 };
 
+let ack = kind => {
+  open Ack;
+  switch kind {
+  | Code(n) => Protocol.Zest.create_ack(n)
+  | Payload(format, data) => Protocol.Zest.create_ack_payload(format, data)
+  | Observe(key, uuid) => Protocol.Zest.create_ack_observe(key, uuid)
+  | Notify(key) => Protocol.Zest.create_ack_notification(key)
+  } |> Lwt.return
+};
+
+let handle_read_notification = (ctx, prov) => {
+  open Ack;
+  route(Notify(router_public_key^), "", ctx, prov) >>= 
+    () => Notify(router_public_key^) |> Lwt.return;
+};
+
 let handle_get_read = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   switch uri_path {
   | "/uptime" => handle_read_uptime(ctx, prov)
   | "/cat" => handle_read_hypercat(ctx, prov)
+  | "/notification" => handle_read_notification(ctx, prov)
   | _ => handle_read_database(ctx, prov)
   };
 };
@@ -706,15 +725,6 @@ let handle_post_write = (payload, ctx, prov) => {
   | "/cat" => handle_write_hypercat(payload, ctx, prov)
   | _ => handle_write_database(payload, ctx, prov)
   };
-};
-
-let ack = kind => {
-  open Ack;
-  switch kind {
-  | Code(n) => Protocol.Zest.create_ack(n)
-  | Payload(format, data) => Protocol.Zest.create_ack_payload(format, data)
-  | Observe(key, uuid) => Protocol.Zest.create_ack_observe(key, uuid)
-  } |> Lwt.return
 };
 
 let create_uuid = () =>

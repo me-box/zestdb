@@ -10,6 +10,7 @@ let route: (t, string, string) => Lwt.t(unit);
 let create_ack : int => string;
 let create_ack_payload: (int, string) => string;
 let create_ack_observe: (string, ~uuid: string) => string;
+let create_ack_notification: (string) => string;
 let create_header: (~tkl: int, ~oc: int, ~code: int) => (Bitstring.t, int);
 let create_option: (~number: int, ~value: string) => (Bitstring.t, int);
 let create_content_format: int => string;
