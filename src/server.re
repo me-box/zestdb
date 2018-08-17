@@ -727,12 +727,14 @@ let handle_write_notification = (payload, ctx, prov) => {
     () => Ack.Code(65) |> Lwt.return;
 };
 
+
 let handle_post_write = (payload, ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let path_list = String.split_on_char('/', uri_path);
   switch path_list {
   | ["", "cat"] => handle_write_hypercat(payload, ctx, prov)
-  | ["", "notification", ..._] => handle_write_notification(payload, ctx, prov)
+  | ["", "notification", "request", ..._] => handle_write_notification(payload, ctx, prov)
+  | ["", "notification", "response", ..._] => handle_write_notification(payload, ctx, prov)
   | _ => handle_write_database(payload, ctx, prov)
   };
 };
