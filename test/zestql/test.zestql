@@ -24,7 +24,7 @@ get count from "sensor1,sensor2" where "serial" is "A00" since 10sec;
 
 get from "sensor200" range 1s to 0s;
 
-observe from "sensor1" for "10s";
+observe from "sensor1" for 10s;
 observe from "sensor1" mode audit;
 
 delete from "sensor42" range 0s to 1s;
