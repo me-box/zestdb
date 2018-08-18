@@ -60,6 +60,7 @@ let get_observed = (options) => {
   switch (loop(Array.to_list(options))) {
   | Some(("" | "data")) => "data"
   | Some(("audit")) => "audit"
+  | Some("notification") => "notification"
   | _ => "none"
   };
 };

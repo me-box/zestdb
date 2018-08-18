@@ -123,7 +123,7 @@ let create_data_payload_worker = (prov, payload) =>
   | None => Protocol.Zest.create_ack(163)
   };
 
-let create_data_payload = (prov, status, payload) =>
+let create_data_payload = (prov, status, payload) => {
   switch status {
   | Ack.Code(163) => Some(payload)
   | Ack.Observe(_) => None
@@ -136,11 +136,41 @@ let create_data_payload = (prov, status, payload) =>
   | Ack.Payload(_) => Some(create_data_payload_worker(prov, payload))
   | Ack.Code(_) => Some(create_data_payload_worker(prov, payload))
   };
+}; 
+
+let create_notification_payload_worker = (prov, payload) => {
+  switch prov {
+  | Some(prov') =>
+    let uri_path = Prov.uri_path(prov');
+    let callback_uri_path = Str.replace_first(Str.regexp("request"), "response", uri_path);
+    let content_format = Prov.content_format_as_string(prov');
+    let timestamp = get_time();
+    let entry =
+      Printf.sprintf(
+        "%d %s %s %s",
+        timestamp,
+        callback_uri_path,
+        content_format,
+        payload
+      );
+    Protocol.Zest.create_ack_payload(69, entry);
+  | None => Protocol.Zest.create_ack(163)
+  };
+};
+
+let create_notification_payload = (prov, status, payload) => {
+  switch status {
+  | Ack.Code(163) => Some(payload)
+  | Ack.Code(65) => Some(create_notification_payload_worker(prov, payload)); 
+  | _ => None;
+  }
+};  
 
 let create_router_payload = (prov, mode, status, payload) =>
   switch mode {
   | "data" => create_data_payload(prov, status, payload)
   | "audit" => create_audit_payload(prov, status, payload)
+  | "notification" => create_notification_payload(prov, status, payload)
   | _ => Some(Protocol.Zest.create_ack(128))
   };
 
@@ -819,7 +849,7 @@ let handle_get_observation_request = (ctx, prov) => {
 let handle_get = (ctx, prov) => {
   let key = Prov.ident(prov);
   let observed = Prov.observed(prov);
-  if (observed == "data" || observed == "audit") {
+  if (observed == "data" || observed == "audit" || observed == "notification") {
     handle_get_observation_request(ctx, prov);
   } else if (Observe.is_observed(ctx.observe_ctx, key)) {
     handle_get_observed(ctx, prov);

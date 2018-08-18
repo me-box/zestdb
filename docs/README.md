@@ -235,7 +235,7 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 
 ### Observation
 
-One benefit of the Zest protocol being built on top of ZeroMQ means that it is easy to support features such as observing data written or read from the server in real-time. There are two types of observation modes: data and audit which provide data in a simple space-separated meta-format. Observing data is used to get a copy of what is POSTed to a specific path, whereas an audit request can be used to provide meta-data on a POST or GET containing information such as the hostnames involved and the type of query etc.
+One benefit of the Zest protocol being built on top of ZeroMQ means that it is easy to support features such as observing data written or read from the server in real-time. There are three types of observation modes: 'data', 'audit' and 'notification' which provide data in a simple space-separated meta-format. Observing data is used to get a copy of what is POSTed to a specific path, whereas an audit request can be used to provide meta-data containing information such as the hostnames involved and the type of query etc. Observing notifications is used in conjunction with notification requests which are described later on.
 
 A typical use case for observation might consist of multiple deployed servers that you need to monitor from a single client. The client could make individual observation requests to each server and collate the data received in real-time to display on a dashboard.
 
@@ -283,17 +283,17 @@ Notifications support communication between two nodes interacting with a zest se
 #### running client to observe notification requests
 
 ```bash
-$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/notification/request/sensor/*' --mode observe --max-age 0
+$ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/notification/request/sensor/*' --mode observe --observe-mode notification --max-age 0
 ```
 
 This observation result contains the information needed to be able to respond back to a request. For example:
 
 ```
-#timestamp #uri-path #content-format #data
-1534527894820 /notification/request/sensor/on/id/1000 json {"active": true}
+#timestamp #callback-path #content-format #request-data
+1534593034282 /notification/response/sensor/on json {"active": true}
 ```
 
-contains 'sensor/on/id/1000' which will be required when constructing a response. Note, if there are no observations setup and a client issues a notification request this will result in a service unavailable response.
+contains a callback path which will be required when constructing a response. Note, if there are no observations setup and a client issues a notification request this will result in a service unavailable response.
 
 
 #### running client to get notifications of responses

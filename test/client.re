@@ -653,7 +653,7 @@ let parse_cmdline = () => {
     ("--max-age", Arg.Set_int(max_age), ": time in seconds to observe a path"),
     (
       "--observe-mode",
-      Arg.Symbol(["data", "audit"], handle_observe_mode),
+      Arg.Symbol(["data", "audit", "notification"], handle_observe_mode),
       ": to set the observe mode"
     ),
     ("--identity", Arg.Set_string(identity), ": to set the client identity"),
