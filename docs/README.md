@@ -290,7 +290,7 @@ This observation result contains the information needed to be able to respond ba
 
 ```
 #timestamp #callback-path #content-format #request-data
-1534593034282 /notification/response/sensor/on json {"active": true}
+1534593034282 /notification/response/sensor/on/id/1000 json {"active": true}
 ```
 
 contains a callback path which will be required when constructing a response. Note, if there are no observations setup and a client issues a notification request this will result in a service unavailable response.
