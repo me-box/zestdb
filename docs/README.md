@@ -289,8 +289,8 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 This observation result contains the information needed to be able to respond back to a request. For example:
 
 ```
-#timestamp #callback-path #content-format #request-data
-1534593034282 /notification/response/sensor/on/id/1000 json {"active": true}
+#timestamp #client-host #callback-path #content-format #request-data
+1534675126283 Johns-MacBook-Pro-3.local /notification/response/sensor/on/id/1000 json {"active": true}
 ```
 
 contains a callback path which will be required when constructing a response. Note, if there are no observations setup and a client issues a notification request this will result in a service unavailable response.

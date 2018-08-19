@@ -142,13 +142,15 @@ let create_notification_payload_worker = (prov, payload) => {
   switch prov {
   | Some(prov') =>
     let uri_path = Prov.uri_path(prov');
+    let uri_host = Prov.uri_host(prov');
     let callback_uri_path = Str.replace_first(Str.regexp("request"), "response", uri_path);
     let content_format = Prov.content_format_as_string(prov');
     let timestamp = get_time();
     let entry =
       Printf.sprintf(
-        "%d %s %s %s",
+        "%d %s %s %s %s",
         timestamp,
+        uri_host,
         callback_uri_path,
         content_format,
         payload
