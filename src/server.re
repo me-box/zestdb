@@ -75,10 +75,11 @@ let create_audit_payload_worker = (prov, code, resp_code) => {
   open Protocol.Zest;
   let uri_host = Prov.uri_host(prov);
   let uri_path = Prov.uri_path(prov);
+  let content_format = Prov.content_format(prov);
   let timestamp = get_time();
   let server = identity^;
   create_ack_payload(
-    69,
+    content_format,
     Printf.sprintf(
       "%d %s %s %s %s %d",
       timestamp,
@@ -109,17 +110,18 @@ let create_data_payload_worker = (prov, payload) =>
   switch prov {
   | Some(prov') =>
     let uri_path = Prov.uri_path(prov');
-    let content_format = Prov.content_format_as_string(prov');
+    let content_format_as_string = Prov.content_format_as_string(prov');
+    let content_format = Prov.content_format(prov');
     let timestamp = get_time();
     let entry =
       Printf.sprintf(
         "%d %s %s %s",
         timestamp,
         uri_path,
-        content_format,
+        content_format_as_string,
         payload
       );
-    Protocol.Zest.create_ack_payload(69, entry);
+    Protocol.Zest.create_ack_payload(content_format, entry);
   | None => Protocol.Zest.create_ack(163)
   };
 
@@ -144,7 +146,8 @@ let create_notification_payload_worker = (prov, payload) => {
     let uri_path = Prov.uri_path(prov');
     let uri_host = Prov.uri_host(prov');
     let callback_uri_path = Str.replace_first(Str.regexp("request"), "response", uri_path);
-    let content_format = Prov.content_format_as_string(prov');
+    let content_format_as_string = Prov.content_format_as_string(prov');
+    let content_format = Prov.content_format(prov');
     let timestamp = get_time();
     let entry =
       Printf.sprintf(
@@ -152,10 +155,10 @@ let create_notification_payload_worker = (prov, payload) => {
         timestamp,
         uri_host,
         callback_uri_path,
-        content_format,
+        content_format_as_string,
         payload
       );
-    Protocol.Zest.create_ack_payload(69, entry);
+    Protocol.Zest.create_ack_payload(content_format, entry);
   | None => Protocol.Zest.create_ack(163)
   };
 };
