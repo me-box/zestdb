@@ -614,10 +614,26 @@ let handle_read_notification = (ctx, prov) => {
   Notify(router_public_key^) |> Lwt.return;
 };
 
+let handle_get_hello = (ctx, prov) => {
+  open Ack;
+  Payload(0, "hello world!") |> Lwt.return
+};
+
+let handle_get_time = (ctx, prov) => {
+  open Ack;
+  open Unix;
+  let months = [|"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"|];
+  let gmt = gmtime(time());
+  let s = Printf.sprintf("%s %d %d:%d:%d", months[gmt.tm_mon], gmt.tm_mday, gmt.tm_hour, gmt.tm_min, gmt.tm_sec);
+  Payload(0, s) |> Lwt.return
+};
+
 let handle_get_read = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let path_list = String.split_on_char('/', uri_path);
   switch path_list {
+  | ["", "time"] => handle_get_time(ctx, prov);
+  | ["", "hello"] => handle_get_hello(ctx, prov);
   | ["", "uptime"] => handle_read_uptime(ctx, prov)
   | ["", "cat"] => handle_read_hypercat(ctx, prov)
   | ["", "notification", "response", ..._] => handle_read_notification(ctx, prov)
