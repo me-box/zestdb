@@ -610,8 +610,11 @@ let ack = kind => {
 
 let handle_read_notification = (ctx, prov) => {
   open Ack;
-  Notify.add(ctx.notify_ctx, Prov.uri_path(prov));
-  Notify(router_public_key^) |> Lwt.return;
+  if (Notify.add(ctx.notify_ctx, Prov.uri_path(prov))) {
+    Notify(router_public_key^) |> Lwt.return;
+  } else {
+    Code(163) |> Lwt.return;    
+  }
 };
 
 let handle_get_hello = (ctx, prov) => {

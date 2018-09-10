@@ -560,6 +560,8 @@ let notify_test = ctx => {
                 observe_loop(deal_soc, loop_count^)
                 >>= (() => close_socket(deal_soc) |> Lwt.return);
               }
+          | Response.Unavailable => 
+            close_socket(req_soc) |> (() => Lwt_io.printf("=> service unavailable\n"))     
           | Response.Error(msg) =>
             close_socket(req_soc) |> (() => Lwt_io.printf("=> %s\n", msg))
           | _ => failwith("unhandled response")
