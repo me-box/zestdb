@@ -808,15 +808,15 @@ let handle_post_write = (payload, ctx, prov) => {
 let create_uuid = () =>
   Uuidm.v4_gen(Random.State.make_self_init(), ()) |> Uuidm.to_string;
 
-let is_valid_token = (token, path, meth) =>
+let is_valid_token = (~token, ~path, ~meth, ~observe=None, ()) =>
   switch token_secret_key^ {
   | "" => true
-  | _ =>
-    Token.is_valid(
-      token,
-      token_secret_key^,
-      ["path = " ++ path, "method = " ++ meth, "target = " ++ identity^]
-    )
+  | _ => switch observe {
+    | None => 
+      Token.is_valid(token, token_secret_key^, ["path = " ++ path, "method = " ++ meth, "target = " ++ identity^])
+    | Some (observe) => 
+      Token.is_valid(token, token_secret_key^, ["path = " ++ path, "method = " ++ meth, "observe = " ++ observe, "target = " ++ identity^])
+    }
   };
 
 let handle_options = (oc, bits) => {
@@ -836,7 +836,7 @@ let handle_options = (oc, bits) => {
 let handle_get_observed = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
-  if (is_valid_token(token, uri_path, "GET")) {
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="GET", ())) {
     handle_get_read(ctx, prov) >>= 
       resp => route(resp, "", ctx, prov) 
         >>= () => ack(resp);
@@ -849,7 +849,7 @@ let handle_get_observed = (ctx, prov) => {
 let handle_get_unobserved = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
-  if (is_valid_token(token, uri_path, "GET")) {
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="GET", ())) {
     handle_get_read(ctx, prov) >>= ack;
   } else {
     ack(Ack.Code(129));
@@ -859,7 +859,8 @@ let handle_get_unobserved = (ctx, prov) => {
 let handle_get_observation_request = (ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
-  if (is_valid_token(token, uri_path, "GET")) {
+  let observed = Prov.observed(prov);
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="GET", ~observe=Some(observed), ())) {
     let uuid = create_uuid();
     Observe.add(ctx.observe_ctx, uuid, prov) >>= 
       () => route(Ack.Observe(router_public_key^, uuid), "", ctx, prov) >>= 
@@ -885,7 +886,7 @@ let handle_get = (ctx, prov) => {
 let handle_post_unobserved = (payload, ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
-  if (is_valid_token(token, uri_path, "POST")) {
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="POST", ())) {
     handle_post_write(payload, ctx, prov) >>= ack;
   } else {
     ack(Code(129));
@@ -895,7 +896,7 @@ let handle_post_unobserved = (payload, ctx, prov) => {
 let handle_post_observed = (payload, ctx, prov) => {
   let uri_path = Prov.uri_path(prov);
   let token = Prov.token(prov);
-  if (is_valid_token(token, uri_path, "POST")) {
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="POST", ())) {
     handle_post_write(payload, ctx, prov) >>= 
       resp => route(resp, payload, ctx, prov) >>= 
         () => ack(resp);
@@ -1022,7 +1023,7 @@ let handle_delete_write = (ctx, prov) => {
 let handle_delete_observed = (ctx, prov) => {
   let token = Prov.token(prov);
   let uri_path = Prov.uri_path(prov);
-  if (is_valid_token(token, uri_path, "DELETE")) {
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="DELETE", ())) {
     handle_delete_write(ctx, prov) >>= 
       resp => route(resp, "", ctx, prov) >>= 
         () => ack(resp);
@@ -1035,7 +1036,7 @@ let handle_delete_observed = (ctx, prov) => {
 let handle_delete_unobserved = (ctx, prov) => {
   let token = Prov.token(prov);
   let uri_path = Prov.uri_path(prov);
-  if (is_valid_token(token, uri_path, "DELETE")) {
+  if (is_valid_token(~token=token, ~path=uri_path, ~meth="DELETE", ())) {
     handle_delete_write(ctx, prov) >>= ack;
   } else {
     ack(Code(129));
