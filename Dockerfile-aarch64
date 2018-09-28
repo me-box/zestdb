@@ -1,6 +1,6 @@
-FROM resin/aarch64-alpine
+FROM resin/aarch64-alpine:3.5
 
-RUN apk update && apk upgrade \
+RUN apk update \
  && apk add sudo \
  && adduser -S databox \
  && echo 'databox ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/databox \
