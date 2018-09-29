@@ -405,10 +405,10 @@ $ client.exe  --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/k
 
 ### Raspberry Pi 3 (aarch64)
 
-A docker build exists for [HypriotOS](https://blog.hypriot.com/)
 
 ```bash
-$ docker pull jptmoore/zestdb:aarch64
+$ docker run -p 5555:5555 -p 5556:5556 -d --name zest --rm jptmoore/zestdb:aarch64 /home/databox/server.exe --secret-key-file example-s
+erver-key
 ```
 
 The client and server binaries are in ```/home/databox```
