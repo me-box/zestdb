@@ -37,6 +37,19 @@ $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-ke
 $ docker run --network host -it jptmoore/zestdb /app/zest/client.exe --server-key 'vl6wu0A@XP?}Or/&BR#LSxn>A+}L)p44/W[wXL3<' --path '/kv/foo/bar' --mode get
 ```
 
+### Storage types
+
+Currently there are 5 different storage types depending on requirements:
+
+1. Key/Value for JSON
+2. Key/Value for text
+3. Key/Value for binary data
+4. Time series for a specific structure of JSON
+5. Time series for arbitrary JSON 
+
+The Key/Value store types are defined within the header options of the protocol. The time series stores are differentiated by path and both store JSON data. One uses a fixed schema to describe numeric data and supports basic statistical functions, whereas the other is more flexible and can handle any valid JSON but does not support extra functionality such as numeric aggregation.
+
+
 ### General API
 
 #### Hypercat
